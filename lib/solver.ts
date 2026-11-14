@@ -1,6 +1,7 @@
-import { centroid, pointInPolygon } from './geometry';
+import { checkFlow, type FlowContext } from './circulation';
+import { centroid, convexSeparation, distPointSegment, pointInPolygon, rectCorners } from './geometry';
 import { checkFit } from './fit';
-import type { Category, DoorMark, PlacedItem, Product, Room, ThemeId, Vec2 } from './types';
+import type { Category, DoorMark, PlacedItem, Product, Room, ThemeId, Vec2, Wall as ApiWall } from './types';
 
 export type RoomType = 'living' | 'bedroom' | 'dining' | 'office';
 
@@ -22,16 +23,13 @@ export const TEMPLATES: Record<RoomType, Role[]> = {
     { role: 'tv console', alts: ['tv-console'], weight: 0.12 },
     { role: 'armchair', alts: ['armchair'], weight: 0.14, optional: true },
     { role: 'side table', alts: ['side-table'], weight: 0.03, optional: true },
-    { role: 'floor lamp', alts: ['floor-lamp'], weight: 0.04, optional: true },
     { role: 'plant', alts: ['plant'], weight: 0.04, optional: true },
     { role: 'shelf', alts: ['bookshelf'], weight: 0.05, optional: true },
   ],
   bedroom: [
     { role: 'bed', alts: ['bed'], weight: 0.45 },
-    { role: 'nightstand', alts: ['nightstand'], count: 2, weight: 0.12 },
     { role: 'dresser', alts: ['dresser'], weight: 0.2, optional: true },
     { role: 'rug', alts: ['rug'], weight: 0.1, optional: true },
-    { role: 'floor lamp', alts: ['floor-lamp'], weight: 0.05, optional: true },
     { role: 'plant', alts: ['plant'], weight: 0.04, optional: true },
   ],
   dining: [
@@ -44,7 +42,6 @@ export const TEMPLATES: Record<RoomType, Role[]> = {
     { role: 'desk', alts: ['desk'], weight: 0.4 },
     { role: 'office chair', alts: ['office-chair'], weight: 0.3 },
     { role: 'shelf', alts: ['bookshelf'], weight: 0.15, optional: true },
-    { role: 'floor lamp', alts: ['floor-lamp'], weight: 0.07, optional: true },
     { role: 'plant', alts: ['plant'], weight: 0.05, optional: true },
   ],
 };
@@ -76,15 +73,33 @@ function distToSeg(p: Vec2, a: Vec2, b: Vec2) {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
+// Room outlines run along wall centre lines, so a piece backed onto a wall sits half a wall's
+// thickness (about 6-8 cm) plus a little air off the outline.
+const WALL_GAP = 0.11;
+
 // Rotation that makes an item's front (API local -y at rot 0) face direction n.
 const faceRot = (n: Vec2) => Math.atan2(n.x, -n.y);
 const add = (p: Vec2, v: Vec2, s: number): Vec2 => ({ x: p.x + v.x * s, y: p.y + v.y * s });
 const m = (p: Product) => ({ w: p.dimsCm.w / 100, d: p.dimsCm.d / 100 });
 
-export type SolveInput = { room: Room; doors: DoorMark[]; picks: { role: string; product: Product }[] };
+// anchor: which candidate wall (0 = best) the main piece backs onto, so an optimiser can try
+// several layouts. walls: the scan's walls by floor, for the wall-thickness fit check.
+// flow: where people need to walk (see circulation.ts); pieces that cut it off are dropped.
+// scene: what the scan shows (see scanSense.ts): windows to keep tall pieces out of, and fixed
+// fixtures (counters, built-ins) nothing may stand on.
+export type SceneInfo = { windows: { a: Vec2; b: Vec2 }[]; fixtures: Vec2[][] };
+export type SolveInput = {
+  room: Room;
+  doors: DoorMark[];
+  picks: { role: string; product: Product }[];
+  anchor?: number;
+  walls?: Record<string, ApiWall[]>;
+  flow?: FlowContext;
+  scene?: SceneInfo;
+};
 export type Placement = Omit<PlacedItem, 'uid'> & { role: string };
 
-export function solveLayout({ room, doors, picks }: SolveInput): { placed: Placement[]; dropped: { role: string; product: Product; reason: string }[] } {
+export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, flow, scene }: SolveInput): { placed: Placement[]; dropped: { role: string; product: Product; reason: string }[] } {
   const type = roomTypeOf(room.label);
   const walls = roomWalls(room, doors).sort((x, y) => y.len - x.len);
   const z = room.floorZ;
@@ -95,6 +110,9 @@ export function solveLayout({ room, doors, picks }: SolveInput): { placed: Place
     placed.push({ role, productId: product.id, roomId: room.id, pos: { x: pos.x, y: pos.y, z }, rot });
   const freeWall = (exclude: Wall[] = []) =>
     walls.filter((w) => !exclude.includes(w)).sort((x, y) => x.doorPenalty - y.doorPenalty || y.len - x.len)[0];
+  // Candidate walls for the main piece, best first; `anchor` picks one of them.
+  const anchors = walls.filter((w) => w.len >= 1.2).sort((x, y) => x.doorPenalty - y.doorPenalty || y.len - x.len);
+  const anchorWall = () => (anchors.length ? anchors[anchor % anchors.length] : freeWall());
   const opposite = (w: Wall) =>
     walls.filter((o) => o !== w && o.n.x * w.n.x + o.n.y * w.n.y < -0.7).sort((x, y) => y.len - x.len)[0];
   const side = (w: Wall, exclude: Wall[]) =>
@@ -107,11 +125,11 @@ export function solveLayout({ room, doors, picks }: SolveInput): { placed: Place
   };
 
   if (type === 'living') {
-    const back = freeWall();
+    const back = anchorWall();
     const sofa = get('sofa')[0];
     if (back && sofa) {
       const s = m(sofa);
-      const sp = add(back.mid, back.n, s.d / 2 + 0.03);
+      const sp = add(back.mid, back.n, s.d / 2 + WALL_GAP);
       const rot = faceRot(back.n);
       put('sofa', sofa, sp, rot);
       const ct = get('coffee table')[0];
@@ -125,7 +143,7 @@ export function solveLayout({ room, doors, picks }: SolveInput): { placed: Place
         const along = (sp.x - tvWall.a.x) * tvWall.t.x + (sp.y - tvWall.a.y) * tvWall.t.y;
         const clamp = Math.max(m(tv).w / 2 + 0.1, Math.min(tvWall.len - m(tv).w / 2 - 0.1, along));
         const base = add(tvWall.a, tvWall.t, clamp);
-        put('tv console', tv, add(base, tvWall.n, m(tv).d / 2 + 0.03), faceRot(tvWall.n));
+        put('tv console', tv, add(base, tvWall.n, m(tv).d / 2 + WALL_GAP), faceRot(tvWall.n));
       }
       const chair = get('armchair')[0];
       if (chair) {
@@ -135,41 +153,31 @@ export function solveLayout({ room, doors, picks }: SolveInput): { placed: Place
       }
       const st = get('side table')[0];
       if (st) put('side table', st, add(sp, back.t, -(s.w / 2 + m(st).w / 2 + 0.05)), rot);
-      const lamp = get('floor lamp')[0];
-      if (lamp) put('floor lamp', lamp, add(add(sp, back.t, s.w / 2 + 0.3), back.n, -0.1), rot);
       const plant = get('plant')[0];
       if (plant) put('plant', plant, corner(sp), 0);
       const shelf = get('shelf')[0];
       const sw = side(back, [back, tvWall].filter(Boolean) as Wall[]);
-      if (shelf && sw) put('shelf', shelf, add(sw.mid, sw.n, m(shelf).d / 2 + 0.03), faceRot(sw.n));
+      if (shelf && sw) put('shelf', shelf, add(sw.mid, sw.n, m(shelf).d / 2 + WALL_GAP), faceRot(sw.n));
     }
   } else if (type === 'bedroom') {
-    const head = freeWall();
+    const head = anchorWall();
     const bed = get('bed')[0];
     if (head && bed) {
       const b = m(bed);
-      const bp = add(head.mid, head.n, b.d / 2 + 0.03);
+      const bp = add(head.mid, head.n, b.d / 2 + WALL_GAP);
       const rot = faceRot(head.n);
       put('bed', bed, bp, rot);
-      get('nightstand').slice(0, 2).forEach((ns, i) => {
-        const sgn = i === 0 ? -1 : 1;
-        const p = add(add(head.mid, head.n, m(ns).d / 2 + 0.03), head.t, sgn * (b.w / 2 + m(ns).w / 2 + 0.04));
-        put('nightstand', ns, p, rot);
-      });
       const rug = get('rug')[0];
       if (rug) put('rug', rug, add(bp, head.n, b.d * 0.2), rot + (m(rug).w > m(rug).d ? Math.PI / 2 : 0));
       const opp = opposite(head);
       const dr = get('dresser')[0];
-      if (dr && opp) put('dresser', dr, add(opp.mid, opp.n, m(dr).d / 2 + 0.03), faceRot(opp.n));
-      const lamp = get('floor lamp')[0];
-      const sw = side(head, [head]);
-      if (lamp && sw) put('floor lamp', lamp, add(add(sw.mid, sw.n, 0.3), sw.t, sw.len / 2 - 0.4), 0);
+      if (dr && opp) put('dresser', dr, add(opp.mid, opp.n, m(dr).d / 2 + WALL_GAP), faceRot(opp.n));
       const plant = get('plant')[0];
       if (plant) put('plant', plant, corner(bp), 0);
     }
   } else if (type === 'dining') {
     const table = get('dining table')[0];
-    const ref = walls[0];
+    const ref = walls.length ? walls[anchor % walls.length] : undefined;
     if (table && ref) {
       const t = m(table);
       const rot = faceRot(ref.n) + Math.PI / 2; // table's long side parallel to the longest wall
@@ -211,40 +219,85 @@ export function solveLayout({ room, doors, picks }: SolveInput): { placed: Place
       if (plant) put('plant', plant, corner(c), 0);
     }
   } else {
-    const wall = [...walls].sort((x, y) => x.doorPenalty - y.doorPenalty || x.len - y.len).find((w) => w.len >= 1.2) ?? walls[0];
+    const desks = [...walls].sort((x, y) => x.doorPenalty - y.doorPenalty || x.len - y.len).filter((w) => w.len >= 1.2);
+    const wall = desks.length ? desks[anchor % desks.length] : walls[0];
     const desk = get('desk')[0];
     if (wall && desk) {
-      const dp = add(wall.mid, wall.n, m(desk).d / 2 + 0.03);
+      const dp = add(wall.mid, wall.n, m(desk).d / 2 + WALL_GAP);
       put('desk', desk, dp, faceRot(wall.n));
       const ch = get('office chair')[0];
-      if (ch) put('office chair', ch, add(dp, wall.n, m(desk).d / 2 + 0.25), faceRot({ x: -wall.n.x, y: -wall.n.y }));
+      if (ch) put('office chair', ch, add(dp, wall.n, m(desk).d / 2 + m(ch).d / 2 + 0.05), faceRot({ x: -wall.n.x, y: -wall.n.y })); // pulled out, not overlapping
       const shelf = get('shelf')[0];
       const sw = side(wall, [wall]);
-      if (shelf && sw) put('shelf', shelf, add(sw.mid, sw.n, m(shelf).d / 2 + 0.03), faceRot(sw.n));
-      const lamp = get('floor lamp')[0];
-      if (lamp) put('floor lamp', lamp, add(add(dp, wall.t, m(desk).w / 2 + 0.3), wall.n, -0.05), 0);
+      if (shelf && sw) put('shelf', shelf, add(sw.mid, sw.n, m(shelf).d / 2 + WALL_GAP), faceRot(sw.n));
       const plant = get('plant')[0];
       if (plant) put('plant', plant, corner(dp), 0);
     }
   }
 
-  // Drop optional pieces that create errors or tight walkways, lowest priority first, until the layout is clean.
+  // Drop pieces that create errors, tight walkways, blocked doors or cut-off paths, lowest
+  // priority first, until the layout is clean.
   const dropped: { role: string; product: Product; reason: string }[] = [];
   const order = TEMPLATES[type].map((r) => r.role);
   const byId = new Map(picks.map((p) => [p.product.id, p.product]));
-  for (let guard = 0; guard < 12; guard++) {
+  const lowestFirst = () => placed.map((_, i) => i).sort((a, b) => order.indexOf(placed[b].role) - order.indexOf(placed[a].role));
+  for (let guard = 0; guard < 16; guard++) {
     const withUid = placed.map((p, i) => ({ item: { ...p, uid: String(i) }, product: byId.get(p.productId)! }));
-    const errs = checkFit(withUid, [room], doors).filter((i) => i.level === 'error' || i.message.startsWith('Walkway'));
-    if (!errs.length) break;
+    const errs = [
+      ...checkFit(withUid, [room], doors, fitWalls).filter(
+        (i) => i.level === 'error' || i.message.startsWith('Walkway') || i.message.startsWith('Blocks a door'),
+      ),
+      ...(scene ? sceneIssues(placed, byId, scene) : []),
+    ];
+    if (!errs.length) {
+      if (!flow || flowClear(room, placed, byId, flow)) break;
+      // Something cuts off a doorway or a walking route: drop the least important piece whose
+      // removal opens it up (or failing that, the least important piece that isn't the anchor).
+      const candidates = lowestFirst().filter((i) => order.indexOf(placed[i].role) > 0 && byId.get(placed[i].productId)!.category !== 'rug');
+      if (!candidates.length) break;
+      // If even the main piece alone blocks it, removing others won't help: leave the layout
+      // for the optimiser to score against other walls.
+      const anchorOnly = placed.filter((_, k) => !candidates.includes(k));
+      if (!flowClear(room, anchorOnly, byId, flow)) break;
+      const fix = candidates.find((i) => flowClear(room, placed.filter((_, k) => k !== i), byId, flow)) ?? candidates[0];
+      dropped.push({ role: placed[fix].role, product: byId.get(placed[fix].productId)!, reason: 'Would block a path through the room' });
+      placed.splice(fix, 1);
+      continue;
+    }
     const bad = [...new Set(errs.map((e) => Number(e.uid)))].sort(
       (a, b) => order.indexOf(placed[b].role) - order.indexOf(placed[a].role),
     )[0];
     const victim = placed[bad];
-    if (order.indexOf(victim.role) === 0 && placed.length === 1) break;
+    // Never drop the main piece (bed, sofa, table, desk); the optimiser tries it on other walls.
+    if (order.indexOf(victim.role) === 0) break;
     dropped.push({ role: victim.role, product: byId.get(victim.productId)!, reason: errs.find((e) => Number(e.uid) === bad)!.message });
     placed.splice(bad, 1);
   }
   return { placed, dropped };
+}
+
+// Pieces that clash with what the scan shows: standing on a counter or built-in, or a tall piece
+// in front of a window.
+export function sceneIssues(placed: Placement[], byId: Map<string, Product>, scene: SceneInfo): { uid: string; message: string }[] {
+  const out: { uid: string; message: string }[] = [];
+  placed.forEach((p, i) => {
+    const pr = byId.get(p.productId)!;
+    const fp = rectCorners({ x: p.pos.x, y: p.pos.y }, pr.dimsCm.w / 100, pr.dimsCm.d / 100, p.rot);
+    if (scene.fixtures.some((f) => convexSeparation(fp, f) < -0.02)) out.push({ uid: String(i), message: 'Sits on a counter or built-in' });
+    else if (pr.dimsCm.h > 90 && scene.windows.some((w) => fp.some((c) => distPointSegment(c, w.a, w.b) < 0.4))) {
+      out.push({ uid: String(i), message: 'Stands in front of a window' });
+    }
+  });
+  return out;
+}
+
+// Whether people can still walk through the room with these pieces in it (rugs don't count).
+export function flowClear(room: Room, placed: Placement[], byId: Map<string, Product>, flow: FlowContext): boolean {
+  const solid = placed
+    .map((p) => ({ p, pr: byId.get(p.productId)! }))
+    .filter(({ pr }) => pr.category !== 'rug')
+    .map(({ p, pr }) => rectCorners({ x: p.pos.x, y: p.pos.y }, pr.dimsCm.w / 100, pr.dimsCm.d / 100, p.rot));
+  return checkFlow(room, solid, flow).ok;
 }
 
 // Deterministic picker used when no LLM is configured (and as the candidate filter for the LLM).

@@ -17,13 +17,13 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
   const design = useDesign();
   const productOf = useStore((s) => s.product);
   const selected = useStore((s) => s.selectedUid);
-  const { select, rotateItem, removeItem, duplicateItem } = useStore.getState();
+  const { select, removeItem, duplicateItem } = useStore.getState();
   const currentRoomId = useViewerState((s) => s.currentRoomId);
 
   const resolved = design.items
     .map((item) => ({ item, product: productOf(item.productId) }))
     .filter((x): x is { item: PlacedItem; product: Product } => !!x.product);
-  const issues = useMemo(() => checkFit(resolved, geometry?.rooms ?? [], design.doors), [resolved, geometry, design.doors]);
+  const issues = useMemo(() => checkFit(resolved, geometry?.rooms ?? [], design.doors, geometry?.walls), [resolved, geometry, design.doors]);
   const total = resolved.reduce((s, r) => s + r.product.priceUsd, 0);
   const roomName = (id: string | null) => geometry?.rooms.find((r) => r.id === id)?.label ?? 'Unassigned';
   const errors = issues.filter((i) => i.level === 'error').length;
@@ -54,11 +54,37 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
       </div>
 
       <div className="scroll-thin flex-1 space-y-4 overflow-y-auto p-4">
+        {resolved.length > 0 && (
+          <section className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3">
+            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${design.locked ? 'bg-brand/15 text-brand' : 'bg-panel text-muted'}`} aria-hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="5" y="11" width="14" height="10" rx="2" />
+                <path d={design.locked ? 'M8 11V7a4 4 0 0 1 8 0v4' : 'M8 11V7a4 4 0 0 1 7.5-2'} />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-semibold">{design.locked ? 'Furniture locked' : 'Furniture unlocked'}</div>
+              <div className="text-[11px] leading-snug text-muted">
+                {design.locked ? 'Walk and look around freely. Unlock to move pieces.' : 'Drag pieces to move them, drag ↻ to rotate.'}
+              </div>
+            </div>
+            <button
+              role="switch"
+              aria-checked={!!design.locked}
+              aria-label="Lock furniture"
+              onClick={() => useStore.getState().setLocked(!design.locked)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition ${design.locked ? 'bg-brand' : 'bg-line'}`}
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${design.locked ? 'left-[22px]' : 'left-0.5'}`} />
+            </button>
+          </section>
+        )}
+
         <StylistBox geometry={geometry} roomId={currentRoomId} />
 
         {resolved.length === 0 && (
           <div className="rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">
-            Drag a piece from the shop into the room, or ask the stylist to furnish it for you.
+            Press Auto-furnish to fill every room, then click any piece to swap it for one that fits.
           </div>
         )}
 
@@ -103,12 +129,6 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
                       )}
                       {isSel && (
                         <div className="mt-2 flex gap-1.5 text-xs">
-                          <button onClick={(e) => (e.stopPropagation(), rotateItem(item.uid, Math.PI / 12))} className="rounded border border-line px-2 py-1">
-                            Rotate 15°
-                          </button>
-                          <button onClick={(e) => (e.stopPropagation(), rotateItem(item.uid, Math.PI / 2))} className="rounded border border-line px-2 py-1">
-                            90°
-                          </button>
                           <button onClick={(e) => (e.stopPropagation(), duplicateItem(item.uid))} className="rounded border border-line px-2 py-1">
                             Duplicate
                           </button>
@@ -132,7 +152,7 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
         <Link href="/cart" className="block w-full rounded-lg btn-brand px-4 py-2.5 text-center text-sm font-medium ">
           Review cart · {fmtUsd(total)}
         </Link>
-        <p className="mt-2 text-center text-[11px] text-muted">Keys: R rotate · D duplicate · Delete remove · Esc cancel</p>
+        <p className="mt-2 text-center text-[11px] text-muted">Click to select, drag the selected piece to move · drag ↻ to rotate · D duplicate · Delete remove</p>
       </div>
     </aside>
   );

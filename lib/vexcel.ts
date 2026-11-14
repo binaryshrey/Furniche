@@ -1,5 +1,6 @@
 import 'server-only';
-import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Listing, Vec2 } from './types';
 
@@ -129,10 +130,75 @@ export async function getTile(z: number, x: number, y: number): Promise<ArrayBuf
 export const CITY_3D = { collection: 'us-tx-houstonr2-2023', layer: '3d-cities' };
 const TILE_3D_PARAMS = new Set(['zoom', 'tile-x', 'tile-y', 'childAOI', 'collection', 'layer', 'latest']);
 
-export async function get3d(kind: 'tileset' | 'tile', params: URLSearchParams): Promise<Response> {
+// The 3D collection is fixed, so every tileset and mesh is cached on disk forever: the first
+// visit pays Vexcel's ~200 ms per request, later visits read from .cache/tiles3d.
+const TILES_3D_CACHE = path.join(process.cwd(), '.cache', 'tiles3d');
+
+export async function get3d(kind: 'tileset' | 'tile', params: URLSearchParams): Promise<Buffer | null> {
   const q = new URLSearchParams();
   params.forEach((v, k) => {
     if (TILE_3D_PARAMS.has(k)) q.append(k, v);
   });
-  return fetch(`${BASE}/3d/${kind}?${q}`, { headers: { 'X-API-KEY': apiKey() }, cache: 'no-store' });
+  q.sort();
+  const file = path.join(TILES_3D_CACHE, `${kind}-${createHash('sha1').update(q.toString()).digest('hex')}`);
+  try {
+    return await readFile(file);
+  } catch {
+    /* not cached yet */
+  }
+  const res = await fetch(`${BASE}/3d/${kind}?${q}`, { headers: { 'X-API-KEY': apiKey() }, cache: 'no-store' });
+  if (!res.ok) return null;
+  const body = Buffer.from(await res.arrayBuffer());
+  await mkdir(TILES_3D_CACHE, { recursive: true });
+  await writeFile(file, body);
+  return body;
+}
+
+// 3d-tiles-renderer picks a parser from the file extension and Vexcel's links have none
+// (./tileset?…, ./tile?…), so tilesets are served with ./tileset.json?… and ./tile.glb?… links.
+export function rewriteTileset(json: string): string {
+  return json.replace(/"\.\/tileset\?/g, '"./tileset.json?').replace(/"\.\/tile\?/g, '"./tile.glb?');
+}
+
+export const CITY_3D_ROOT = 'tileset.json?collection=us-tx-houstonr2-2023&layer=3d-cities';
+
+// Every tileset and mesh URL of the city down to `maxZoom`, exactly as the renderer will request
+// them (relative to /api/vexcel/3d/). Crawled once from the (disk-cached) tilesets, then saved.
+export async function city3dManifest(maxZoom = 15): Promise<string[]> {
+  const file = path.join(TILES_3D_CACHE, `manifest-z${maxZoom}.json`);
+  try {
+    return JSON.parse(await readFile(file, 'utf8'));
+  } catch {
+    /* crawl below */
+  }
+  const zoomOf = (u: string) => Number(u.match(/zoom=(\d+)/)?.[1] ?? 0);
+  const urls: string[] = [CITY_3D_ROOT];
+  const seen = new Set(urls);
+  let frontier = [CITY_3D_ROOT];
+  while (frontier.length) {
+    const next: string[] = [];
+    // A few at a time: the first crawl goes to Vexcel.
+    for (let i = 0; i < frontier.length; i += 12) {
+      const bodies = await Promise.all(
+        frontier.slice(i, i + 12).map(async (u) => {
+          const q = new URLSearchParams(u.slice(u.indexOf('?') + 1));
+          return get3d('tileset', q);
+        }),
+      );
+      for (const body of bodies) {
+        if (!body) continue;
+        for (const m of rewriteTileset(body.toString('utf8')).matchAll(/"uri"\s*:\s*"\.\/([^"]+)"/g)) {
+          const u = m[1];
+          if (seen.has(u) || zoomOf(u) > maxZoom) continue;
+          seen.add(u);
+          urls.push(u);
+          if (u.startsWith('tileset.json')) next.push(u);
+        }
+      }
+    }
+    frontier = next;
+  }
+  await mkdir(TILES_3D_CACHE, { recursive: true });
+  await writeFile(file, JSON.stringify(urls));
+  return urls;
 }

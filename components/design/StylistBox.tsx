@@ -1,6 +1,9 @@
 'use client';
 import { useState } from 'react';
-import { useDesign, useStore } from '@/lib/store';
+import { senseRoom } from '@/lib/scanSense';
+import { autoFurnish, furnishableType } from '@/lib/autofurnish';
+import { useViewerState } from '@/lib/sceneBridge';
+import { useDesign, useProducts, useStore } from '@/lib/store';
 import type { ModelGeometry } from '@/lib/types';
 
 const EXAMPLES = ['Warm Japandi under $3,000', 'Midcentury with walnut, $2,500', 'Bright coastal, keep it cheap'];
@@ -13,6 +16,49 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ summary: string; dropped: { name: string; reason: string }[]; method: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const products = useProducts();
+  // A defurnished model's mesh still holds the seller's furniture, so its "fixtures" aren't fixed.
+  const hasDefurnish = useViewerState((s) => s.hasDefurnish);
+  const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+  // Instant starting layout: recommended pieces for the room's type and size, placed by trying
+  // several layouts and keeping the best, in every furnishable room. Replaces only those rooms' pieces.
+  function furnish() {
+    if (!geometry) return;
+    setError(null);
+    const rooms = geometry.rooms.filter((r) => furnishableType(r));
+    let pieces = 0;
+    let spent = 0;
+    let budget = 0;
+    let done = 0;
+    let tried = 0;
+    const dropped: { name: string; reason: string }[] = [];
+    for (const r of rooms) {
+      const sense = senseRoom(r, { fixtures: !hasDefurnish });
+      const res = autoFurnish(r, products, { doors: design.doors, walls: geometry.walls, theme: design.themeId, rooms: geometry.rooms, panos: geometry.panos, sense });
+      if (!res) continue;
+      useStore.getState().replaceItems(res.placed.map((p) => ({ productId: p.productId, roomId: p.roomId, pos: p.pos, rot: p.rot })), r.id);
+      pieces += res.placed.length;
+      spent += res.spent;
+      budget += res.budget;
+      tried = Math.max(tried, res.tried);
+      done += 1;
+      dropped.push(...res.dropped.map((d) => ({ name: d.product.name.split(',')[0], reason: d.reason })));
+    }
+    if (!done) {
+      setNote(null);
+      return setError('No furnishable rooms found.');
+    }
+    // The whole home was refurnished: drop pieces stranded outside every room, then fix the new
+    // layout in place so the rooms can be walked without nudging anything.
+    useStore.getState().replaceItems([], null);
+    useStore.getState().setLocked(true);
+    setNote({
+      summary: `${pieces} pieces in ${done} ${done === 1 ? 'room' : 'rooms'} for ${usd(spent)} (budget ${usd(budget)}). Compared ${tried} layouts per room and kept the one with the best fit, reading doorways, windows and built-ins from the scan and leaving every doorway and walking route clear.`,
+      dropped,
+      method: 'auto',
+    });
+  }
 
   async function run(text: string) {
     if (!room) return;
@@ -59,6 +105,13 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
           {busy ? 'Styling…' : 'Furnish'}
         </button>
       </form>
+      <button
+        onClick={furnish}
+        disabled={!geometry}
+        className="mt-2 w-full rounded-lg btn-brand px-2 py-2 text-xs font-semibold disabled:opacity-40"
+      >
+        Auto-furnish
+      </button>
       {!note && room && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {EXAMPLES.map((ex) => (
@@ -74,10 +127,18 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
           <p>{note.summary}</p>
           {note.dropped.length > 0 && (
             <p className="text-muted">
-              Left out: {note.dropped.map((d) => `${d.name} (${d.reason.toLowerCase()})`).join('; ')}.
+              Left out: {note.dropped.slice(0, 3).map((d) => `${d.name} (${d.reason.toLowerCase()})`).join('; ')}
+              {note.dropped.length > 3 ? ` and ${note.dropped.length - 3} more` : ''}.
             </p>
           )}
-          <p className="text-[11px] text-muted">{note.method === 'ai' ? 'Products chosen by AI; positions set by layout rules.' : 'Chosen by style and budget rules.'} Replaces what was in this room.</p>
+          <p className="text-[11px] text-muted">
+            {note.method === 'auto'
+              ? 'Picked for the room’s type, size, style and budget, preferring pieces with real 3D models. Drag, rotate or remove anything.'
+              : note.method === 'ai'
+                ? 'Products chosen by AI; positions set by layout rules.'
+                : 'Chosen by style and budget rules.'}{' '}
+            Replaces what was in {note.method === 'auto' ? 'the furnished rooms' : 'this room'}.
+          </p>
         </div>
       )}
     </section>

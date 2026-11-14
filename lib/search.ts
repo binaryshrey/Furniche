@@ -14,6 +14,7 @@ export type SearchFilters = {
 export type SearchResult = {
   sid: string;
   kind: 'home' | 'apartment';
+  listingId: number | null; // homes only; keys the Vexcel property lookup
   title: string;
   subtitle: string;
   price: number | null;
@@ -91,6 +92,7 @@ export function toResult(l: Listing): SearchResult | null {
     return {
       sid: l.sid,
       kind: 'home',
+      listingId: l.listingId,
       title: l.address,
       subtitle: [l.beds != null && `${l.beds} bd`, l.baths != null && `${l.baths} ba`, l.sqft && `${l.sqft.toLocaleString()} sq ft`].filter(Boolean).join(' · '),
       price,
@@ -106,6 +108,7 @@ export function toResult(l: Listing): SearchResult | null {
   return {
     sid: l.sid,
     kind: 'apartment',
+    listingId: null,
     title: l.community ?? l.address,
     subtitle: [l.unitName, l.address].filter(Boolean).join(' · '),
     price,

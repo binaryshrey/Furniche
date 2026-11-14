@@ -111,3 +111,15 @@ describe('productFitsRoom', () => {
     expect(productFitsRoom(prod('big', 'sectional', 450, 200), room)).toBe(false);
   });
 });
+
+describe('walls', () => {
+  it('flags a piece that sinks into a wall even inside the mid-wall outline', async () => {
+    const { checkFit } = await import('./fit');
+    const room = { id: 'r', label: 'Room', floorId: 'f', polygon: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }], areaM2: 16, widthM: 4, depthM: 4, heightM: 2.5, floorZ: 0 };
+    const wall = { id: 'w', a: { x: 4, y: 0 }, b: { x: 4, y: 4 }, thickness: 0.14 };
+    const sofa = { id: 's', category: 'sofa', dimsCm: { w: 200, d: 90, h: 80 }, placement: 'floor' } as never;
+    const at = (x: number) => [{ item: { uid: 'a', productId: 's', roomId: 'r', pos: { x, y: 2, z: 0 }, rot: Math.PI / 2 }, product: sofa }];
+    expect(checkFit(at(3.52), [room], [], { f: [wall] }).map((i) => i.message)).toContain('Goes into a wall'); // back edge 3.97, wall face 3.93
+    expect(checkFit(at(3.4), [room], [], { f: [wall] })).toEqual([]);
+  });
+});

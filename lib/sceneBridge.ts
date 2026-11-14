@@ -5,7 +5,8 @@ import type { Vec3 } from './types';
 import { fromThree } from './coords';
 
 // Shares the Matterport camera and our furniture group with DOM overlays that do their own raycasts.
-export const bridge: { camera: THREE.Camera | null; furniture: THREE.Group | null } = { camera: null, furniture: null };
+// scan: Matterport's room-mesh chunks (found by SurfaceLayer), for snapping pieces to the real floor.
+export const bridge: { camera: THREE.Camera | null; furniture: THREE.Group | null; scan: THREE.Mesh[] } = { camera: null, furniture: null, scan: [] };
 
 type Ghost = { productId: string; pos: Vec3; rot: number } | null;
 
@@ -20,13 +21,19 @@ export const useViewerState = create<{
   hasDefurnish: boolean;
   currentRoomId: string | null;
   cameraFloorZ: number;
-  setPartial: (p: Partial<{ sdk: any; ready: boolean; hasDefurnish: boolean; currentRoomId: string | null; cameraFloorZ: number }>) => void;
+  // True once Matterport is actually showing a room: inside mode, standing on a pano. `ready`
+  // only means our boot code finished; a slow model can still be on its dark dollhouse view.
+  showingRoom: boolean;
+  scanVersion: number; // bumps when the scan's mesh chunks change, so floor snapping reruns
+  setPartial: (p: Partial<{ sdk: any; ready: boolean; hasDefurnish: boolean; currentRoomId: string | null; cameraFloorZ: number; showingRoom: boolean; scanVersion: number }>) => void;
 }>((set) => ({
   sdk: null,
   ready: false,
   hasDefurnish: false,
   currentRoomId: null,
   cameraFloorZ: 0,
+  showingRoom: false,
+  scanVersion: 0,
   setPartial: (p) => set(p),
 }));
 
@@ -57,4 +64,24 @@ export function raycast(ndc: { x: number; y: number }, floorZ: number, itemsFirs
     return { kind: 'floor', point: fromThree(p.x, p.y, p.z) };
   }
   return null;
+}
+
+const down = new THREE.Raycaster();
+down.layers.enableAll(); // Matterport keeps its room mesh on its own render layer
+const DOWN = new THREE.Vector3(0, -1, 0);
+
+// Height of the scan's real floor at three.js (x, z), near an estimated height. The Model API
+// floor heights are estimates (pano height minus a camera height), so flat things like rugs and
+// shadows can end up a few cm under the real floor and get hidden. Hits more than 30 cm off the
+// estimate (a leftover seller's table, a ceiling) are ignored.
+export function groundY(x: number, z: number, approxY: number): number {
+  if (!bridge.scan.length) return approxY;
+  down.set(new THREE.Vector3(x, approxY + 1.2, z), DOWN);
+  down.far = 2;
+  let best: number | null = null;
+  for (const h of down.intersectObjects(bridge.scan, false)) {
+    if (Math.abs(h.point.y - approxY) > 0.3) continue;
+    if (best === null || Math.abs(h.point.y - approxY) < Math.abs(best - approxY)) best = h.point.y;
+  }
+  return best ?? approxY;
 }

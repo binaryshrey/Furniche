@@ -60,25 +60,31 @@ export async function getModelGeometry(sid: string): Promise<ModelGeometry> {
     pos: { x: p.position.x, y: p.position.y, z: p.position.z },
   }));
 
-  // The pano API has no floor field. Split pano heights at the largest gaps into one
-  // group per floor (floors are listed bottom to top). The camera sits ~1.5 m above the floor.
+  // The pano API has no floor field. Each floor shows up as a dense cluster of camera
+  // heights (the camera sits ~1.5 m above the floor); panos on a staircase are stragglers in
+  // between, so look for clusters rather than gaps. The largest clusters, one per floor, are
+  // the floors, listed bottom to top.
   const CAMERA_HEIGHT = 1.5;
   const rawFloors: any[] = m.floors ?? [];
   const sortedZ = panos.map((p) => p.pos.z).sort((a, b) => a - b);
-  const cuts = sortedZ
-    .slice(1)
-    .map((z, i) => ({ gap: z - sortedZ[i], at: (z + sortedZ[i]) / 2 }))
-    .filter((g) => g.gap > 1.8)
-    .sort((a, b) => b.gap - a.gap)
-    .slice(0, Math.max(0, rawFloors.length - 1))
-    .map((g) => g.at)
+  const clusters: number[][] = [];
+  for (const z of sortedZ) {
+    const last = clusters[clusters.length - 1];
+    if (last && z - last[last.length - 1] < 0.35) last.push(z);
+    else clusters.push([z]);
+  }
+  const levels = clusters
+    .sort((a, b) => b.length - a.length)
+    .slice(0, Math.max(1, rawFloors.length))
+    .map((c) => c[Math.floor(c.length / 2)])
     .sort((a, b) => a - b);
-  const floorIndex = (z: number) => cuts.filter((c) => z > c).length;
-  const floors: Floor[] = rawFloors.map((f: any, i: number) => {
-    const zs = sortedZ.filter((z) => floorIndex(z) === i);
-    const median = zs.length ? zs[Math.floor(zs.length / 2)] : CAMERA_HEIGHT + i * 3;
-    return { id: f.id, label: f.label ?? '', z: median - CAMERA_HEIGHT };
-  });
+  const floors: Floor[] = rawFloors.map((f: any, i: number) => ({
+    id: f.id,
+    label: f.label ?? '',
+    z: (levels[i] ?? (levels[levels.length - 1] ?? CAMERA_HEIGHT) + 3 * (i - levels.length + 1)) - CAMERA_HEIGHT,
+  }));
+  const floorIndex = (z: number) =>
+    levels.reduce((best, lv, i) => (Math.abs(z - lv) < Math.abs(z - levels[best]) ? i : best), 0);
   for (const p of panos) p.floorId = floors[Math.min(floorIndex(p.pos.z), floors.length - 1)]?.id ?? null;
   const floorZ = new Map(floors.map((f) => [f.id, f.z]));
 
@@ -116,10 +122,11 @@ export async function getModelGeometry(sid: string): Promise<ModelGeometry> {
       label,
       floorId: fid,
       polygon,
-      areaM2: dims.areaFloor ?? polygonArea(polygon),
-      widthM: dims.width ?? 0,
-      depthM: dims.depth ?? 0,
-      heightM: dims.height ?? null,
+      // Some rooms come back without dimensions; fall back to the outline's bounding box.
+      areaM2: dims.areaFloor || polygonArea(polygon),
+      widthM: dims.width || Math.max(...polygon.map((v) => v.x)) - Math.min(...polygon.map((v) => v.x)),
+      depthM: dims.depth || Math.max(...polygon.map((v) => v.y)) - Math.min(...polygon.map((v) => v.y)),
+      heightM: dims.height || null,
       floorZ: floorZ.get(fid) ?? 0,
     });
   }
@@ -138,4 +145,18 @@ export async function getModelGeometry(sid: string): Promise<ModelGeometry> {
   };
   cache.set(sid, { at: Date.now(), data: geometry });
   return geometry;
+}
+
+// The six cube faces of a panorama (Matterport order: up, then four sides, then down), at the
+// best resolution available. The URLs are signed and expire, so they are fetched fresh.
+const RES_ORDER = ['2k', 'high', 'low'];
+export async function panoSkybox(sid: string, panoId: string): Promise<string[] | null> {
+  const data = await gql<{ model: { panoLocations: { id: string; skyboxes: { resolution: string; status: string; children: string[] }[] }[] } }>(
+    `query($id: ID!) { model(id: $id) { panoLocations { id skyboxes { resolution status children } } } }`,
+    { id: sid },
+  );
+  const pano = data.model?.panoLocations.find((p) => p.id === panoId);
+  const boxes = (pano?.skyboxes ?? []).filter((b) => b.status === 'available' && b.children?.length === 6);
+  boxes.sort((a, b) => (RES_ORDER.indexOf(a.resolution) + 99) % 99 - (RES_ORDER.indexOf(b.resolution) + 99) % 99);
+  return boxes[0]?.children ?? null;
 }

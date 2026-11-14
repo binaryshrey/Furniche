@@ -42,3 +42,6 @@ data/
 public/matterport-assets/
 costar-hackathon-kit/
 matterport_kit/
+
+# Downloaded store 3D models
+.cache/

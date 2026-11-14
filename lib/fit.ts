@@ -1,5 +1,5 @@
-import { convexSeparation, pointInPolygon, rectCorners } from './geometry';
-import type { Category, DoorMark, FitIssue, FitLevel, PlacedItem, Product, Room, Vec2 } from './types';
+import { centroid, convexSeparation, pointInPolygon, rectCorners } from './geometry';
+import type { Category, DoorMark, FitIssue, FitLevel, ModelGeometry, Pano, PlacedItem, Product, Room, Vec2, Vec3, Wall } from './types';
 
 // Clearances in metres. Sources: common interior design guidance
 // (36 in walkways where possible, 30 in minimum; 18 in sofa to coffee table).
@@ -9,7 +9,15 @@ export const FIT_RULES = {
   overlapTolerance: 0.02,
   companionMin: 0.35, // e.g. sofa to coffee table
   doorClear: 0.9,
+  wallTolerance: 0.02, // how far a piece may touch into a wall's thickness before it counts
 };
+
+// A wall segment as a rectangle at its real thickness.
+function wallRect(w: Wall): Vec2[] {
+  const len = Math.hypot(w.b.x - w.a.x, w.b.y - w.a.y);
+  const mid = { x: (w.a.x + w.b.x) / 2, y: (w.a.y + w.b.y) / 2 };
+  return rectCorners(mid, len, Math.max(w.thickness, 0.06), Math.atan2(w.b.y - w.a.y, w.b.x - w.a.x));
+}
 
 // Rugs lie under furniture; an umbrella canopy hangs over the table and chairs.
 const NO_OVERLAP_CHECK: Category[] = ['rug', 'umbrella'];
@@ -37,13 +45,44 @@ export function footprint(item: PlacedItem, product: Product): Vec2[] {
   return rectCorners({ x: item.pos.x, y: item.pos.y }, product.dimsCm.w / 100, product.dimsCm.d / 100, item.rot);
 }
 
-export function roomAt(p: Vec2, rooms: Room[]): Room | null {
-  return rooms.find((r) => pointInPolygon(p, r.polygon)) ?? null;
+// In a multi-storey home rooms on different floors overlap in plan, so with a height (a piece
+// on the floor, or the camera standing on it) pick the floor that point is on: the highest
+// floor at or just below it.
+export function roomAt(p: Vec2 | Vec3, rooms: Room[]): Room | null {
+  const hits = rooms.filter((r) => pointInPolygon(p, r.polygon));
+  if (hits.length < 2 || !('z' in p)) return hits[0] ?? null;
+  const below = hits.filter((r) => r.floorZ <= p.z + 0.3).sort((a, b) => b.floorZ - a.floorZ);
+  return below[0] ?? [...hits].sort((a, b) => a.floorZ - b.floorZ)[0];
+}
+
+// The panorama to stand on to see a room: on the room's own floor, nearest its middle. (Nearest
+// by plan position alone can land on the floor above, facing a wall.)
+export function panoForRoom(room: Room, panos: Pano[]): Pano | null {
+  const onFloor = (p: Pano) => (p.floorId ? p.floorId === room.floorId : p.pos.z > room.floorZ && p.pos.z < room.floorZ + 2.5);
+  const c = centroid(room.polygon);
+  const near = (list: Pano[]) => [...list].sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.y - c.y) - Math.hypot(b.pos.x - c.x, b.pos.y - c.y))[0] ?? null;
+  const floor = panos.filter(onFloor);
+  return near(floor) ?? near(panos);
+}
+
+// Where a tour starts: the living room (else family/great/dining, else the largest room). The
+// tour (MatterportHost) and the sky-to-house flight (its panorama) both use this, so the flight
+// ends exactly where the tour opens. `skip`: panos the tour can't visit (disabled or unaligned
+// sweeps still have photos in the Model API), as reported by the tour itself.
+export function entryPano(geometry: ModelGeometry, skip: ReadonlySet<string> = new Set()): Pano | null {
+  const panos = geometry.panos.filter((p) => !skip.has(p.id));
+  const living = [...geometry.rooms].sort((a, b) => {
+    const pri = (l: string) => (/living/i.test(l) ? 2 : /family|great|dining/i.test(l) ? 1 : 0);
+    return pri(b.label) - pri(a.label) || b.areaM2 - a.areaM2;
+  })[0];
+  return living ? panoForRoom(living, panos) : panos[0] ?? null;
 }
 
 const cm = (m: number) => `${Math.round(m * 100)} cm`;
 
-export function checkFit(inputs: FitInput[], rooms: Room[], doors: DoorMark[] = []): FitIssue[] {
+// walls (by floor id) are optional; with them a piece that sinks into a wall's thickness is an
+// error even while its centre line stays inside the room outline (which runs mid-wall).
+export function checkFit(inputs: FitInput[], rooms: Room[], doors: DoorMark[] = [], walls: Record<string, Wall[]> = {}): FitIssue[] {
   const issues: FitIssue[] = [];
   const floorItems = inputs.filter((i) => i.product.placement !== 'wall');
   const add = (uid: string, level: FitLevel, message: string) => issues.push({ uid, level, message });
@@ -64,12 +103,16 @@ export function checkFit(inputs: FitInput[], rooms: Room[], doors: DoorMark[] = 
     const corners = footprint(item, product);
     const outside = corners.filter((c) => !pointInPolygon(c, room.polygon)).length;
     if (outside > 0) add(item.uid, 'error', `Crosses a wall of the ${room.label.toLowerCase()}`);
+    else if ((walls[room.floorId] ?? []).some((w) => convexSeparation(corners, wallRect(w)) < -FIT_RULES.wallTolerance)) {
+      add(item.uid, 'error', 'Goes into a wall');
+    }
 
     for (const door of doors.filter((d) => d.roomId === room.id)) {
-      const r = Math.max(door.widthM, FIT_RULES.doorClear);
+      // Room to walk through: a door's swing, or half a wide opening plus a step.
+      const r = Math.max(door.widthM / 2 + 0.3, FIT_RULES.doorClear);
       const near = corners.some((c) => Math.hypot(c.x - door.pos.x, c.y - door.pos.y) < r) ||
         Math.hypot(item.pos.x - door.pos.x, item.pos.y - door.pos.y) < r;
-      if (near) add(item.uid, 'warn', 'Blocks a door you marked');
+      if (near) add(item.uid, 'warn', 'Blocks a doorway');
     }
   }
 

@@ -32,6 +32,8 @@ type State = {
   rotateItem: (uid: string, delta: number) => void;
   removeItem: (uid: string) => void;
   duplicateItem: (uid: string) => void;
+  swapItem: (uid: string, next: PlacedItem) => void;
+  setLocked: (locked: boolean) => void; // replace a piece with another product in place
   replaceItems: (items: Omit<PlacedItem, 'uid'>[], roomId: string | null) => void;
   clearRoom: (roomId: string) => void;
 
@@ -99,6 +101,8 @@ export const useStore = create<State>()(
           update((d) => ({ ...d, items: [...d.items, { ...it, uid: nid, pos: { ...it.pos, x: it.pos.x + 0.3, y: it.pos.y - 0.3 } }] }));
           set({ selectedUid: nid });
         },
+        setLocked: (locked) => update((d) => ({ ...d, locked })),
+        swapItem: (id, next) => update((d) => ({ ...d, items: d.items.map((i) => (i.uid === id ? { ...next, uid: id } : i)) })),
         replaceItems: (items, roomId) =>
           update((d) => ({
             ...d,
@@ -119,7 +123,9 @@ export const useStore = create<State>()(
         addImportedProduct: (p) => set({ importedProducts: [...get().importedProducts.filter((x) => x.id !== p.id), p] }),
 
         select: (id) => set({ selectedUid: id }),
-        setPending: (productId) => set({ pendingProductId: productId, mode: productId ? 'arrange' : get().mode }),
+        // Picking a product no longer switches modes: furniture can be grabbed in any mode, and
+        // staying in Walk keeps Matterport's own controls working after the drop.
+        setPending: (productId) => set({ pendingProductId: productId }),
         setMode: (m) => set({ mode: m, pendingProductId: m === 'arrange' ? get().pendingProductId : null }),
         setShowFurnished: (v) => set({ showFurnished: v }),
         loadDesign: (d) => set({ designs: { ...get().designs, [d.sid]: d } }),

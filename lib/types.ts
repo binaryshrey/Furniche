@@ -111,6 +111,9 @@ export type Design = {
   doors: DoorMark[];
   surfaces: SurfaceChoice[];
   themeId: ThemeId | null;
+  // Furniture can't be moved, rotated or nudged while locked, so the room can be walked
+  // freely; on after Auto-furnish, toggled in the design panel.
+  locked?: boolean;
   updatedAt: string;
 };
 

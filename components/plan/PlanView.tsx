@@ -39,7 +39,7 @@ export default function PlanView({ geometry }: { geometry: ModelGeometry }) {
     .map((item) => ({ item, product: productOf(item.productId) }))
     .filter((x): x is { item: PlacedItem; product: Product } => !!x.product)
     .filter((x) => x.product.placement !== 'outdoor');
-  const issues = useMemo(() => checkFit(resolved, geometry.rooms, design.doors), [resolved, geometry, design.doors]);
+  const issues = useMemo(() => checkFit(resolved, geometry.rooms, design.doors, geometry.walls), [resolved, geometry, design.doors]);
 
   const toWorld = (e: { clientX: number; clientY: number }): Vec2 => {
     const svg = svgRef.current!;
@@ -138,6 +138,7 @@ export default function PlanView({ geometry }: { geometry: ModelGeometry }) {
                 e.stopPropagation();
                 (e.target as Element).setPointerCapture?.(e.pointerId);
                 st().select(item.uid);
+                if (st().design().locked) return; // locked: select only
                 const w = toWorld(e);
                 drag.current = { uid: item.uid, off: { x: item.pos.x - w.x, y: item.pos.y - w.y } };
               }}

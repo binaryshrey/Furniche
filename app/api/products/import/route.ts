@@ -63,7 +63,25 @@ function num(v: string): number {
   return parseFloat(whole) + frac;
 }
 
+// Amazon-style sizes label each number: 30"D x 84"W x 34"H, or 84"L x 30"W x 34"H.
+function labelledDims(text: string): { w: number; d: number; h: number } | null {
+  const part = String.raw`(${NUM})\s*(${UNIT})?\s*([LWDH])\b`;
+  const m = text.match(new RegExp(String.raw`${part}\s*[x×]\s*${part}\s*[x×]\s*${part}`, 'i'));
+  if (!m) return null;
+  const after = text.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 12);
+  const unit = m[2] ?? m[5] ?? m[8] ?? (/cm|centim/i.test(after) ? 'cm' : 'in');
+  const vals: Record<string, number> = {};
+  for (const i of [1, 4, 7]) vals[m[i + 2].toUpperCase()] = toCm(num(m[i]), unit);
+  // With both L and W, L runs along the front and W is front to back.
+  const w = vals.L ?? vals.W;
+  const d = vals.L != null ? vals.W ?? vals.D : vals.D;
+  const h = vals.H;
+  return w && d && h ? { w, d, h } : null;
+}
+
 function parseDims(text: string): { w: number; d: number; h: number } | null {
+  const labelled = labelledDims(text);
+  if (labelled) return labelled;
   const triple = text.match(new RegExp(`(${NUM})\\s*${UNIT}?\\s*[x×]\\s*(${NUM})\\s*${UNIT}?\\s*[x×]\\s*(${NUM})\\s*(${UNIT})`, 'i'));
   if (triple) {
     const unit = triple[4];
@@ -125,11 +143,14 @@ const Extracted = z.object({
 });
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { url?: string; text?: string };
+  // `name`, `price` and `ld` (JSON-LD blocks) come from the "Add to Furniche" bookmarklet, which
+  // reads the page in the shopper's own browser, so stores that block servers still work.
+  const body = (await req.json().catch(() => ({}))) as { url?: string; text?: string; name?: string; price?: string; ld?: string[] };
   let url: URL | null = null;
-  let html = '';
+  const fromBrowser = !!(body.name || body.ld?.length);
+  let html = (body.ld ?? []).slice(0, 20).map((b) => `<script type="application/ld+json">${String(b).slice(0, 200_000)}</script>`).join('');
   const text = body.text?.slice(0, 20000) ?? '';
-  if (!body.url?.trim() && !text.trim()) {
+  if (!body.url?.trim() && !text.trim() && !fromBrowser) {
     return NextResponse.json({ error: 'Paste a product link or its details text.' }, { status: 400 });
   }
 
@@ -142,6 +163,8 @@ export async function POST(req: Request) {
     if (!/^https?:$/.test(url.protocol) || blockedHost(url.hostname)) {
       return NextResponse.json({ error: 'Only public http(s) product pages can be imported.' }, { status: 400 });
     }
+  }
+  if (url && !fromBrowser) {
     try {
       // Follow redirects by hand so every hop passes the same public-host check.
       let next: URL = url;
@@ -170,8 +193,14 @@ export async function POST(req: Request) {
       /* fall through to the paste-text path */
     }
     if (!html && !text) {
+      // Most big stores (Amazon, Wayfair, Target, West Elm…) block server requests outright.
+      const slug = url.pathname.match(/\/([A-Za-z0-9][A-Za-z0-9-]{8,})\/(?:dp|p|pdp)\b/)?.[1];
       return NextResponse.json(
-        { error: 'The store blocked our request. Paste the product details text instead, or enter the size by hand.', blocked: true },
+        {
+          error: `${retailerOf(url.hostname) === 'other' ? 'This store' : url.hostname.replace(/^www\./, '')} blocks automatic reading. Use the Add to Furniche button on the product page, or paste the page text below.`,
+          blocked: true,
+          nameHint: slug ? slug.replace(/-/g, ' ') : null,
+        },
         { status: 422 },
       );
     }
@@ -179,9 +208,9 @@ export async function POST(req: Request) {
 
   const ld = html ? jsonLdProduct(html) : null;
   const pageText = (html ? stripHtml(html) : '') + ' ' + text;
-  const name: string = ld?.name ?? (html && meta(html, 'og:title')) ?? text.split('\n')[0]?.slice(0, 120) ?? 'Imported item';
+  const name: string = ld?.name ?? body.name?.slice(0, 200) ?? (html && meta(html, 'og:title')) ?? text.split('\n')[0]?.slice(0, 120) ?? 'Imported item';
   const offer = Array.isArray(ld?.offers) ? ld.offers[0] : ld?.offers;
-  const price = offer?.price ?? offer?.lowPrice ?? (html && meta(html, 'product:price:amount'));
+  const price = offer?.price ?? offer?.lowPrice ?? (html ? meta(html, 'product:price:amount') : null) ?? body.price;
   const image = (Array.isArray(ld?.image) ? ld.image[0] : ld?.image) ?? (html && meta(html, 'og:image')) ?? undefined;
 
   let draft = {
@@ -191,7 +220,7 @@ export async function POST(req: Request) {
     dimsCm: parseDims(pageText),
     color: '#c9b79c',
     confidence: 'low' as 'high' | 'medium' | 'low',
-    method: 'page data',
+    method: fromBrowser ? 'the product page in your browser' : 'page data',
   };
   if (draft.dimsCm && draft.priceUsd) draft.confidence = 'medium';
 

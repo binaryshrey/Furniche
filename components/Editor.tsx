@@ -3,14 +3,16 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
-import { centroid } from '@/lib/geometry';
+import { panoForRoom } from '@/lib/fit';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useStore } from '@/lib/store';
 import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
+import TourCover from './viewer/TourCover';
 import DesignPanel from './design/DesignPanel';
 import PlanView from './plan/PlanView';
-import ShopPanel, { fmtUsd } from './shop/ShopPanel';
+import { fmtUsd } from './shop/ShopPanel';
+import SwapCard from './design/SwapCard';
 import { Logo } from './ui/Brand';
 
 const MatterportHost = dynamic(() => import('./viewer/MatterportHost'), {
@@ -30,6 +32,7 @@ export default function Editor({ sid }: { sid: string }) {
   const showFurnished = useStore((s) => s.showFurnished);
   const setShowFurnished = useStore((s) => s.setShowFurnished);
   const { sdk, ready, hasDefurnish, currentRoomId } = useViewerState();
+  const locked = useStore((s) => !!(s.activeSid && s.designs[s.activeSid]?.locked));
 
   useEffect(() => {
     setActive(sid);
@@ -56,8 +59,7 @@ export default function Editor({ sid }: { sid: string }) {
   async function goToRoom(roomId: string) {
     const room = geometry?.rooms.find((r) => r.id === roomId);
     if (!room || !geometry || !sdk) return;
-    const c = centroid(room.polygon);
-    const pano = [...geometry.panos].sort((a, b) => Math.hypot(a.pos.x - c.x, a.pos.y - c.y) - Math.hypot(b.pos.x - c.x, b.pos.y - c.y))[0];
+    const pano = panoForRoom(room, geometry.panos);
     if (pano) {
       const { moveToPano } = await import('./viewer/MatterportHost');
       moveToPano(sdk, pano.id);
@@ -121,8 +123,6 @@ export default function Editor({ sid }: { sid: string }) {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <ShopPanel geometry={geometry} />
-
         <main className="relative flex min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-2 border-b border-line bg-paper px-3 py-2 text-xs">
             <div className="flex overflow-hidden rounded-md border border-line bg-card">
@@ -167,7 +167,7 @@ export default function Editor({ sid }: { sid: string }) {
                 </option>
               ))}
             </select>
-            <span className="ml-auto text-muted">{ready ? (mode === 'arrange' ? 'Drag pieces to move them. Shift + scroll rotates.' : 'Click the floor to walk.') : 'Connecting to Matterport…'}</span>
+            <span className="ml-auto text-muted">{ready ? (locked ? 'Furniture locked · click the floor to walk, drag to look around · click a piece to swap it' : mode === 'arrange' ? 'Walking is off. Drag pieces to move, drag ↻ to rotate.' : 'Click the floor to walk · click a piece to select it, then drag it to move · drag ↻ to rotate') : 'Connecting to Matterport…'}</span>
           </div>
 
           <div className="relative min-h-0 flex-1 bg-paper">
@@ -175,6 +175,8 @@ export default function Editor({ sid }: { sid: string }) {
             <div className={view === '3d' ? 'absolute inset-0' : 'invisible absolute inset-0'}>
               <MatterportHost sid={sid} geometry={geometry} />
               <ArrangeOverlay geometry={geometry} />
+              <SwapCard geometry={geometry} />
+              <TourCover sid={sid} />
             </div>
             {view === 'plan' && geometry && (
               <div className="absolute inset-0 z-10">

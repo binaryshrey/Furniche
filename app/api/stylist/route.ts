@@ -42,9 +42,9 @@ export async function POST(req: Request) {
     const ai = await structured({
       system:
         'You are an interior stylist choosing real products for one room. Pick only product ids from the catalog. ' +
-        'Respect the budget (total of all picks, counting each chair or nightstand separately). Every piece must fit the room: ' +
+        'Respect the budget (total of all picks, counting each chair separately). Every piece must fit the room: ' +
         'width of the largest piece must be at least 0.6 m less than the longest wall. Skip optional roles when the room is small or the budget is tight. ' +
-        'Return one pick per unit (two nightstands means two picks). Do not choose positions; layout is done separately.',
+        'Return one pick per unit (four dining chairs means four picks). Do not choose positions; layout is done separately.',
       user:
         `Shopper request: ${body.prompt}\nRoom: ${room.label}, ${room.widthM.toFixed(2)} x ${room.depthM.toFixed(2)} m, ceiling ${room.heightM?.toFixed(2) ?? 'unknown'} m.\n` +
         `Default budget if none stated: $${budget}.\nRoles to fill:\n${roles.join('\n')}\n\nCatalog:\n${catalog.join('\n')}`,

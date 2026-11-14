@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CATEGORY_LABEL } from '@/catalog/products';
 import { useStore } from '@/lib/store';
 import type { Category, Product, Retailer } from '@/lib/types';
@@ -16,6 +16,17 @@ type Draft = {
   retailer: Retailer;
 };
 
+// Product data handed over by the bookmarklet, via /import (see app/import/page.tsx).
+export const IMPORT_KEY = 'furniche-import';
+export type PagePayload = { url: string; name?: string; price?: string; text?: string; ld?: string[] };
+
+// Runs on the store's page in the shopper's browser, so stores that block servers still work.
+// It reads JSON-LD, the title, a price and any lines that mention dimensions, then opens Furniche.
+function bookmarklet(origin: string): string {
+  const js = `(()=>{const q=s=>document.querySelector(s);const m=p=>q('meta[property="'+p+'"],meta[name="'+p+'"]')?.content||'';const ld=[...document.querySelectorAll('script[type="application/ld+json"]')].map(s=>s.textContent);const price=(q('#corePrice_feature_div .a-offscreen,#corePriceDisplay_desktop_feature_div .a-offscreen,.a-price .a-offscreen,[data-test="product-price"],[itemprop=price]')?.textContent||m('product:price:amount')||'').trim();const lines=document.body.innerText.split('\\n').filter(l=>/dimension|width|depth|height|\\d\\s*("|in|inch|cm)?\\s*[LWDH]?\\s*[x\u00d7]/i.test(l)).slice(0,60).join('\\n');const p={url:location.href,name:(q('#productTitle')?.textContent||m('og:title')||document.title).trim(),price,text:lines.slice(0,8000),ld:ld.map(s=>s.slice(0,100000)).slice(0,10)};window.open('${origin}/import#'+encodeURIComponent(JSON.stringify(p)))})()`;
+  return 'javascript:' + encodeURIComponent(js);
+}
+
 export default function ImportLink() {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState('');
@@ -26,20 +37,44 @@ export default function ImportLink() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const addImported = useStore((s) => s.addImportedProduct);
   const setPending = useStore((s) => s.setPending);
+  const marklet = useRef<HTMLAnchorElement>(null);
 
-  async function run() {
+  // React refuses javascript: hrefs in JSX, so the bookmarklet link is set directly.
+  useEffect(() => {
+    marklet.current?.setAttribute('href', bookmarklet(window.location.origin));
+  });
+
+  // Pick up a product sent by the bookmarklet.
+  useEffect(() => {
+    let payload: PagePayload | null = null;
+    try {
+      payload = JSON.parse(localStorage.getItem(IMPORT_KEY) ?? 'null');
+      localStorage.removeItem(IMPORT_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+    if (payload?.url) {
+      setOpen(true);
+      setUrl(payload.url);
+      run(payload);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function run(page?: PagePayload) {
     setBusy(true);
     setError(null);
     try {
       const res = await fetch('/api/products/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url || undefined, text: text || undefined }),
+        body: JSON.stringify(page ?? { url: url || undefined, text: text || undefined }),
       });
       const json = await res.json();
       if (!res.ok) {
         setError(json.error);
         setBlocked(!!json.blocked);
+        if (json.nameHint && !text) setText(json.nameHint + '\n');
         return;
       }
       setDraft({ ...json.draft, dimsCm: json.draft.dimsCm ?? { w: 0, d: 0, h: 0 } });
@@ -103,18 +138,27 @@ export default function ImportLink() {
       {!draft ? (
         <>
           <input id="imp-url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.ikea.com/us/en/p/…" className="w-full rounded border border-line px-2 py-1.5" />
+          {error && <p className="text-xs text-warn">{error}</p>}
           {blocked && (
-            <textarea
-              id="imp-text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Paste the product name, price and dimensions from the page"
-              className="h-20 w-full rounded border border-line px-2 py-1.5 text-xs"
-            />
+            <>
+              <div className="rounded-md bg-panel p-2 text-[11px] leading-snug text-muted">
+                Drag{' '}
+                <a ref={marklet} onClick={(e) => e.preventDefault()} className="whitespace-nowrap rounded-full bg-ink px-2 py-0.5 font-semibold text-paper" title="Drag me to your bookmarks bar">
+                  + Add to Furniche
+                </a>{' '}
+                to your bookmarks bar once. Then open any product page (Amazon, Wayfair, Target…) and click it.
+              </div>
+              <textarea
+                id="imp-text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="…or paste the product name, price and the “Product Dimensions” line from the page"
+                className="h-20 w-full rounded border border-line px-2 py-1.5 text-xs"
+              />
+            </>
           )}
-          {error && <p className="text-xs text-bad">{error}</p>}
           <div className="flex gap-2">
-            <button disabled={busy || (!url && !text)} onClick={run} className="flex-1 rounded btn-brand px-3 py-1.5  disabled:opacity-40">
+            <button disabled={busy || (!url && !text)} onClick={() => run()} className="flex-1 rounded btn-brand px-3 py-1.5  disabled:opacity-40">
               {busy ? 'Reading the page…' : 'Import'}
             </button>
             <button onClick={() => setOpen(false)} className="rounded border border-line px-3 py-1.5">

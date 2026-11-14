@@ -1,7 +1,24 @@
+'use client';
+import { useState } from 'react';
 import type { Product } from '@/lib/types';
 
-// A material-swatch style tile: the product's top-down footprint at scale, in its colour.
+// The product's own photo when we have one (IKEA's in-room lifestyle shots, or the image an imported page
+// gave us); otherwise a material-swatch tile: its top-down footprint at scale, in its colour.
 export default function ProductSwatch({ product, size = 72 }: { product: Product; size?: number }) {
+  const [broken, setBroken] = useState(false);
+  const photo =
+    product.imageUrl ??
+    (product.retailer === 'ikea' ? `/api/product-image?v=room&id=${encodeURIComponent(product.id)}&name=${encodeURIComponent(product.name)}` : null);
+
+  if (photo && !broken) {
+    return (
+      <div className="relative shrink-0 overflow-hidden rounded-lg bg-panel" style={{ width: size, height: size }} aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photo} alt="" loading="lazy" onError={() => setBroken(true)} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+
   const { w, d } = product.dimsCm;
   const max = Math.max(w, d, 60);
   const pw = Math.max(10, (w / max) * (size - 16));
