@@ -6,7 +6,7 @@ import SearchBar from '@/components/search/SearchBar';
 import { Logo } from '@/components/ui/Brand';
 import { useOnMesh } from '@/lib/coverage';
 import type { Entry } from '@/components/sky/SkyView';
-import { entryUrl } from '@/lib/entrySkip';
+import { getEntry, preloadEntry } from '@/lib/entryCache';
 import { useViewerState } from '@/lib/sceneBridge';
 import type { SearchResult } from '@/lib/search';
 
@@ -98,7 +98,7 @@ export default function SkyPage({ searchParams }: { searchParams: { q?: string; 
     setHover(sid);
     if (sid && !warmed.has(sid)) {
       warmed.add(sid);
-      fetch(entryUrl(sid)).catch(() => {});
+      preloadEntry(sid);
     }
   };
 
@@ -111,10 +111,7 @@ export default function SkyPage({ searchParams }: { searchParams: { q?: string; 
     setSurroundings(null);
     setEntry(null);
     // The 360° photo where the tour opens: the flight ends inside it.
-    fetch(entryUrl(r.sid))
-      .then((x) => (x.ok ? x.json() : null))
-      .then((d) => d?.faces && setEntry({ faces: d.faces, eyeHeight: d.eyeHeight }))
-      .catch(() => {});
+    getEntry(r.sid).then((e) => e && setEntry(e));
     if (r.listingId) {
       fetch(`/api/vexcel/property?listing=${r.listingId}`)
         .then((x) => (x.ok ? x.json() : null))

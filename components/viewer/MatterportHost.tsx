@@ -32,6 +32,7 @@ export async function moveToPano(sdk: any, panoId: string, instant = false, trie
 }
 
 const MAX_REMOUNTS = 2;
+const SDK_WAIT_MS = 12000;
 
 export default function MatterportHost({ sid, geometry }: { sid: string; geometry: ModelGeometry | null }) {
   // A fresh <matterport-viewer> recovers from a failed boot; bumping the key remounts it.
@@ -43,7 +44,7 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
   const geomRef = useRef(geometry);
   geomRef.current = geometry;
 
-  useEffect(() => () => setPartial({ sdk: null, ready: false, currentRoomId: null, showingRoom: false }), [setPartial]);
+  useEffect(() => () => setPartial({ sdk: null, ready: false, currentRoomId: null, showingRoom: false, embedOnly: false }), [setPartial]);
 
   const attemptRef = useRef(0);
   function remount() {
@@ -53,6 +54,20 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
     setPartial({ sdk: null, ready: false, currentRoomId: null, showingRoom: false });
     setAttempt(attemptRef.current);
   }
+
+  // The SDK key only allows certain domains (localhost here). On any other host, if the SDK
+  // hasn't connected after a while, show Matterport's standard embedded tour instead: the home
+  // can still be walked through, and furnishing works in the floor plan.
+  const sdkReady = useViewerState((st) => !!st.sdk);
+  const [embedOnly, setEmbedOnly] = useState(false);
+  useEffect(() => {
+    if (sdkReady || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) return;
+    const t = setTimeout(() => {
+      setEmbedOnly(true);
+      setPartial({ showingRoom: true, embedOnly: true }); // reveal the tour (and let the sky crossfade finish)
+    }, SDK_WAIT_MS);
+    return () => clearTimeout(t);
+  }, [sdkReady, sid, setPartial]);
 
   // A direct page load sometimes ends on Showcase's "model not available" screen while a
   // client-side navigation to the same model works. Watch for that screen and remount.
@@ -171,6 +186,22 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
     const target = showFurnished ? base : defurnish;
     if (target && !target.active) target.setActive().catch(() => {});
   }, [showFurnished]);
+
+  if (embedOnly) {
+    return (
+      <div className="relative h-full w-full">
+        <iframe
+          title="3D tour"
+          src={`https://my.matterport.com/show/?m=${sid}&play=1&qs=1&brand=0&help=0`}
+          allow="fullscreen; xr-spatial-tracking"
+          className="h-full w-full border-0"
+        />
+        <div className="pointer-events-none absolute left-1/2 top-3 z-10 max-w-[90%] -translate-x-1/2 rounded-full bg-paper/90 px-4 py-2 text-center text-xs text-muted backdrop-blur">
+          Live furnishing in 3D runs on localhost for this demo. Walk the home here, and use Floor plan to furnish it.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MatterportViewer

@@ -12,34 +12,34 @@ const FEATURED = { sid: '6dgWVBzerB7', label: '1623 Fawnhope Drive, Houston' };
 const thumb = (sid: string, w = 960) => `https://my.matterport.com/api/v1/player/models/${sid}/thumb?width=${w}`;
 const FIRST_QUERY = 'apartments';
 
-// Listing counts for the hero, and the first search, so the explorer renders with results.
+// The first search, so the explorer renders with results.
 async function load() {
   try {
     const d = JSON.parse(await readFile(path.join(process.cwd(), 'data', 'listings.json'), 'utf8')) as { homes: Listing[]; apartments: Listing[] };
     const filters = parseQuery(FIRST_QUERY);
     const results = search([...d.homes, ...d.apartments], filters);
-    return { count: d.homes.length + d.apartments.length, initial: { q: FIRST_QUERY, summary: describe(filters), total: results.length, results } };
+    return { initial: { q: FIRST_QUERY, summary: describe(filters), total: results.length, results } };
   } catch {
-    return { count: null, initial: { q: FIRST_QUERY, summary: '', total: 0, results: [] } };
+    return { initial: { q: FIRST_QUERY, summary: '', total: 0, results: [] } };
   }
 }
 
 export default async function Home() {
-  const { count, initial } = await load();
+  const { initial } = await load();
 
   return (
     <div className="min-h-screen">
-      <TopNav />
+      <TopNav name="Furniche AI" />
 
       <section className="px-4 pb-10 pt-12 sm:px-6 md:pt-16">
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
-            <span className="block">Discover your new home.</span>
-            <span className="block text-brand">Furnished before you move in.</span>
+        <div className="mx-auto max-w-5xl text-center">
+          <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight md:text-5xl lg:text-6xl">
+            <span className="block">Discover your dream home.</span>
+            {/* One line from tablet width up; phones are too narrow and wrap. */}
+            <span className="block text-brand md:whitespace-nowrap">Fully furnished before you move in.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base font-light leading-relaxed text-muted">
-            {count ? count.toLocaleString() : 'Thousands of'} Houston listings in photoreal 3D. Glide over the city, step inside any empty
-            home, and place real furniture from IKEA, West Elm and more, measured to the centimetre.
+            Explore 3,000+ Houston homes, walk through any of them and let AI furnish every room with artistic furniture and appliances.
           </p>
         </div>
       </section>
@@ -77,7 +77,7 @@ export default async function Home() {
 
       <footer className="mt-20 border-t border-line bg-card">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 text-sm text-muted sm:px-6">
-          <span>© 2026 Furniche · Built at HackPrinceton for the CoStar track with Matterport, Vexcel and CoStar data</span>
+          <span>© 2026 Furniche AI · Built at HackPrinceton for the CoStar track with Matterport, Vexcel and CoStar data</span>
           <span>
             {Object.values(RETAILER_LABEL)
               .filter((r) => r !== 'Other')
