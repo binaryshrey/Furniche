@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { RETAILER_LABEL } from '@/catalog/products';
 import { surfaceLines } from '@/components/design/SurfacesBox';
+import CapitalOneCheckout from '@/components/shop/CapitalOneCheckout';
 import ProductSwatch from '@/components/shop/ProductSwatch';
 import { fmtDims, fmtUsd } from '@/components/shop/ShopPanel';
 import { TopNav } from '@/components/ui/Brand';
@@ -142,6 +143,16 @@ export default function Cart() {
                 {copied ? 'Copied' : 'Copy shopping list'}
               </button>
             </div>
+            <CapitalOneCheckout
+              lines={[
+                ...[...groups.entries()].map(([retailer, rows]) => ({
+                  retailer,
+                  amountUsd: rows.reduce((s, r) => s + r.qty * r.product.priceUsd, 0),
+                  description: `Furniche: ${rows.map((r) => `${r.qty}x ${r.product.name.split(',')[0]}`).join(', ')}`,
+                })),
+                ...(finishTotal > 0 ? [{ retailer: 'other' as Retailer, amountUsd: finishTotal, description: 'Furniche: paint and flooring' }] : []),
+              ]}
+            />
             <p className="mt-3 text-xs text-muted">Furniche doesn&apos;t sell anything. Buy links open each store; prices are a sample and may have changed.</p>
           </>
         )}

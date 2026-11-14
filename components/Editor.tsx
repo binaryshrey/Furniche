@@ -9,6 +9,7 @@ import { useStore } from '@/lib/store';
 import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
+import ChatPanel from './chat/ChatPanel';
 import DesignPanel from './design/DesignPanel';
 import PlanView from './plan/PlanView';
 import { fmtUsd } from './shop/ShopPanel';
@@ -178,6 +179,7 @@ export default function Editor({ sid }: { sid: string }) {
               <SwapCard geometry={geometry} />
               <TourCover sid={sid} />
             </div>
+            <ChatPanel />
             {view === 'plan' && geometry && (
               <div className="absolute inset-0 z-10">
                 <PlanView geometry={geometry} />
