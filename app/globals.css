@@ -2,26 +2,133 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+html {
+  color-scheme: dark;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: #0f0f0f;
+  color: #f7f7f7;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* One sans everywhere; headings are semibold and slightly tight, as on Airbnb. */
+@layer components {
+  .font-display {
+    font-weight: 600;
+    letter-spacing: -0.015em;
   }
+}
+
+.btn-brand {
+  background: linear-gradient(to right, #e61e4d 0%, #e31c5f 50%, #d70466 100%);
+  color: #fff;
+}
+.btn-brand:hover {
+  filter: brightness(1.06);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a3a3a3;
+}
+
+:focus-visible {
+  outline: 2px solid #f7f7f7;
+  outline-offset: 2px;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Search map: price tags with an arrow pointing at the building. */
+.fn-pin-anchor {
+  background: none;
+  border: 0;
+}
+.fn-pin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, calc(-100% - 9px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #0f0f0f;
+  color: #f7f7f7;
+  border: 1px solid rgba(239, 233, 223, 0.25);
+  font: 500 12px/1 var(--font-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.fn-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-bottom: 0;
+  border-top-color: #1b1b1b;
+}
+.fn-pin em {
+  font-style: normal;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #ff385c;
+  color: #fff;
+}
+.fn-pin.is-active {
+  background: #f7f7f7;
+  color: #0f0f0f;
+  transform: translate(-50%, calc(-100% - 9px)) scale(1.12);
+}
+.fn-pin.is-active::after {
+  border-top-color: #f7f7f7;
+}
+.leaflet-container {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+.leaflet-control-attribution {
+  background: rgba(15, 15, 15, 0.7) !important;
+  color: #a3a3a3 !important;
+}
+.leaflet-control-attribution a {
+  color: #f7f7f7 !important;
+}
+/* Hide hairline seams between map tiles on fractional device-pixel ratios. */
+.leaflet-tile-container img.leaflet-tile {
+  width: 256.5px !important;
+  height: 256.5px !important;
 }

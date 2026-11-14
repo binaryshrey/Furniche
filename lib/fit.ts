@@ -1,0 +1,152 @@
+import { convexSeparation, pointInPolygon, rectCorners } from './geometry';
+import type { Category, DoorMark, FitIssue, FitLevel, PlacedItem, Product, Room, Vec2 } from './types';
+
+// Clearances in metres. Sources: common interior design guidance
+// (36 in walkways where possible, 30 in minimum; 18 in sofa to coffee table).
+export const FIT_RULES = {
+  walkwayMin: 0.76,
+  touchingTolerance: 0.05,
+  overlapTolerance: 0.02,
+  companionMin: 0.35, // e.g. sofa to coffee table
+  doorClear: 0.9,
+};
+
+// Rugs lie under furniture; an umbrella canopy hangs over the table and chairs.
+const NO_OVERLAP_CHECK: Category[] = ['rug', 'umbrella'];
+const SEATING: Category[] = ['sofa', 'sectional', 'armchair', 'bench'];
+const LOW_TABLES: Category[] = ['coffee-table', 'side-table'];
+
+// Pairs that are meant to sit close together; walkway rules do not apply between them.
+function companions(a: Category, b: Category): boolean {
+  const pair = (x: Category[], y: Category[]) => (x.includes(a) && y.includes(b)) || (x.includes(b) && y.includes(a));
+  return (
+    pair(SEATING, LOW_TABLES) ||
+    pair(['bed'], ['nightstand']) ||
+    pair(['dining-table', 'round-table', 'patio-table'], ['dining-chair', 'bench', 'patio-chair']) ||
+    pair(['desk'], ['office-chair', 'dining-chair']) ||
+    pair(['side-table'], ['sofa', 'sectional', 'armchair', 'bed', 'floor-lamp']) ||
+    pair(['floor-lamp', 'plant'], [...SEATING, 'bed', 'desk', 'tv-console', 'bookshelf', 'side-table', 'dresser']) ||
+    pair(['dining-chair'], ['dining-chair']) ||
+    pair(['patio-chair'], ['patio-chair'])
+  );
+}
+
+export type FitInput = { item: PlacedItem; product: Product };
+
+export function footprint(item: PlacedItem, product: Product): Vec2[] {
+  return rectCorners({ x: item.pos.x, y: item.pos.y }, product.dimsCm.w / 100, product.dimsCm.d / 100, item.rot);
+}
+
+export function roomAt(p: Vec2, rooms: Room[]): Room | null {
+  return rooms.find((r) => pointInPolygon(p, r.polygon)) ?? null;
+}
+
+const cm = (m: number) => `${Math.round(m * 100)} cm`;
+
+export function checkFit(inputs: FitInput[], rooms: Room[], doors: DoorMark[] = []): FitIssue[] {
+  const issues: FitIssue[] = [];
+  const floorItems = inputs.filter((i) => i.product.placement !== 'wall');
+  const add = (uid: string, level: FitLevel, message: string) => issues.push({ uid, level, message });
+
+  const roomOf = (item: PlacedItem) => (item.roomId && rooms.find((r) => r.id === item.roomId)) || roomAt(item.pos, rooms);
+  for (const { item, product } of inputs) {
+    const room = roomOf(item);
+    if (!room) {
+      if (product.placement !== 'outdoor') add(item.uid, 'error', 'Not inside a room');
+      continue;
+    }
+    const hM = product.dimsCm.h / 100;
+    if (room.heightM && product.placement !== 'wall' && hM > room.heightM) {
+      add(item.uid, 'error', `Taller than the ceiling (${cm(hM)} vs ${cm(room.heightM)})`);
+    }
+    if (product.placement === 'wall') continue;
+
+    const corners = footprint(item, product);
+    const outside = corners.filter((c) => !pointInPolygon(c, room.polygon)).length;
+    if (outside > 0) add(item.uid, 'error', `Crosses a wall of the ${room.label.toLowerCase()}`);
+
+    for (const door of doors.filter((d) => d.roomId === room.id)) {
+      const r = Math.max(door.widthM, FIT_RULES.doorClear);
+      const near = corners.some((c) => Math.hypot(c.x - door.pos.x, c.y - door.pos.y) < r) ||
+        Math.hypot(item.pos.x - door.pos.x, item.pos.y - door.pos.y) < r;
+      if (near) add(item.uid, 'warn', 'Blocks a door you marked');
+    }
+  }
+
+  for (let i = 0; i < floorItems.length; i++) {
+    for (let j = i + 1; j < floorItems.length; j++) {
+      const a = floorItems[i];
+      const b = floorItems[j];
+      if (NO_OVERLAP_CHECK.includes(a.product.category) || NO_OVERLAP_CHECK.includes(b.product.category)) continue;
+      // A wall sits between items in different rooms, so there is no shared walkway to check.
+      if (roomOf(a.item)?.id !== roomOf(b.item)?.id) continue;
+      const sep = convexSeparation(footprint(a.item, a.product), footprint(b.item, b.product));
+      if (sep > FIT_RULES.walkwayMin + 0.5) continue;
+      const comp = companions(a.product.category, b.product.category);
+      if (sep < -FIT_RULES.overlapTolerance) {
+        add(a.item.uid, 'error', `Overlaps ${b.product.name.split(',')[0]}`);
+        add(b.item.uid, 'error', `Overlaps ${a.product.name.split(',')[0]}`);
+      } else if (comp) {
+        const seatTable =
+          (SEATING.includes(a.product.category) && b.product.category === 'coffee-table') ||
+          (SEATING.includes(b.product.category) && a.product.category === 'coffee-table');
+        if (seatTable && sep < FIT_RULES.companionMin) {
+          const msg = `Only ${cm(Math.max(sep, 0))} between seat and coffee table (aim for 35–45 cm)`;
+          add(a.item.uid, 'warn', msg);
+          add(b.item.uid, 'warn', msg);
+        }
+      } else if (sep > FIT_RULES.touchingTolerance && sep < FIT_RULES.walkwayMin) {
+        const msg = `Walkway is ${cm(sep)} (needs ${cm(FIT_RULES.walkwayMin)})`;
+        add(a.item.uid, 'warn', msg);
+        add(b.item.uid, 'warn', msg);
+      }
+    }
+  }
+  return dedupe(issues);
+}
+
+function dedupe(issues: FitIssue[]): FitIssue[] {
+  const seen = new Set<string>();
+  return issues.filter((i) => {
+    const k = i.uid + i.message;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+export function levelFor(uid: string, issues: FitIssue[]): FitLevel {
+  const mine = issues.filter((i) => i.uid === uid);
+  if (mine.some((i) => i.level === 'error')) return 'error';
+  if (mine.some((i) => i.level === 'warn')) return 'warn';
+  return 'ok';
+}
+
+// Whether a product's footprint can fit in a room at all, in either orientation.
+export function productFitsRoom(product: Product, room: Room | null): boolean {
+  if (!room || product.placement === 'wall') return true;
+  const xs = room.polygon.map((p) => p.x);
+  const ys = room.polygon.map((p) => p.y);
+  const W = Math.max(room.widthM || 0, Math.max(...xs) - Math.min(...xs) > 0 ? Math.min(Math.max(...xs) - Math.min(...xs), room.widthM || Infinity) : 0);
+  const D = Math.max(room.depthM || 0, Math.max(...ys) - Math.min(...ys) > 0 ? Math.min(Math.max(...ys) - Math.min(...ys), room.depthM || Infinity) : 0);
+  const w = product.dimsCm.w / 100;
+  const d = product.dimsCm.d / 100;
+  const tallOk = !room.heightM || product.dimsCm.h / 100 <= room.heightM;
+  return tallOk && ((w <= W && d <= D) || (w <= D && d <= W));
+}
+
+// Outdoor planner: the parcel acts as the room, and building footprints are obstacles.
+export function checkOutdoor(inputs: FitInput[], parcel: Vec2[], buildings: Vec2[][]): FitIssue[] {
+  const yard: Room = { id: 'parcel', label: 'Lot', floorId: '', polygon: parcel, areaM2: 0, widthM: 0, depthM: 0, heightM: null, floorZ: 0 };
+  const issues = checkFit(
+    inputs.map((i) => ({ ...i, item: { ...i.item, roomId: 'parcel' } })),
+    [yard],
+  ).map((i) => (i.message.startsWith('Crosses a wall') ? { ...i, message: 'Crosses the property line' } : i));
+  for (const { item, product } of inputs) {
+    if (product.category === 'umbrella') continue;
+    const fp = footprint(item, product);
+    const onHouse = buildings.some((b) => fp.some((c) => pointInPolygon(c, b)) || b.some((c) => pointInPolygon(c, fp)) || pointInPolygon(item.pos, b));
+    if (onHouse) issues.push({ uid: item.uid, level: 'error', message: 'Sits on a building' });
+  }
+  return dedupe(issues);
+}

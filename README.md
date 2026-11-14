@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Furniche
 
-## Getting Started
+Furnish a real Houston listing before you move in. Open the home's Matterport scan in its
+empty-room view, shop furniture from IKEA, Amazon, West Elm, Wayfair and Target, and drop each
+piece into the room at its true size. Furniche checks the fit, styles a room for you, prices
+paint and flooring, and plans the yard on a Vexcel aerial image.
 
-First, run the development server:
+Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built World" track.
+
+## What it does
+
+- **Search in plain words.** Type "3 bed apartments under $2,000" or "studio in Montrose under
+  $1,500". Matches appear as price tags on a Vexcel aerial map with a carousel of every result;
+  click one to walk into its scan. Neighbourhood names become a radius search.
+- **Float over the 3D city.** Vexcel's 3D mesh of Houston streams into the browser with every
+  match floating above its building. Drag, tilt and zoom, or fly with W A S D and Q/E; hover a
+  card to glide to that home and click a pin to walk inside.
+- **Furnish the real room.** The scan opens in Matterport's defurnished view. Drag a product
+  from the shop onto the floor; it lands at its catalogue size. Drag to move, `R` rotate,
+  `D` duplicate, `Delete` remove.
+- **Fit check.** Every piece is checked against the room outline from the Matterport Model API:
+  crossing a wall, overlapping, taller than the ceiling, blocking a door you marked, and
+  walkways under 76 cm. Seat–table pairs (sofa and coffee table, bed and nightstand) get their
+  own spacing rule.
+- **Floor plan.** A to-scale plan from the scan's wall graph, with the same drag and fit check.
+- **AI stylist.** Describe a look and budget ("warm japandi under $3,000"). Claude only picks
+  products; a deterministic solver places them against the room's walls and drops optional
+  pieces that would break the fit check. Without an API key a rule-based picker is used.
+- **Paste a link.** Paste a product page; Furniche reads its structured data for name, price and
+  size (including fractional inches). It never guesses a size: if none is on the page, you
+  enter it.
+- **Walls and floor.** Paint, wallpaper and flooring per room, with gallons (2 coats,
+  350 sq ft per gallon, 15% for openings) and flooring area (+10% waste).
+- **Mood boards.** Six themes with palettes, finishes and matching products.
+- **Plan the yard.** For homes, the Vexcel aerial image is shown to scale with the parcel line
+  and building footprints. Place patio furniture and see lot, paved, deck, pool and tree-cover
+  figures. Pieces off the lot or on a building turn red.
+- **Cart and sharing.** One shopping list grouped by store with buy links, and a share link
+  that carries the whole design in the URL.
+
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install --legacy-peer-deps
+cp .env.example .env.local          # fill in the keys
+python3 scripts/build_listings.py   # builds data/listings.json (Houston; --region la for LA)
+npm run dev                          # http://localhost:3000
+npm test
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the app at `http://localhost:3000` (not `127.0.0.1`): the Matterport SDK key is limited to
+localhost.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The CoStar kit and the generated `data/listings.json` are not in this repo; they come from
+the hackathon organisers.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How it works
 
-## Learn More
+- Next.js 14 (App Router), React 18, TypeScript, Tailwind, zustand.
+- `@matterport/webcomponent` + `@matterport/r3f` host the scan; furniture is rendered with
+  three.js inside Matterport's scene. Stand-in shapes are built at each product's exact size.
+- `lib/matterport.ts` reads rooms, walls and panos from the Matterport Model API (GraphQL).
+- `lib/vexcel.ts` reads the parcel and buildings from Vexcel's property API and frames the
+  ortho image on the same centre, so the overlay lines up. Ortho map tiles and the 3D Tiles
+  city mesh go through server routes so the API key never reaches the browser.
+- `/sky` renders the 3D city with `3d-tiles-renderer` on three.js. The Draco and KTX2 decoders
+  in `public/decoders/` are copied from three.js. Vexcel's 3D collection covers Houston only.
+- `lib/search.ts` turns plain-language queries into filters (rules, plus Claude when a key is
+  set); the search map uses Leaflet with Vexcel tiles.
+- `lib/fit.ts` (separating-axis tests on footprints) and `lib/solver.ts` are pure functions
+  with unit tests.
+- Designs are saved in the browser; there are no accounts and nothing is sold.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The product catalogue is a curated sample; prices and sizes were checked on the date shown in
+the cart and may have changed.

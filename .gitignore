@@ -34,3 +34,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Furniche
+.env*
+!.env.example
+data/
+public/matterport-assets/
+costar-hackathon-kit/
+matterport_kit/
