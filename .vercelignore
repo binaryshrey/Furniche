@@ -1,0 +1,13 @@
+# Used by `vercel deploy` instead of .gitignore. Unlike GitHub, the deployment includes data/
+# (listings built from the CoStar kit) and the Matterport viewer assets, which the app needs.
+node_modules
+.next
+.cache
+.vercel
+.env*
+!.env.example
+costar-hackathon-kit
+matterport_kit
+coverage
+*.tsbuildinfo
+.DS_Store
