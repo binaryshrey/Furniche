@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Entry } from '@/components/sky/SkyView';
-import { entryUrl } from '@/lib/entrySkip';
+import { getEntry, preloadEntry } from '@/lib/entryCache';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useOnMesh } from '@/lib/coverage';
 import type { SearchResult } from '@/lib/search';
@@ -177,7 +177,7 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
   const warm = (sid: string | null) => {
     if (!sid || warmed.current.has(sid)) return;
     warmed.current.add(sid);
-    fetch(entryUrl(sid)).catch(() => {});
+    preloadEntry(sid);
   };
   const hoverCard = (sid: string | null) => {
     setHover(sid);
@@ -211,10 +211,7 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
     document.documentElement.style.overflow = 'hidden';
     setEntry(null);
     // The 360° photo where the tour opens: the flight ends inside it.
-    fetch(entryUrl(r.sid))
-      .then((x) => (x.ok ? x.json() : null))
-      .then((d) => d?.faces && setEntry({ faces: d.faces, eyeHeight: d.eyeHeight }))
-      .catch(() => {});
+    getEntry(r.sid).then((e) => e && setEntry(e));
     setHover(r.sid);
     setDescended(false);
     setFading(false);
@@ -269,19 +266,13 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
           aria-live="polite"
         >
           <div className="w-[min(420px,calc(100vw-32px))] text-center">
-            <div className="font-display text-2xl">Loading 3D Houston</div>
-            <p className="mt-2 text-sm text-muted">
-              {!city.total
-                ? 'Finding every building in the city…'
-                : city.done < city.total
-                  ? `Bringing the whole city onto your device · ${city.done.toLocaleString()} of ${city.total.toLocaleString()} pieces`
-                  : 'Sharpening the view to full photo detail…'}
-            </p>
+            <div className="font-display text-3xl font-bold tracking-tight">Furniche AI</div>
+            <p className="mt-2 text-sm text-muted">Finding your dream home…</p>
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-line">
               <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${city.done < city.total || !city.total ? pct * 0.95 : city.sharp ? 100 : 97}%` }} />
             </div>
             <div className="mt-2 text-xs text-muted">
-              {city.done < city.total || !city.total ? `${pct}%` : 'Almost there'} · about 30 seconds the first time, a few seconds after that
+              {city.done < city.total || !city.total ? `${pct}%` : 'Almost there'}
             </div>
             {patience && (
               <button onClick={() => setReady(true)} className="mt-6 text-sm font-semibold underline underline-offset-4">

@@ -1,4 +1,6 @@
 import 'server-only';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { chainPolygon, polygonArea } from './geometry';
 import type { Floor, ModelGeometry, Pano, Room, Vec2, Wall } from './types';
 
@@ -48,6 +50,16 @@ const TTL_MS = 10 * 60 * 1000;
 export async function getModelGeometry(sid: string): Promise<ModelGeometry> {
   const hit = cache.get(sid);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
+  // Every listing's floor plan ships with the app (scripts/build_geometry.py), so this is
+  // normally a local read; the Model API is only the fallback for models not in the index.
+  if (/^[A-Za-z0-9]{6,20}$/.test(sid)) {
+    const shipped = await readFile(path.join(process.cwd(), 'data', 'geometry', `${sid}.json`), 'utf8').catch(() => null);
+    if (shipped) {
+      const data = JSON.parse(shipped) as ModelGeometry;
+      cache.set(sid, { at: Date.now(), data });
+      return data;
+    }
+  }
 
   const data = await gql<{ model: any }>(GEOMETRY_QUERY, { id: sid });
   const m = data.model;

@@ -9,6 +9,7 @@ import { useStore } from '@/lib/store';
 import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
+import ChatPanel from './chat/ChatPanel';
 import DesignPanel from './design/DesignPanel';
 import PlanView from './plan/PlanView';
 import { fmtUsd } from './shop/ShopPanel';
@@ -31,7 +32,7 @@ export default function Editor({ sid }: { sid: string }) {
   const setMode = useStore((s) => s.setMode);
   const showFurnished = useStore((s) => s.showFurnished);
   const setShowFurnished = useStore((s) => s.setShowFurnished);
-  const { sdk, ready, hasDefurnish, currentRoomId } = useViewerState();
+  const { sdk, ready, hasDefurnish, currentRoomId, embedOnly } = useViewerState();
   const locked = useStore((s) => !!(s.activeSid && s.designs[s.activeSid]?.locked));
 
   useEffect(() => {
@@ -167,7 +168,7 @@ export default function Editor({ sid }: { sid: string }) {
                 </option>
               ))}
             </select>
-            <span className="ml-auto text-muted">{ready ? (locked ? 'Furniture locked · click the floor to walk, drag to look around · click a piece to swap it' : mode === 'arrange' ? 'Walking is off. Drag pieces to move, drag ↻ to rotate.' : 'Click the floor to walk · click a piece to select it, then drag it to move · drag ↻ to rotate') : 'Connecting to Matterport…'}</span>
+            <span className="ml-auto text-muted">{ready ? (locked ? 'Furniture locked · click the floor to walk, drag to look around · click a piece to swap it' : mode === 'arrange' ? 'Walking is off. Drag pieces to move, drag ↻ to rotate.' : 'Click the floor to walk · click a piece to select it, then drag it to move · drag ↻ to rotate') : embedOnly ? 'Walk-through tour · switch to Floor plan to furnish' : 'Connecting to Matterport…'}</span>
           </div>
 
           <div className="relative min-h-0 flex-1 bg-paper">
@@ -178,6 +179,7 @@ export default function Editor({ sid }: { sid: string }) {
               <SwapCard geometry={geometry} />
               <TourCover sid={sid} />
             </div>
+            <ChatPanel />
             {view === 'plan' && geometry && (
               <div className="absolute inset-0 z-10">
                 <PlanView geometry={geometry} />

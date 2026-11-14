@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { create } from 'zustand';
+import { useLighting, warmthColor } from '@/lib/lighting';
 import { groundY, useViewerState } from '@/lib/sceneBridge';
 import type { ModelGeometry } from '@/lib/types';
 
@@ -56,6 +57,8 @@ export default function RoomLighting({ geometry }: { geometry: ModelGeometry | n
   const roomId = useViewerState((s) => s.currentRoomId);
   const { env, light, set } = useRoomEnv();
   const sun = useRef<THREE.DirectionalLight>(null);
+  const brightness = useLighting((s) => s.brightness);
+  const tint = warmthColor(useLighting((s) => s.warmth));
 
   // Soft shadow maps on the shared renderer; only our light casts, so Matterport is unaffected.
   useEffect(() => {
@@ -131,12 +134,14 @@ export default function RoomLighting({ geometry }: { geometry: ModelGeometry | n
 
   return (
     <>
-      {/* With the room's own light available, keep the fill low so pieces aren't flat. */}
-      <ambientLight intensity={env ? 0.15 : 0.9} />
-      <hemisphereLight args={['#fffaf0', '#8a7f72', env ? 0.25 : 0.5]} />
+      {/* With the room's own light available, keep the fill low so pieces aren't flat.
+          brightness and warmth come from the chat (lib/lighting.ts). */}
+      <ambientLight intensity={(env ? 0.15 : 0.9) * brightness} color={tint} />
+      <hemisphereLight args={[tint, '#8a7f72', (env ? 0.25 : 0.5) * brightness]} />
       <directionalLight
         ref={sun}
-        intensity={env ? 0.9 : 1.1}
+        color={tint}
+        intensity={(env ? 0.9 : 1.1) * brightness}
         castShadow
         shadow-mapSize={[1024, 1024]} // lower resolution reads as softer, more natural edges
         shadow-bias={-0.0004}

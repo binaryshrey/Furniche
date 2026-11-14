@@ -35,6 +35,19 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
 - **Plan the yard.** For homes, the Vexcel aerial image is shown to scale with the parcel line
   and building footprints. Place patio furniture and see lot, paved, deck, pool and tree-cover
   figures. Pieces off the lot or on a building turn red.
+- **Ask Furniche (chat).** A chat in the editor that knows the open home and design. Ask about
+  any piece, price, look or light, or tell it what to change: add, remove or swap furniture,
+  "make this room feel bigger" (re-lays the room for the most open floor, or swaps in smaller
+  pieces of the same style), paint and flooring, and warmer or brighter light in the 3D view.
+  Runs on Claude with tools; without `ANTHROPIC_API_KEY` common commands still work by keyword.
+- **Move-in budget (Capital One Nessie).** Reads the mover's checking, savings and card, bills and
+  paychecks from the Nessie sandbox and shows what is safe to spend without missing rent (bills
+  and a $500 cushion kept back, 40% of savings, card kept under 30% use). The chat answers
+  "what can I afford?", and the cart shows a pay-now / pay-later plan and pays each store as a
+  Nessie purchase. Without `NESSIE_API_KEY` the same numbers come from demo data.
+- **Text it on iMessage (Photon).** With `PHOTON_PROJECT_ID` and `PHOTON_API_KEY` set, the same
+  assistant answers iMessages to your Photon line while the editor is open, and edits sent by
+  text update the 3D room live. Messages are polled, so no public webhook URL is needed.
 - **Cart and sharing.** One shopping list grouped by store with buy links, and a share link
   that carries the whole design in the URL.
 
@@ -43,6 +56,7 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
 ```bash
 npm install --legacy-peer-deps
 cp .env.example .env.local          # fill in the keys
+npx matterport-assets public/matterport-assets   # Matterport viewer files (not in git)
 python3 scripts/build_listings.py   # builds data/listings.json (Houston; --region la for LA)
 npm run dev                          # http://localhost:3000
 npm test
