@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Listing, Vec2 } from './types';
+import { cacheDir } from '@/lib/cacheDir';
 
 const BASE = 'https://api.vexcelgroup.com/v2';
 
@@ -132,7 +133,7 @@ const TILE_3D_PARAMS = new Set(['zoom', 'tile-x', 'tile-y', 'childAOI', 'collect
 
 // The 3D collection is fixed, so every tileset and mesh is cached on disk forever: the first
 // visit pays Vexcel's ~200 ms per request, later visits read from .cache/tiles3d.
-const TILES_3D_CACHE = path.join(process.cwd(), '.cache', 'tiles3d');
+const TILES_3D_CACHE = cacheDir('tiles3d');
 
 export async function get3d(kind: 'tileset' | 'tile', params: URLSearchParams): Promise<Buffer | null> {
   const q = new URLSearchParams();

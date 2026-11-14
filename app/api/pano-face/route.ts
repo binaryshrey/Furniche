@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { cacheDir } from '@/lib/cacheDir';
 
 // Same-origin copy of a Matterport panorama face for WebGL textures. Only Matterport's CDN is
 // allowed; files are cached on disk by their path (the query string is a signature that expires).
-const CACHE = path.join(process.cwd(), '.cache', 'panos');
+const CACHE = cacheDir('panos');
 
 export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get('u') ?? '';

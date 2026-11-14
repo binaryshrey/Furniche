@@ -1,12 +1,13 @@
 import 'server-only';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { cacheDir } from '@/lib/cacheDir';
 
 // IKEA publishes a real-scale, textured GLB (Draco) for many products, linked from the product
 // page (web-api.ikea.com/dimma/assets/...). We find the page, read that link, download the file
 // once and cache it on disk. Reuse is agreed with IKEA for this project.
 
-const CACHE = path.join(process.cwd(), '.cache', 'models');
+const CACHE = cacheDir('models');
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 const PRODUCT_PAGE = /^https:\/\/www\.ikea\.com\/[a-z]{2}\/[a-z]{2}\/p\/[a-z0-9-]+\/?$/i;
 const GLB_LINK = /https:\/\/web-api\.ikea\.com\/dimma\/assets\/[^"'\\\s]+\.glb(?:\?[^"'\\\s]*)?/;
@@ -61,7 +62,7 @@ export async function ikeaModel(id: string, url: string, name: string): Promise<
 // A photo of the product for thumbnails: IKEA's lifestyle shot (the piece styled in a real,
 // lit room, so fabric, wood grain and sheen read like a photograph), else its studio cut-out.
 // Cached on disk like the models; `null` (also cached) when IKEA has no match.
-const IMAGES = path.join(process.cwd(), '.cache', 'images-room');
+const IMAGES = cacheDir('images-room');
 export async function ikeaImage(id: string, name: string): Promise<Buffer | null> {
   const file = path.join(IMAGES, `${id}.jpg`);
   const miss = path.join(IMAGES, `${id}.none`);
