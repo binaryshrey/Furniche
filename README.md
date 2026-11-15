@@ -29,6 +29,14 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
 - **Paste a link.** Paste a product page; Furniche reads its structured data for name, price and
   size (including fractional inches). It never guesses a size: if none is on the page, you
   enter it.
+- **Photo to 3D.** Take or upload a photo of any piece (your own armchair, one you saw in a
+  shop) and it becomes a textured 3D model with real depth, ready to drag into the scan, for
+  free. Quick builds one in a few seconds; Max detail takes about a minute for finer shape and
+  textures. A piece photographed at an angle is squared up automatically; turn it until its
+  front faces the arrow. Type one real measurement and the rest follow the model's shape, so it
+  is never stretched (Claude estimates the size when a key is set). It gets the same fit check
+  as store products. The free GPUs allow a few models a day, and every model is kept, so build
+  your demo pieces ahead of time.
 - **Walls and floor.** Paint, wallpaper and flooring per room, with gallons (2 coats,
   350 sq ft per gallon, 15% for openings) and flooring area (+10% waste).
 - **Mood boards.** Six themes with palettes, finishes and matching products.
@@ -59,6 +67,9 @@ cp .env.example .env.local          # fill in the keys
 npx matterport-assets public/matterport-assets   # Matterport viewer files (not in git)
 python3 scripts/build_listings.py   # builds data/listings.json (Houston; --region la for LA)
 python3 scripts/build_ikea_catalog.py   # refreshes catalog/ikea-catalog.json from IKEA's search (optional)
+# No matterport_kit/models_index.csv? Build one from the Model API, then point the script at it:
+#   node scripts/build_model_index.mjs --kit <kit>
+#   python3 scripts/build_listings.py --kit <kit> --index data/models_index.csv
 npm run dev                          # http://localhost:3000
 npm test
 ```
@@ -84,6 +95,31 @@ the hackathon organisers.
   set); the search map uses Leaflet with Vexcel tiles.
 - `lib/fit.ts` (separating-axis tests on footprints) and `lib/solver.ts` are pure functions
   with unit tests.
+- Photo to 3D (`lib/photo3d.ts`, `/api/photo3d`) runs free on Hugging Face's shared GPUs
+  (ZeroGPU Spaces), called with `@gradio/client`. The TRELLIS Space cuts the piece out on its
+  CPU (no GPU allowance used); then one GPU run builds the model: Stability AI's Stable Fast 3D
+  for Quick (2048 px texture), Microsoft's TRELLIS for Max detail. Hugging Face meters free use
+  per day: a free account (`HF_TOKEN`, optional) gets about 3 runs and 5 minutes of reserved GPU
+  time, so about 3 Quick or 1 Max detail models; without a token, less. Progress streams to the
+  page as it happens, and the cut-out and the model come with it: the browser keeps them
+  (IndexedDB, `lib/photoAssets.ts`), so placed pieces load after a reload, on Vercel too, where
+  functions share no disk. The server also caches models by the photo's hash in `.cache/photo3d`
+  (in `/tmp` on Vercel, per instance). A photo is only built once per browser: build the demo
+  pieces ahead of time, in the browser you'll demo from, and they load instantly on stage. iPhone
+  (HEIC) photos are converted on the server with libheif in WebAssembly (`lib/heic.ts`), so that
+  works on Vercel as well. Photo pieces are never picked by Auto-furnish, the stylist or swaps,
+  and they appear in the cart without a store link.
+  It can also run with no daily limits: on this computer with PyTorch (`bash
+  scripts/photo3d_local_setup.sh`, then `.cache/photo3d-local/venv/bin/python scripts/photo3d_local.py`
+  and `PHOTO3D_GPU_URL=http://127.0.0.1:8765`), where TripoSR builds the shape on the Mac's GPU and the
+  photo itself paints the side the camera saw; or on a free Kaggle or Colab GPU with
+  `scripts/photo3d_gpu.ipynb` (Hunyuan3D-2). The live site can use the server on this computer
+  too: Vercel can't reach it, but the browser can (`lib/photoDirect.ts`). Open
+  http://127.0.0.1:8765/connect once and allow the site to reach this computer if Chrome asks
+  (`/connect-gpu` shows the state and turns it off). On this computer a build needs about 5 GB of memory,
+  which the server gives back when it's done; on an 8 GB Mac, close other apps first, or the build
+  crawls while macOS swaps (the app waits up to 8 minutes). While a model builds, the piece can
+  already go in the room as its cut-out, and it turns 3D by itself when the model arrives.
 - Designs are saved in the browser; there are no accounts and nothing is sold.
 
 The product catalogue is a curated sample; prices and sizes were checked on the date shown in

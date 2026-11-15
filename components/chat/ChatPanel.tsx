@@ -4,6 +4,7 @@ import { CategoryCarousel, CategoryGrid, FURNITURE_GROUPS } from '@/components/a
 import WallsFloorTab from '@/components/assistant/WallsFloorTab';
 import { surfaceLines } from '@/components/design/SurfacesBox';
 import MyDesignTab from '@/components/assistant/MyDesignTab';
+import PhotoTo3D from '@/components/photo/PhotoTo3D';
 import { fmtUsd } from '@/components/shop/ShopPanel';
 import type { WorkDesign } from '@/lib/designOps';
 import { useLighting, type LightPrefs } from '@/lib/lighting';
@@ -29,11 +30,12 @@ type Msg = {
   before?: Before | null;
   undone?: boolean;
 };
-type Tab = 'chat' | 'furniture' | 'finishes' | 'design';
+type Tab = 'chat' | 'furniture' | 'photo' | 'finishes' | 'design';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'chat', label: 'Chat', icon: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' },
   { id: 'furniture', label: 'Furniture', icon: 'M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3M3 12h18v4H3zM5 16v2M19 16v2' },
+  { id: 'photo', label: 'Photo to 3D', icon: 'M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z' },
   { id: 'finishes', label: 'Walls & floor', icon: 'M4 4h12v5H4zM16 6.5h3v5h-7v3M11 14.5h2v6h-2z' },
   { id: 'design', label: 'My design', icon: 'M4 6h16M4 12h16M4 18h10' },
 ];
@@ -381,6 +383,11 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
                   ))}
                 </div>
               ))}
+
+            {/* Kept mounted so a build in progress, or a finished preview, survives switching tabs. */}
+            <div className={tab === 'photo' ? '' : 'hidden'}>
+              <PhotoTo3D room={room} geometry={geometry} onAdded={added} />
+            </div>
 
             {tab === 'finishes' && <WallsFloorTab geometry={geometry} room={room} />}
 

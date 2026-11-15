@@ -42,7 +42,8 @@ type State = {
   setSurface: (s: Omit<SurfaceChoice, 'uid'>) => void;
   removeSurface: (uid: string) => void;
   setTheme: (t: ThemeId | null) => void;
-  addImportedProduct: (p: Product) => void;
+  addImportedProduct: (p: Product) => void; // adds, or replaces the product with the same id
+  removeImportedProduct: (id: string) => void; // and every placed copy of it
 
   select: (uid: string | null) => void;
   setPending: (productId: string | null) => void;
@@ -120,7 +121,25 @@ export const useStore = create<State>()(
           }),
         removeSurface: (id) => update((d) => ({ ...d, surfaces: d.surfaces.filter((x) => x.uid !== id) })),
         setTheme: (t) => update((d) => ({ ...d, themeId: t })),
-        addImportedProduct: (p) => set({ importedProducts: [...get().importedProducts.filter((x) => x.id !== p.id), p] }),
+        addImportedProduct: (p) => {
+          const list = get().importedProducts;
+          set({ importedProducts: list.some((x) => x.id === p.id) ? list.map((x) => (x.id === p.id ? p : x)) : [...list, p] });
+        },
+        removeImportedProduct: (id) => {
+          const { designs, selectedUid, pendingProductId } = get();
+          const gone = Object.values(designs).some((d) => d.items.some((i) => i.uid === selectedUid && i.productId === id));
+          set({
+            importedProducts: get().importedProducts.filter((p) => p.id !== id),
+            designs: Object.fromEntries(
+              Object.entries(designs).map(([sid, d]) => [
+                sid,
+                d.items.some((i) => i.productId === id) ? { ...d, items: d.items.filter((i) => i.productId !== id), updatedAt: new Date().toISOString() } : d,
+              ]),
+            ),
+            selectedUid: gone ? null : selectedUid,
+            pendingProductId: pendingProductId === id ? null : pendingProductId,
+          });
+        },
 
         select: (id) => set({ selectedUid: id }),
         // Picking a product no longer switches modes: furniture can be grabbed in any mode, and

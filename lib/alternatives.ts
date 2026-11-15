@@ -53,7 +53,8 @@ export function alternatives(opts: {
   const room = rooms.find((r) => r.id === item.roomId);
 
   const tried = products
-    .filter((p) => p.id !== current.id && family.includes(p.category) && p.placement === current.placement)
+    // Pieces made from the shopper's photos can't be bought, so they are never offered as swaps.
+    .filter((p) => p.id !== current.id && p.source !== 'photo' && family.includes(p.category) && p.placement === current.placement)
     .filter((p) => !room?.heightM || p.dimsCm.h / 100 < room.heightM)
     .map((p) => {
       const placed = swapped(item, current, p);
