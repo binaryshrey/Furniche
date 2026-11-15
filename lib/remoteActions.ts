@@ -1,7 +1,7 @@
 'use client';
 import * as THREE from 'three';
 import { toThree } from './coords';
-import { pointInPolygon } from './geometry';
+import { minDistToBoundary, pointInPolygon } from './geometry';
 import { bridge } from './sceneBridge';
 import type { ModelGeometry } from './types';
 
@@ -27,6 +27,9 @@ let vSign = 0;
 let pending = { dx: 0, dy: 0 };
 let turning = false;
 export async function look(sdk: Sdk, dx: number, dy: number) {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+  dx = Math.max(-90, Math.min(90, dx));
+  dy = Math.max(-45, Math.min(45, dy));
   pending = { dx: pending.dx + dx, dy: pending.dy + dy };
   if (turning || !sdk) return;
   turning = true;
@@ -34,6 +37,7 @@ export async function look(sdk: Sdk, dx: number, dy: number) {
     while (Math.abs(pending.dx) > 0.2 || Math.abs(pending.dy) > 0.2) {
       const step = pending;
       pending = { dx: 0, dy: 0 };
+      if (!Number.isFinite(step.dx) || !Number.isFinite(step.dy)) continue; // never rotate by NaN
       const before = forward();
       const sh = hSign || 1;
       const sv = vSign || 1;
@@ -81,10 +85,28 @@ function watch(sdk: Sdk) {
   });
   sdk.Sweep.current.subscribe((sw: { sid?: string }) => {
     if (sw?.sid) currentSweep = bare(sw.sid); // empty mid-transition; keep the last real one
+    transitStart = sw?.sid ? 0 : transitStart || Date.now();
+  });
+  sdk.Camera.pose.subscribe((p: { position?: { x: number; y: number; z: number } }) => {
+    const q = p?.position;
+    cameraLost = !!q && ![q.x, q.y, q.z].every((v) => typeof v === 'number' && Number.isFinite(v));
   });
 }
+// Showcase can leave the camera at NaN after a failed transition: that renders black.
+let cameraLost = false;
 
-const OUTSIDE = /patio|deck|porch|balcony|yard|garden|exterior|outdoor|terrace|driveway|roof/i;
+const OUTSIDE = /patio|deck|porch|balcony|yard|garden|exterior|outdoor|terrace|driveway|roof|garage/i;
+
+// Viewpoints that turned out to show a black screen; never go there again this session.
+const dark = new Set<string>();
+
+// Signs Showcase is showing a black frame, without asking it for a screenshot (its screenshot
+// call resizes the camera and can itself leave it at NaN): the camera position is NaN, or a move
+// has been in flight (no current sweep) for too long.
+let transitStart = 0;
+function looksBlack(): boolean {
+  return cameraLost || (transitStart > 0 && Date.now() - transitStart > 8000);
+}
 
 // A viewpoint you may be taken to: enabled, aligned, and standing inside one of the home's rooms.
 export function isInside(id: string, geometry: ModelGeometry): boolean {
@@ -93,28 +115,87 @@ export function isInside(id: string, geometry: ModelGeometry): boolean {
   // no imagery in this view (moving there shows black), so it doesn't count.
   if (!info && Object.keys(sweeps).length) return false;
   if (info && (info.enabled === false || (info.alignmentType && info.alignmentType !== 'aligned'))) return false;
+  if (dark.has(id)) return false;
   const pano = geometry.panos.find((p) => p.id === id);
   if (!pano) return false;
-  return geometry.rooms.some((r) => !OUTSIDE.test(r.label) && pointInPolygon(pano.pos, r.polygon));
+  // Inside a room on the viewpoint's own floor (an outdoor viewpoint can sit under an upstairs
+  // room's outline), and not hugging the outline, where viewpoints peer out through doors.
+  return geometry.rooms.some(
+    (r) =>
+      !OUTSIDE.test(r.label) &&
+      (pano.floorId ? pano.floorId === r.floorId : pano.pos.z > r.floorZ && pano.pos.z < r.floorZ + 2.6) &&
+      pointInPolygon(pano.pos, r.polygon) &&
+      minDistToBoundary([pano.pos], r.polygon) > 0.2,
+  );
 }
 
 // While the phone drives the tour, never leave the building: if the camera lands on a viewpoint
 // outside (where the scan turns black), fly back to the last one inside.
-export function guardInside(sdk: Sdk, geometry: ModelGeometry | null, moveToPano: (sdk: Sdk, id: string) => Promise<boolean>): () => void {
+export function guardInside(sdk: Sdk, geometry: ModelGeometry | null, moveToPano: (sdk: Sdk, id: string) => Promise<boolean>, strict = true): () => void {
   if (!sdk || !geometry) return () => {};
   watch(sdk);
   let lastInside: string | null = null;
   let returning = false;
-  const sub = sdk.Sweep.current.subscribe(async (sw: { sid?: string }) => {
-    if (!sw?.sid || returning) return;
-    const id = bare(sw.sid);
-    if (isInside(id, geometry)) return void (lastInside = id);
-    if (!lastInside) return;
+  let check: ReturnType<typeof setTimeout> | undefined;
+  const goBack = async () => {
+    if (!lastInside || returning) return;
     returning = true;
     await moveToPano(sdk, lastInside).catch(() => false);
     returning = false;
+  };
+  const sub = sdk.Sweep.current.subscribe(async (sw: { sid?: string }) => {
+    clearTimeout(check);
+    if (!sw?.sid || returning) return;
+    const id = bare(sw.sid);
+    if (strict && !isInside(id, geometry)) return void goBack();
+    // Inside by the plan; make sure the camera is sound once the move has settled.
+    check = setTimeout(() => {
+      if (returning) return;
+      if (looksBlack()) {
+        dark.add(id);
+        if (lastInside && lastInside !== id) return void goBack();
+      } else lastInside = id;
+    }, 1400);
   });
-  return () => sub?.cancel?.();
+  // Watchdog: a black frame can also appear without a viewpoint change (a transition that
+  // failed half way). Two black readings in a row: fly to the last good viewpoint, or failing
+  // that the nearest viewpoint inside the building.
+  let blackRuns = 0;
+  let rescues = 0;
+  const dog = setInterval(async () => {
+    if (returning || document.hidden) return;
+    if (!looksBlack()) {
+      blackRuns = 0;
+      rescues = 0;
+      if (currentSweep && isInside(currentSweep, geometry)) lastInside = currentSweep;
+      return;
+    }
+    if (++blackRuns < 2) return;
+    blackRuns = 0;
+    if (currentSweep) dark.add(currentSweep);
+    let target = lastInside && lastInside !== currentSweep ? lastInside : null;
+    if (!target) {
+      const here = geometry.panos.find((p) => p.id === currentSweep);
+      const cands = geometry.panos.filter((p) => p.id !== currentSweep && isInside(p.id, geometry));
+      if (here) cands.sort((a, b) => Math.hypot(a.pos.x - here.pos.x, a.pos.y - here.pos.y) - Math.hypot(b.pos.x - here.pos.x, b.pos.y - here.pos.y));
+      target = cands[0]?.id ?? null;
+    }
+    // A fly-back already failed to fix it: Showcase itself is stuck, so start a fresh viewer.
+    if (!target || ++rescues > 1) {
+      rescues = 0;
+      window.dispatchEvent(new Event('fn-viewer-reset'));
+      return;
+    }
+    returning = true;
+    // A move into a stuck Showcase may never settle: give up waiting after a few seconds.
+    await Promise.race([moveToPano(sdk, target).catch(() => false), wait(6000)]);
+    returning = false;
+  }, 2500);
+  return () => {
+    clearTimeout(check);
+    clearInterval(dog);
+    sub?.cancel?.();
+  };
 }
 
 // Step to the next viewpoint ahead (or behind): only one Matterport links to the current one,

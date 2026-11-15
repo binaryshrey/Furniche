@@ -45,7 +45,7 @@ const STARTERS = [
   AUTO,
   "What can I afford?",
   "Make this room feel bigger",
-  "Warmer evening light",
+  "Show sunset light",
 ];
 const AUTO_RE =
   /\bauto[- ]?furnish|furnish (the )?(whole|entire|every|all)|furnish everything/i;
@@ -57,7 +57,7 @@ const mid = () => Math.random().toString(36).slice(2, 10);
 function snapshot(geometry: ModelGeometry | null = null): { sid: string; roomId: string | null; design: WorkDesign; imported: ReturnType<typeof useStore.getState>['importedProducts']; lighting: LightPrefs; scenes: ReturnType<typeof roomScenes> } {
   const s = useStore.getState();
   const d = s.design();
-  const { brightness, warmth } = useLighting.getState();
+  const { brightness, warmth, sun } = useLighting.getState();
   return {
     sid: d.sid,
     roomId: useViewerState.getState().currentRoomId,
@@ -68,7 +68,7 @@ function snapshot(geometry: ModelGeometry | null = null): { sid: string; roomId:
       themeId: d.themeId,
     },
     imported: s.importedProducts,
-    lighting: { brightness, warmth },
+    lighting: { brightness, warmth, sun: sun ?? null },
     scenes: roomScenes(geometry), // windows and built-ins, so the assistant places pieces clear of them
   };
 }
@@ -80,8 +80,8 @@ function apply(out: {
 }): Before | null {
   if (!out.design && !out.lighting) return null;
   const cur = useStore.getState().design();
-  const { brightness, warmth } = useLighting.getState();
-  const before: Before = { design: cur, lighting: { brightness, warmth } };
+  const { brightness, warmth, sun } = useLighting.getState();
+  const before: Before = { design: cur, lighting: { brightness, warmth, sun: sun ?? null } };
   // Pieces the chat adds or moves stay movable.
   if (out.design)
     useStore.getState().loadDesign({
@@ -326,7 +326,7 @@ export default function ChatPanel({
         before,
       },
     ]);
-    window.dispatchEvent(new CustomEvent('fn-chat-reply', { detail: { text, suggestions: ['What can I afford?', 'Make this room feel bigger', 'Warmer evening light'] } }));
+    window.dispatchEvent(new CustomEvent('fn-chat-reply', { detail: { text, suggestions: ['What can I afford?', 'Make this room feel bigger', 'Show sunset light'] } }));
     frame(target);
   }
 
@@ -412,7 +412,7 @@ export default function ChatPanel({
       setToast(`${name} added. Drag it to move, drag ↻ to rotate`);
       // Log it in the chat too, with a one-tap Remove (and Undo, which restores the design without it).
       const cur = st.design();
-      const before: Before = { design: { ...cur, items: cur.items.filter((i) => i.uid !== st.selectedUid) }, lighting: { ...useLighting.getState() } };
+      const before: Before = { design: { ...cur, items: cur.items.filter((i) => i.uid !== st.selectedUid) }, lighting: { brightness: useLighting.getState().brightness, warmth: useLighting.getState().warmth, sun: useLighting.getState().sun ?? null } };
       setMsgs((m) => [
         ...m,
         { id: mid(), role: 'assistant', text: `Added the ${name} (${fmtUsd(p.priceUsd)}) to the ${room?.label.toLowerCase() ?? 'room'}, clear of walkways and windows.`, channel: 'web', actions: [`Added ${name}`], suggestions: [`Remove the ${name}`, 'Make this room feel bigger', 'What can I afford?'], before },

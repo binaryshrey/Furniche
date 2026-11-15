@@ -8,6 +8,7 @@ import { demoBudget, type MoveInBudget } from './budget';
 import { compactRoom, designTotal, fitToBudget, floorStats, furnishableRooms, issuesFor, optimizeRoom, placeFree, roomById, styleRoom, swapFor, type Ctx, type WorkDesign } from './designOps';
 import { productFitsRoom } from './fit';
 import { clampLight, LIGHT_PRESETS, type LightPrefs } from './lighting';
+import { clock, lightAt, momentTime, type SunMoment } from './sun';
 import { llmAvailable } from './llm';
 import { getModelGeometry } from './matterport';
 import { getBudget, nessieAvailable } from './nessie';
@@ -152,8 +153,12 @@ const tools: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: 'set_lighting',
-    description: 'Change the light in the 3D view (the whole tour is graded, not just the furniture). brightness 0.3–2 (1 = the room\'s own light); warmth -1 cool daylight … 0 neutral … 1 warm lamp light. Evening: brightness 0.7, warmth 0.9. Daylight: brightness 1.35, warmth -0.7.',
-    input_schema: { type: 'object', properties: { brightness: { type: 'number' }, warmth: { type: 'number' } }, additionalProperties: false },
+    description: 'Change the light in the 3D view (the whole tour is graded, not just the furniture). brightness 0.3–2 (1 = the room\'s own light); warmth -1 cool daylight … 0 neutral … 1 warm lamp light. Evening: brightness 0.7, warmth 0.9. Daylight: brightness 1.35, warmth -0.7. timeOfDay instead shows real sunlight for that moment at this home: sunbeams through the windows and outside doors that face the sun, and the matching light (use it for morning, noon, sunset, night and the like; "off" removes the sunlight).',
+    input_schema: {
+      type: 'object',
+      properties: { brightness: { type: 'number' }, warmth: { type: 'number' }, timeOfDay: { type: 'string', enum: ['sunrise', 'morning', 'noon', 'afternoon', 'golden', 'night', 'off'] } },
+      additionalProperties: false,
+    },
   },
   {
     name: 'get_budget',
@@ -214,7 +219,7 @@ function describeDesign(ctx: Ctx, state: State, roomId: string | null): string {
   const rooms = furnishableRooms(ctx.geometry);
   const lines: string[] = [];
   lines.push(`Home: ${ctx.geometry.address ?? ctx.geometry.name}. Shopper is standing in: ${roomById(ctx, roomId)?.label ?? 'no room yet'} (${roomId ?? '-'}).`);
-  lines.push(`Theme: ${state.design.themeId ?? 'none'}. Lighting: brightness ${state.lighting.brightness.toFixed(2)}, warmth ${state.lighting.warmth.toFixed(2)}.`);
+  lines.push(`Theme: ${state.design.themeId ?? 'none'}. Lighting: brightness ${state.lighting.brightness.toFixed(2)}, warmth ${state.lighting.warmth.toFixed(2)}${state.lighting.sun != null ? `, sunlight at ${clock(state.lighting.sun)}` : ''}.`);
   for (const r of rooms) {
     const st = floorStats(r, state.design.items, ctx.products);
     lines.push(
@@ -367,6 +372,20 @@ async function runTool(name: string, input: any, ctx: Ctx, state: State, roomId:
       return `Theme set to ${THEMES.find((t) => t.id === input.theme)?.name}.`;
     }
     case 'set_lighting': {
+      if (input.timeOfDay) {
+        if (input.timeOfDay === 'off') state.lighting = clampLight({ ...LIGHT_PRESETS.neutral, sun: null }, state.lighting);
+        else {
+          const lat = ctx.geometry.lat ?? 29.76;
+          const lon = ctx.geometry.lon ?? -95.37;
+          const sun = momentTime(input.timeOfDay as SunMoment, lat, lon);
+          const { tone } = lightAt(sun, lat, lon);
+          state.lighting = clampLight({ brightness: tone.brightness, warmth: tone.warmth, sun }, state.lighting);
+        }
+        state.changedLight = true;
+        const t = state.lighting.sun;
+        state.actions.push(t == null ? 'Sunlight off' : `Time of day: ${clock(t)}`);
+        return t == null ? 'Sunlight off.' : `Showing ${input.timeOfDay} sunlight (${clock(t)} at this home): beams come in through the windows and outside doors facing the sun.`;
+      }
       state.lighting = clampLight(input, state.lighting);
       state.changedLight = true;
       state.actions.push(`Lighting: brightness ${state.lighting.brightness.toFixed(1)}, warmth ${state.lighting.warmth.toFixed(1)}`);
@@ -566,7 +585,8 @@ export function suggestNext(ctx: Ctx, state: State, roomId: string | null, last:
     if (!state.design.surfaces.some((s) => s.roomId === room.id)) out.push(`Paint the walls to match ${theme.name}`);
     if (floorStats(room, state.design.items, ctx.products).freeShare < 0.7) out.push(`Make the ${name} feel bigger`);
   }
-  out.push(state.lighting.warmth > 0.2 ? 'Bright daylight' : 'Warmer evening light');
+  const sun = state.lighting.sun;
+  out.push(sun == null || sun < 15 * 60 ? 'Show sunset light' : 'Show morning sun');
   // Whatever this reply added can be taken out again in one tap.
   const justAdded = [...new Set((state.added ?? []).filter((a) => state.design.items.some((i) => i.uid === a.uid)).map((a) => a.name))].slice(0, 2);
   out.unshift(...justAdded.map((n) => `Remove the ${n}`));
@@ -746,27 +766,55 @@ async function rulesReply(input: AgentInput, ctx: Ctx, state: State): Promise<st
           (b.cardRoom ? ` The card adds ${usd(b.cardRoom)} of room if you keep it under 30% used.` : '') +
           (b.notes[0] ? ` ${b.notes[0]}` : ''),
       );
-    } else if (/\b(bright(er)?|dim(mer)?|darker|warm(er)?|cool(er)?|coz[yi]|evening|dusk|sunset|night|daylight|morning|noon|sunny|natural light|moody|lighting|reset (the )?light)/.test(c) && !nonLamp.length && !/wall|paint|colou?r|floor/.test(c)) {
-      // Named looks jump straight to a preset; plain "brighter"/"warmer" nudge from where it is.
-      let d = { ...state.lighting };
-      if (/reset|normal|neutral/.test(c)) d = { ...LIGHT_PRESETS.neutral };
-      else if (/evening|dusk|sunset|night|coz[yi]|moody/.test(c)) d = { ...LIGHT_PRESETS.evening };
-      else if (/daylight|morning|noon|sunny|natural light/.test(c)) d = { ...LIGHT_PRESETS.daylight };
-      else {
-        if (/bright/.test(c)) d.brightness += 0.35;
-        if (/dim|dark/.test(c)) d.brightness -= 0.3;
-        if (/warm/.test(c)) d.warmth = Math.max(d.warmth, 0) + 0.45;
-        if (/cool/.test(c)) d.warmth = Math.min(d.warmth, 0) - 0.45;
-      }
-      await run('set_lighting', d, room);
-      const L = state.lighting;
-      replies.push(
-        L.warmth >= 0.85 && L.brightness <= 0.75
-          ? 'Switched to evening light: low, warm amber, like lamps after sunset.'
-          : L.warmth <= -0.65 && L.brightness >= 1.3
-            ? 'Switched to daylight: bright, cool light, like a sunny morning through the windows.'
+    } else if (/\b(bright(er)?|dim(mer)?|darker|warm(er)?|cool(er)?|coz[yi]|evening|dusk|dawn|sunrise|sunset|golden hour|afternoon|midday|night|daylight|morning|noon|sunny|sun ?light|sun ?beams?|natural light|moody|lighting|reset (the )?light)/.test(c) && !nonLamp.length && !/wall|paint|colou?r|floor/.test(c)) {
+      // A time of day shows real sunlight through the windows; named looks jump to a preset;
+      // plain "brighter"/"warmer" nudge from where it is.
+      const moment: SunMoment | null = /sunrise|dawn/.test(c)
+        ? 'sunrise'
+        : /morning/.test(c)
+          ? 'morning'
+          : /noon|midday|daylight|sunny|natural light/.test(c)
+            ? 'noon'
+            : /afternoon/.test(c)
+              ? 'afternoon'
+              : /golden hour|sunset|dusk|evening/.test(c)
+                ? 'golden'
+                : /\bnight|midnight/.test(c)
+                  ? 'night'
+                  : /sun ?light|sun ?beams?/.test(c)
+                    ? 'morning'
+                    : null;
+      if (moment && !/reset|normal|neutral|coz[yi]|moody|lamp/.test(c)) {
+        await run('set_lighting', { timeOfDay: moment }, room);
+        const t = state.lighting.sun ?? 0;
+        replies.push(
+          {
+            sunrise: `Sunrise, ${clock(t)}: low amber light slants in through the east-facing windows.`,
+            morning: `Morning, ${clock(t)}: bright sun through the windows that face it, long patches across the floor.`,
+            noon: `Midday, ${clock(t)}: the sun is high, so the beams are short and bright under the windows facing it.`,
+            afternoon: `Afternoon, ${clock(t)}: the light swings round to the west-facing windows.`,
+            golden: `Golden hour, ${clock(t)}: warm low sun stretches deep into the rooms facing the sunset.`,
+            night: `Night, ${clock(t)}: the sun is down, the windows go dark blue and the house is dim.`,
+          }[moment] + ' Drag the Time of day slider (bottom left) or press ▶ to play the whole day.',
+        );
+      } else {
+        let d: LightPrefs = { ...state.lighting };
+        if (/reset|normal|neutral/.test(c)) d = { ...LIGHT_PRESETS.neutral, sun: null };
+        else if (/evening|dusk|sunset|night|coz[yi]|moody/.test(c)) d = { ...LIGHT_PRESETS.evening, sun: null };
+        else {
+          if (/bright/.test(c)) d.brightness += 0.35;
+          if (/dim|dark/.test(c)) d.brightness -= 0.3;
+          if (/warm/.test(c)) d.warmth = Math.max(d.warmth, 0) + 0.45;
+          if (/cool/.test(c)) d.warmth = Math.min(d.warmth, 0) - 0.45;
+        }
+        await run('set_lighting', d, room);
+        const L = state.lighting;
+        replies.push(
+          L.warmth >= 0.85 && L.brightness <= 0.75
+            ? 'Switched to evening light: low, warm amber, like lamps after sunset.'
             : `Light is now ${L.warmth > 0.2 ? 'warmer' : L.warmth < -0.2 ? 'cooler' : 'neutral'} at ${Math.round(L.brightness * 100)}% brightness.`,
-      );
+        );
+      }
       if (cats.some((x) => x.cat === 'floor-lamp') || /lamp/.test(c)) replies.push(await addPieces([{ cat: 'floor-lamp', qty: 1 }], c, room, ctx, state));
     } else if (/\b(walls?|paint|colou?rs?|wallpaper|accent wall)\b/.test(c) && !nonLamp.length) {
       const hint = COLOR_HINTS.find(([re]) => re.test(c))?.[1];

@@ -12,7 +12,7 @@ import type { DoorMark, Pano, Product, Room, ThemeId, Vec2, Wall } from './types
 export function furnishableType(room: Room): RoomType | null {
   const l = room.label.toLowerCase();
   const area = room.areaM2 || polygonArea(room.polygon);
-  if (/kitchen/.test(l)) return area >= 30 ? 'living' : null; // a big "kitchen" is an open-plan living space
+  if (/kitchen/.test(l)) return null; // kitchens keep their own counters and nothing else
   if (/bath|closet|laundry|garage|stair|hall|pantry|utility|patio|balcony|porch|foyer|entry|mud|toilet|powder|storage|void|deck|yard/.test(l)) return null;
   if (/bed|nursery|guest/.test(l)) return 'bedroom';
   if (/dining|breakfast/.test(l)) return 'dining';

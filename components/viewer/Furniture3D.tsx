@@ -282,6 +282,14 @@ export default function Furniture3D(props: Props) {
         return <Panel {...p} />;
       case 'wall-art':
         return <Panel {...p} frame={false} />;
+      case 'tv':
+        // Slim black bezel, dark glossy screen.
+        return (
+          <group>
+            <Box p={[0, h / 2, 0]} s={[w, h, Math.max(d, 0.03)]} c="#111111" f="lacquer" r={0.004} opacity={opacity} />
+            <Box p={[0, h / 2, Math.max(d, 0.03) / 2 + 0.002]} s={[w - 0.03, h - 0.03, 0.003]} c="#1b2330" f="metal" r={0.001} opacity={opacity} />
+          </group>
+        );
       case 'lounger':
         return (
           <group>

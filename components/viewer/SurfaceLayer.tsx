@@ -3,7 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { materialById } from '@/catalog/materials';
-import { bridge, useViewerState } from '@/lib/sceneBridge';
+import { centroid } from '@/lib/geometry';
+import { bridge, groundY, useViewerState } from '@/lib/sceneBridge';
 import { useDesign } from '@/lib/store';
 import type { ModelGeometry, SurfaceChoice } from '@/lib/types';
 
@@ -15,6 +16,8 @@ import type { ModelGeometry, SurfaceChoice } from '@/lib/types';
 // Open doorways have no mesh, so they stay clear, and real walls hide paint behind them.
 
 const MAX_VERTS = 48;
+const ALL_ROOMS = 32;
+const ALL_VERTS = 480;
 
 const vertex = /* glsl */ `
   varying vec3 vWorld;
@@ -37,6 +40,11 @@ const fragment = /* glsl */ `
   uniform vec3 uColor;
   uniform vec3 uAccent;
   uniform float uAlpha;
+  uniform vec2 uAll[${ALL_VERTS}];   // every room's outline, one after another (mode 2)
+  uniform int uStart[${ALL_ROOMS}];
+  uniform int uLen[${ALL_ROOMS}];
+  uniform float uFY[${ALL_ROOMS}];   // each room's real floor height (three.js y)
+  uniform int uRooms;
   varying vec3 vWorld;
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -70,6 +78,28 @@ const fragment = /* glsl */ `
     return d;
   }
 
+  // On the floor of some room: inside its outline, or within a doorway's depth of it (thresholds
+  // between rooms), at that room's floor height.
+  bool onAnyFloor(vec2 q, float y) {
+    for (int r = 0; r < ${ALL_ROOMS}; r++) {
+      if (r >= uRooms) break;
+      if (abs(y - uFY[r]) > 0.09) continue;
+      int s0 = uStart[r];
+      int n = uLen[r];
+      bool c = false;
+      float d = 1e9;
+      for (int k = 0; k < ${ALL_VERTS}; k++) {
+        if (k >= n) break;
+        vec2 a = uAll[s0 + k];
+        vec2 b = uAll[s0 + (k == 0 ? n - 1 : k - 1)];
+        if (((a.y > q.y) != (b.y > q.y)) && (q.x < (b.x - a.x) * (q.y - a.y) / (b.y - a.y + 1e-9) + a.x)) c = !c;
+        d = min(d, segDist(q, a, b));
+      }
+      if (c || d < 0.2) return true;
+    }
+    return false;
+  }
+
   void main() {
     vec3 p = vWorld;
     vec2 q = vec2(p.x, -p.z);                       // three -> Matterport API floor plane
@@ -92,8 +122,12 @@ const fragment = /* glsl */ `
       }
     } else {
       if (n.y < 0.85) discard;
-      if (abs(p.y - uFloor) > 0.12) discard;
-      if (!insidePoly(q)) discard;
+      if (uMode == 2) {
+        if (!onAnyFloor(q, p.y)) discard;
+      } else {
+        if (abs(p.y - uFloor) > 0.12) discard;
+        if (!insidePoly(q)) discard;
+      }
       if (uPattern == 2) {
         float boardW = 0.19, boardL = 1.25;
         float row = floor(q.y / boardW);
@@ -134,6 +168,33 @@ function shownInTree(o: THREE.Object3D): boolean {
   return true;
 }
 
+// Rooms whose floor the home's flooring covers (not the garage or outdoor spaces), with the
+// scan's real floor height for each.
+const NOT_FLOORED = /garage|patio|porch|deck|balcony|yard|void|exterior|outdoor/i;
+function allFloors(geometry: ModelGeometry) {
+  const rooms = geometry.rooms.filter((r) => !NOT_FLOORED.test(r.label) && r.polygon.length >= 3).slice(0, ALL_ROOMS);
+  const pts: THREE.Vector2[] = [];
+  const start: number[] = [];
+  const len: number[] = [];
+  const fy: number[] = [];
+  for (const r of rooms) {
+    if (pts.length + r.polygon.length > ALL_VERTS) break;
+    start.push(pts.length);
+    len.push(r.polygon.length);
+    for (const v of r.polygon) pts.push(new THREE.Vector2(v.x, v.y));
+    const c = centroid(r.polygon);
+    fy.push(groundY(c.x, -c.y, r.floorZ));
+  }
+  const n = start.length;
+  while (pts.length < ALL_VERTS) pts.push(new THREE.Vector2());
+  while (start.length < ALL_ROOMS) {
+    start.push(0);
+    len.push(0);
+    fy.push(-999);
+  }
+  return { pts, start, len, fy, n };
+}
+
 function makeMaterial(s: SurfaceChoice, geometry: ModelGeometry): THREE.ShaderMaterial | null {
   const room = geometry.rooms.find((r) => r.id === s.roomId);
   const m = materialById(s.materialId);
@@ -142,6 +203,7 @@ function makeMaterial(s: SurfaceChoice, geometry: ModelGeometry): THREE.ShaderMa
   while (poly.length < MAX_VERTS) poly.push(new THREE.Vector2());
   const wall = typeof s.target === 'object' ? (geometry.walls[room.floorId] ?? []).find((w) => w.id === (s.target as { wallId: string }).wallId) : null;
   const floor = s.target === 'floor';
+  const all = floor ? allFloors(geometry) : null;
   return new THREE.ShaderMaterial({
     vertexShader: vertex,
     fragmentShader: fragment,
@@ -150,7 +212,12 @@ function makeMaterial(s: SurfaceChoice, geometry: ModelGeometry): THREE.ShaderMa
       uCount: { value: Math.min(room.polygon.length, MAX_VERTS) },
       uFloor: { value: room.floorZ },
       uHeight: { value: room.heightM ?? 2.6 },
-      uMode: { value: floor ? 1 : 0 },
+      uMode: { value: floor ? 2 : 0 },
+      uAll: { value: all?.pts ?? Array.from({ length: ALL_VERTS }, () => new THREE.Vector2()) },
+      uStart: { value: all?.start ?? new Array(ALL_ROOMS).fill(0) },
+      uLen: { value: all?.len ?? new Array(ALL_ROOMS).fill(0) },
+      uFY: { value: all?.fy ?? new Array(ALL_ROOMS).fill(-999) },
+      uRooms: { value: all?.n ?? 0 },
       uPattern: { value: m.kind === 'wallpaper' ? 1 : m.kind === 'floor' ? 2 : 0 },
       uSeg: { value: wall ? new THREE.Vector4(wall.a.x, wall.a.y, wall.b.x, wall.b.y) : new THREE.Vector4() },
       uUseSeg: { value: wall ? 1 : 0 },
@@ -190,9 +257,12 @@ export default function SurfaceLayer({ geometry }: { geometry: ModelGeometry | n
     }
   });
 
+  // Floor heights come from the scan, so rebuild the flooring once the scan has loaded (not on every chunk).
+  const scanVersion = useViewerState((v) => v.scanVersion);
+  const floorScan = Math.min(scanVersion, 3);
   const materials = useMemo(
     () => (geometry ? design.surfaces.map((s) => makeMaterial(s, geometry)).filter((m): m is THREE.ShaderMaterial => !!m) : []),
-    [design.surfaces, geometry],
+    [design.surfaces, geometry, floorScan], // eslint-disable-line react-hooks/exhaustive-deps
   );
   useEffect(() => () => materials.forEach((m) => m.dispose()), [materials]);
 

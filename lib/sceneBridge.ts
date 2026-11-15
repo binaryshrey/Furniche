@@ -44,12 +44,32 @@ const raycaster = new THREE.Raycaster();
 export type Hit = { kind: 'item'; uid: string; point: Vec3 } | { kind: 'floor'; point: Vec3 } | null;
 
 // ndc: normalized device coords. floorZ: API-frame floor height to intersect.
+// Furniture answers only our own picking (below), never Matterport's pointer: otherwise a piece
+// between the camera and a walking circle (or a piece's shadow round it) blocks the walk.
+let picking = false;
+export function pickOnly(o: THREE.Object3D) {
+  o.traverse((x) => {
+    if (x.userData.__pickOnly) return;
+    x.userData.__pickOnly = true;
+    const own = x.raycast;
+    x.raycast = function (r, hits) {
+      if (picking) own.call(this, r, hits);
+    };
+  });
+}
+
 export function raycast(ndc: { x: number; y: number }, floorZ: number, itemsFirst = true): Hit {
   const cam = bridge.camera;
   if (!cam) return null;
   raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), cam);
   if (itemsFirst && bridge.furniture) {
-    const hits = raycaster.intersectObjects(bridge.furniture.children, true);
+    picking = true;
+    let hits: THREE.Intersection[] = [];
+    try {
+      hits = raycaster.intersectObjects(bridge.furniture.children, true);
+    } finally {
+      picking = false;
+    }
     for (const h of hits) {
       let o: THREE.Object3D | null = h.object;
       while (o && !o.userData?.uid) o = o.parent;
@@ -66,6 +86,16 @@ export function raycast(ndc: { x: number; y: number }, floorZ: number, itemsFirs
     return { kind: 'floor', point: fromThree(p.x, p.y, p.z) };
   }
   return null;
+}
+
+// The first point of the scan itself under the cursor (a wall, the floor), in API coordinates.
+export function scanPoint(ndc: { x: number; y: number }): Vec3 | null {
+  const cam = bridge.camera;
+  if (!cam || !bridge.scan.length) return null;
+  raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), cam);
+  raycaster.layers.enableAll();
+  const h = raycaster.intersectObjects(bridge.scan, false)[0];
+  return h && h.distance < 30 ? fromThree(h.point.x, h.point.y, h.point.z) : null;
 }
 
 const down = new THREE.Raycaster();

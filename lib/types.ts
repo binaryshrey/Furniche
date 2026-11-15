@@ -4,7 +4,10 @@
 export type Vec2 = { x: number; y: number };
 export type Vec3 = { x: number; y: number; z: number };
 
-export type Wall = { id: string; a: Vec2; b: Vec2; thickness: number };
+// A window or doorway in a wall: `at` is its centre as a fraction of the way from a to b; sill and
+// height in metres above the floor.
+export type WallOpening = { type: 'window' | 'doorway' | 'opening'; at: number; width: number; sill: number; height: number };
+export type Wall = { id: string; a: Vec2; b: Vec2; thickness: number; openings?: WallOpening[] };
 
 export type Room = {
   id: string;
@@ -61,6 +64,7 @@ export type Category =
   | 'bar-stool'
   | 'mattress' // sits on a bed frame
   | 'decor' // floor-standing showpieces: vases, baskets, pouffes, plant stands, lanterns
+  | 'tv' // wall-mounted television
   | 'patio-table'
   | 'patio-chair'
   | 'lounger'

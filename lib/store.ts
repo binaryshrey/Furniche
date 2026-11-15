@@ -52,6 +52,12 @@ type State = {
   loadDesign: (d: Design) => void;
 };
 
+// Mattresses lying on this bed frame (same spot), which move, turn and go with it.
+function ridersOf(it: PlacedItem, items: PlacedItem[], product: (id: string) => { category: string } | undefined): string[] {
+  if (product(it.productId)?.category !== 'bed') return [];
+  return items.filter((m) => m.uid !== it.uid && product(m.productId)?.category === 'mattress' && Math.hypot(m.pos.x - it.pos.x, m.pos.y - it.pos.y) < 0.3).map((m) => m.uid);
+}
+
 export const useStore = create<State>()(
   persist(
     (set, get) => {
@@ -87,12 +93,30 @@ export const useStore = create<State>()(
           set({ selectedUid: id });
           return id;
         },
+        // A mattress lying on a bed frame travels with it.
         moveItem: (id, pos, roomId) =>
-          update((d) => ({ ...d, items: d.items.map((i) => (i.uid === id ? { ...i, pos, roomId } : i)) })),
+          update((d) => {
+            const it = d.items.find((i) => i.uid === id);
+            const riders = it ? ridersOf(it, d.items, get().product) : [];
+            const dx = it ? pos.x - it.pos.x : 0;
+            const dy = it ? pos.y - it.pos.y : 0;
+            return {
+              ...d,
+              items: d.items.map((i) => (i.uid === id ? { ...i, pos, roomId } : riders.includes(i.uid) ? { ...i, pos: { ...i.pos, x: i.pos.x + dx, y: i.pos.y + dy }, roomId } : i)),
+            };
+          }),
         rotateItem: (id, delta) =>
-          update((d) => ({ ...d, items: d.items.map((i) => (i.uid === id ? { ...i, rot: i.rot + delta } : i)) })),
+          update((d) => {
+            const it = d.items.find((i) => i.uid === id);
+            const riders = it ? ridersOf(it, d.items, get().product) : [];
+            return { ...d, items: d.items.map((i) => (i.uid === id || riders.includes(i.uid) ? { ...i, rot: i.rot + delta } : i)) };
+          }),
         removeItem: (id) => {
-          update((d) => ({ ...d, items: d.items.filter((i) => i.uid !== id) }));
+          update((d) => {
+            const it = d.items.find((i) => i.uid === id);
+            const riders = it ? ridersOf(it, d.items, get().product) : [];
+            return { ...d, items: d.items.filter((i) => i.uid !== id && !riders.includes(i.uid)) };
+          });
           if (get().selectedUid === id) set({ selectedUid: null });
         },
         duplicateItem: (id) => {
@@ -116,7 +140,8 @@ export const useStore = create<State>()(
         setSurface: (s) =>
           update((d) => {
             const key = JSON.stringify([s.roomId, s.target]);
-            const rest = d.surfaces.filter((x) => JSON.stringify([x.roomId, x.target]) !== key);
+            // Flooring is one choice for the whole home: a new floor replaces every room's.
+            const rest = d.surfaces.filter((x) => JSON.stringify([x.roomId, x.target]) !== key && !(s.target === 'floor' && x.target === 'floor'));
             return { ...d, surfaces: [...rest, { ...s, uid: uid() }] };
           }),
         removeSurface: (id) => update((d) => ({ ...d, surfaces: d.surfaces.filter((x) => x.uid !== id) })),

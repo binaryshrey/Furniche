@@ -131,7 +131,9 @@ describe('moveInBudget', () => {
 
 describe('lighting', () => {
   it('clamps and tints', () => {
-    expect(clampLight({ brightness: 5, warmth: -3 }, { brightness: 1, warmth: 0 })).toEqual({ brightness: 2, warmth: -1 });
+    expect(clampLight({ brightness: 5, warmth: -3 }, { brightness: 1, warmth: 0 })).toEqual({ brightness: 2, warmth: -1, sun: null });
+    expect(clampLight({ sun: 1500 }, { brightness: 1, warmth: 0 }).sun).toBe(60); // wraps past midnight
+    expect(clampLight({ brightness: 1.2 }, { brightness: 1, warmth: 0, sun: 600 }).sun).toBe(600); // keeps the time of day
     expect(warmthColor(0)).toBe('#fffaf0');
     expect(warmthColor(1)).toBe('#ffc88a');
   });
