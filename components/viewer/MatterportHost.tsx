@@ -19,6 +19,24 @@ function hideLoading(el: any) {
 
 const startPano = (geometry: ModelGeometry, skip?: ReadonlySet<string>) => entryPano(geometry, skip)?.id ?? null;
 
+// Showcase throws these from its own async teardown whenever a viewer is unmounted while the page
+// stays loaded: our remount after a failed boot, a Fast Refresh in development, or leaving the
+// editor client-side. They are harmless (the old viewer is already gone), so keep them out of the
+// console and the Next.js error overlay. Everything else still surfaces.
+const TEARDOWN = /No Data was registered to the Module|module unloaded/i;
+if (typeof window !== 'undefined' && !(window as any).__fnTeardownGuard) {
+  (window as any).__fnTeardownGuard = true;
+  const swallow = (e: ErrorEvent | PromiseRejectionEvent) => {
+    const reason = 'reason' in e ? e.reason : e.error ?? e.message;
+    const msg = typeof reason === 'string' ? reason : reason?.message ?? String(reason ?? '');
+    if (!TEARDOWN.test(msg)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  };
+  window.addEventListener('error', swallow, true);
+  window.addEventListener('unhandledrejection', swallow, true);
+}
+
 export async function moveToPano(sdk: any, panoId: string, instant = false, tries = 6) {
   for (let i = 0; i < tries; i++) {
     try {

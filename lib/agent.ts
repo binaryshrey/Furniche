@@ -7,7 +7,7 @@ import { swapped } from './alternatives';
 import { demoBudget, type MoveInBudget } from './budget';
 import { compactRoom, designTotal, fitToBudget, floorStats, furnishableRooms, issuesFor, optimizeRoom, placeFree, roomById, styleRoom, swapFor, type Ctx, type WorkDesign } from './designOps';
 import { productFitsRoom } from './fit';
-import { clampLight, type LightPrefs } from './lighting';
+import { clampLight, LIGHT_PRESETS, type LightPrefs } from './lighting';
 import { llmAvailable } from './llm';
 import { getModelGeometry } from './matterport';
 import { getBudget, nessieAvailable } from './nessie';
@@ -151,7 +151,7 @@ const tools: Anthropic.Beta.BetaTool[] = [
   },
   {
     name: 'set_lighting',
-    description: 'Change how the furniture is lit in the 3D view. brightness 0.3–2 (1 = the room\'s own light); warmth -1 cool daylight … 0 neutral … 1 warm lamp light.',
+    description: 'Change the light in the 3D view (the whole tour is graded, not just the furniture). brightness 0.3–2 (1 = the room\'s own light); warmth -1 cool daylight … 0 neutral … 1 warm lamp light. Evening: brightness 0.7, warmth 0.9. Daylight: brightness 1.35, warmth -0.7.',
     input_schema: { type: 'object', properties: { brightness: { type: 'number' }, warmth: { type: 'number' } }, additionalProperties: false },
   },
   {
@@ -712,15 +712,27 @@ async function rulesReply(input: AgentInput, ctx: Ctx, state: State): Promise<st
           (b.cardRoom ? ` The card adds ${usd(b.cardRoom)} of room if you keep it under 30% used.` : '') +
           (b.notes[0] ? ` ${b.notes[0]}` : ''),
       );
-    } else if (/\b(bright(er)?|dim(mer)?|darker|warm(er)?|cool(er)?|coz[yi]|evening|daylight|natural light|moody|lighting|reset (the )?light)/.test(c) && !nonLamp.length && !/wall|paint|colou?r|floor/.test(c)) {
-      const d = { ...state.lighting };
-      if (/reset/.test(c)) Object.assign(d, { brightness: 1, warmth: 0 });
-      if (/bright|daylight|natural light/.test(c)) d.brightness += 0.35;
-      if (/dim|dark|moody/.test(c)) d.brightness -= 0.3;
-      if (/warm|coz|evening|moody/.test(c)) d.warmth = Math.max(d.warmth, 0) + 0.5;
-      if (/cool|daylight/.test(c)) d.warmth = Math.min(d.warmth, 0) - 0.5;
+    } else if (/\b(bright(er)?|dim(mer)?|darker|warm(er)?|cool(er)?|coz[yi]|evening|dusk|sunset|night|daylight|morning|noon|sunny|natural light|moody|lighting|reset (the )?light)/.test(c) && !nonLamp.length && !/wall|paint|colou?r|floor/.test(c)) {
+      // Named looks jump straight to a preset; plain "brighter"/"warmer" nudge from where it is.
+      let d = { ...state.lighting };
+      if (/reset|normal|neutral/.test(c)) d = { ...LIGHT_PRESETS.neutral };
+      else if (/evening|dusk|sunset|night|coz[yi]|moody/.test(c)) d = { ...LIGHT_PRESETS.evening };
+      else if (/daylight|morning|noon|sunny|natural light/.test(c)) d = { ...LIGHT_PRESETS.daylight };
+      else {
+        if (/bright/.test(c)) d.brightness += 0.35;
+        if (/dim|dark/.test(c)) d.brightness -= 0.3;
+        if (/warm/.test(c)) d.warmth = Math.max(d.warmth, 0) + 0.45;
+        if (/cool/.test(c)) d.warmth = Math.min(d.warmth, 0) - 0.45;
+      }
       await run('set_lighting', d, room);
-      replies.push(`Light in the 3D view is now ${state.lighting.warmth > 0.2 ? 'warmer' : state.lighting.warmth < -0.2 ? 'cooler, like daylight' : 'neutral'} at ${Math.round(state.lighting.brightness * 100)}% brightness.`);
+      const L = state.lighting;
+      replies.push(
+        L.warmth >= 0.85 && L.brightness <= 0.75
+          ? 'Switched to evening light: low, warm amber, like lamps after sunset.'
+          : L.warmth <= -0.65 && L.brightness >= 1.3
+            ? 'Switched to daylight: bright, cool light, like a sunny morning through the windows.'
+            : `Light is now ${L.warmth > 0.2 ? 'warmer' : L.warmth < -0.2 ? 'cooler' : 'neutral'} at ${Math.round(L.brightness * 100)}% brightness.`,
+      );
       if (cats.some((x) => x.cat === 'floor-lamp') || /lamp/.test(c)) replies.push(await addPieces([{ cat: 'floor-lamp', qty: 1 }], c, room, ctx, state));
     } else if (/\b(walls?|paint|colou?rs?|wallpaper|accent wall)\b/.test(c) && !nonLamp.length) {
       const hint = COLOR_HINTS.find(([re]) => re.test(c))?.[1];
