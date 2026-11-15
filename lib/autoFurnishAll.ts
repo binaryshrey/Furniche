@@ -1,7 +1,8 @@
 'use client';
 import { autoFurnish, furnishableType } from './autofurnish';
-import { senseRoom } from './scanSense';
+import { linkDoors } from './closets';
 import { useViewerState } from './sceneBridge';
+import { senseRoom } from './scanSense';
 import { useStore } from './store';
 import type { ModelGeometry } from './types';
 
@@ -22,7 +23,9 @@ export function autoFurnishAll(geometry: ModelGeometry): { rooms: string[]; summ
   let spent = 0;
   for (const r of geometry.rooms.filter((x) => furnishableType(x))) {
     const sense = senseRoom(r, { fixtures: !hasDefurnish });
-    const res = autoFurnish(r, products, { doors: design.doors, walls: geometry.walls, theme: design.themeId, rooms: geometry.rooms, panos: geometry.panos, sense });
+    // Doors the mesh hides (an open door leaf) come from the tour's own sightlines between rooms.
+    const doors = [...design.doors, ...linkDoors(r, geometry.rooms, geometry.panos, useViewerState.getState().sweepLinks)];
+    const res = autoFurnish(r, products, { doors, walls: geometry.walls, theme: design.themeId, rooms: geometry.rooms, panos: geometry.panos, sense });
     if (!res) continue;
     st.replaceItems(res.placed.map((p) => ({ productId: p.productId, roomId: p.roomId, pos: p.pos, rot: p.rot })), r.id);
     rooms.push(r.id);

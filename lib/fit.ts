@@ -85,10 +85,15 @@ const cm = (m: number) => `${Math.round(m * 100)} cm`;
 // error even while its centre line stays inside the room outline (which runs mid-wall).
 export function checkFit(inputs: FitInput[], rooms: Room[], doors: DoorMark[] = [], walls: Record<string, Wall[]> = {}): FitIssue[] {
   const issues: FitIssue[] = [];
-  const floorItems = inputs.filter((i) => i.product.placement !== 'wall');
   const add = (uid: string, level: FitLevel, message: string) => issues.push({ uid, level, message });
 
   const roomOf = (item: PlacedItem) => (item.roomId && rooms.find((r) => r.id === item.roomId)) || roomAt(item.pos, rooms);
+  // A pot on a table or counter stands above the floor: it does not collide with floor pieces.
+  const raised = (item: PlacedItem) => {
+    const r = roomOf(item);
+    return !!r && item.pos.z - r.floorZ > 0.3;
+  };
+  const floorItems = inputs.filter((i) => i.product.placement !== 'wall' && !raised(i.item));
   for (const { item, product } of inputs) {
     const room = roomOf(item);
     if (!room) {

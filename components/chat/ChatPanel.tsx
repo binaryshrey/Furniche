@@ -261,7 +261,7 @@ export default function ChatPanel({
     if (!geometry || !sdk) return;
     const { moveToPano } = await import("@/components/viewer/MatterportHost");
     // The open panel covers the right of the view, so aim a little right to keep the pieces in the clear part.
-    await lookAt({ sdk, geometry, roomId: roomIdToShow, items: useStore.getState().design().items, moveToPano: (s, id) => moveToPano(s, id, false, 2), yawOffset: usePanel.getState().open ? 18 : 0, ...opts });
+    await lookAt({ sdk, geometry, roomId: roomIdToShow, items: useStore.getState().design().items, moveToPano: (s, id) => moveToPano(s, id, true, 2), yawOffset: usePanel.getState().open ? 18 : 0, ...opts });
   }
 
   // Auto-furnish from the chat: furnish every room, report it like any reply (with Undo), then

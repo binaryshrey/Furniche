@@ -79,8 +79,14 @@ const fragment = /* glsl */ `
     vec3 col = uColor;
 
     if (uMode == 0) {
-      if (abs(n.y) > 0.35) discard;
-      if (p.y < uFloor + 0.04 || p.y > uFloor + uHeight - 0.03) discard;
+      // Matterport's measured room height can sit below the real ceiling, and the scan tilts where
+      // wall meets ceiling (coving), so near the top allow slanted faces and a margin above it:
+      // the paint then runs up to the ceiling line instead of stopping short. The ceiling itself
+      // (facing straight down) stays unpainted, and the occluder hides any wall of a floor above.
+      float top = uFloor + uHeight;
+      float tilt = p.y > top - 0.45 ? 0.85 : 0.35;
+      if (abs(n.y) > tilt) discard;
+      if (p.y < uFloor + 0.04 || p.y > top + 0.45) discard;
       // Wall faces sit about half a wall's thickness from the outline (which runs mid-wall);
       // blinds, shelves and cabinets stand further out and stay unpainted.
       if (edgeDist(q) > 0.17) discard;
