@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { runAgent, type ChatTurn } from '@/lib/agent';
-import type { WorkDesign } from '@/lib/designOps';
+import type { RoomScene, WorkDesign } from '@/lib/designOps';
 import type { LightPrefs } from '@/lib/lighting';
 import { photonAvailable, receivedSince, reply } from '@/lib/photon';
 import type { Product } from '@/lib/types';
@@ -17,7 +17,7 @@ const g = globalThis as unknown as {
 // Only messages that arrive after the server starts are answered.
 const st = (g.__photon ??= { since: new Date().toISOString(), seen: new Set(), histories: new Map(), busy: false });
 
-type Body = { sid: string; roomId: string | null; design: WorkDesign; imported: Product[]; lighting: LightPrefs };
+type Body = { sid: string; roomId: string | null; design: WorkDesign; imported: Product[]; lighting: LightPrefs; scenes?: Record<string, RoomScene> };
 
 export async function GET() {
   return NextResponse.json({ enabled: photonAvailable() });
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     for (const m of inbound) {
       st.seen.add(m.id);
       const history = st.histories.get(m.from) ?? [];
-      const out = await runAgent({ sid: body.sid, roomId: body.roomId, design, imported: body.imported ?? [], lighting, history, message: m.text, channel: 'imessage' });
+      const out = await runAgent({ sid: body.sid, roomId: body.roomId, design, imported: body.imported ?? [], lighting, history, message: m.text, channel: 'imessage', scenes: body.scenes });
       if (out.design) {
         design = out.design;
         designChanged = true;

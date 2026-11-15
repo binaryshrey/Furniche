@@ -46,28 +46,19 @@ export default function Cart() {
     if (!p) continue;
     counts.set(p.id, { product: p, qty: (counts.get(p.id)?.qty ?? 0) + 1 });
   }
-  const groups = new Map<Retailer, { product: Product; qty: number }[]>();
-  for (const row of counts.values())
-    groups.set(row.product.retailer, [
-      ...(groups.get(row.product.retailer) ?? []),
-      row,
-    ]);
-  const finishes = active
-    ? surfaceLines(geometry, active.surfaces, active.doors)
-    : [];
-  const furnitureTotal = [...counts.values()].reduce(
-    (s, r) => s + r.qty * r.product.priceUsd,
-    0,
-  );
+  // Pieces made from the shopper's photos have no store, so they get a group of their own.
+  const groupOf = (p: Product): Retailer | 'photo' => (p.source === 'photo' ? 'photo' : p.retailer);
+  const groupLabel = (g: Retailer | 'photo') => (g === 'photo' ? 'From your photos' : RETAILER_LABEL[g]);
+  const groups = new Map<Retailer | 'photo', { product: Product; qty: number }[]>();
+  for (const row of counts.values()) groups.set(groupOf(row.product), [...(groups.get(groupOf(row.product)) ?? []), row]);
+  const finishes = active ? surfaceLines(geometry, active.surfaces, active.doors) : [];
+  const furnitureTotal = [...counts.values()].reduce((s, r) => s + r.qty * r.product.priceUsd, 0);
   const finishTotal = finishes.reduce((s, f) => s + f.cost, 0);
 
   function copyList() {
-    const lines = [...groups.entries()].flatMap(([r, rows]) => [
-      `${RETAILER_LABEL[r]}:`,
-      ...rows.map(
-        (x) =>
-          `  ${x.qty} × ${x.product.name} (${fmtUsd(x.product.priceUsd)}) ${x.product.url}`,
-      ),
+    const lines = [...groups.entries()].flatMap(([group, rows]) => [
+      `${groupLabel(group)}:`,
+      ...rows.map((x) => `  ${x.qty} × ${x.product.name} (${fmtUsd(x.product.priceUsd)}) ${x.product.url}`.trimEnd()),
     ]);
     finishes.forEach((f) =>
       lines.push(
@@ -124,20 +115,11 @@ export default function Cart() {
             </div>
 
             <div className="mt-8 space-y-8">
-              {[...groups.entries()].map(([retailer, rows]) => (
-                <section key={retailer}>
+              {[...groups.entries()].map(([group, rows]) => (
+                <section key={group}>
                   <div className="mb-2 flex items-baseline justify-between border-b border-line pb-1">
-                    <h2 className="font-display text-xl">
-                      {RETAILER_LABEL[retailer]}
-                    </h2>
-                    <span className="num text-sm">
-                      {fmtUsd(
-                        rows.reduce(
-                          (s, r) => s + r.qty * r.product.priceUsd,
-                          0,
-                        ),
-                      )}
-                    </span>
+                    <h2 className="font-display text-xl">{groupLabel(group)}</h2>
+                    <span className="num text-sm">{fmtUsd(rows.reduce((s, r) => s + r.qty * r.product.priceUsd, 0))}</span>
                   </div>
                   <ul className="divide-y divide-line">
                     {rows.map(({ product, qty }) => (
@@ -156,14 +138,13 @@ export default function Cart() {
                         <div className="num w-24 text-right text-sm">
                           {qty} × {fmtUsd(product.priceUsd)}
                         </div>
-                        <a
-                          href={product.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-md border border-ink px-3 py-1.5 text-xs"
-                        >
-                          Buy at {RETAILER_LABEL[product.retailer]}
-                        </a>
+                        {product.url ? (
+                          <a href={product.url} target="_blank" rel="noreferrer" className="rounded-md border border-ink px-3 py-1.5 text-xs">
+                            Buy at {RETAILER_LABEL[product.retailer]}
+                          </a>
+                        ) : (
+                          <span className="w-[92px] text-center text-xs text-muted">No store link</span>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -209,29 +190,16 @@ export default function Cart() {
             </div>
             <CapitalOneCheckout
               lines={[
-                ...[...groups.entries()].map(([retailer, rows]) => ({
+                // Pieces from the shopper's photos have no store to pay.
+                ...[...groups.entries()].flatMap(([retailer, rows]) => (retailer === 'photo' ? [] : [{ retailer, rows }])).map(({ retailer, rows }) => ({
                   retailer,
-                  amountUsd: rows.reduce(
-                    (s, r) => s + r.qty * r.product.priceUsd,
-                    0,
-                  ),
-                  description: `FurNiche AI: ${rows.map((r) => `${r.qty}x ${r.product.name.split(",")[0]}`).join(", ")}`,
+                  amountUsd: rows.reduce((s, r) => s + r.qty * r.product.priceUsd, 0),
+                  description: `FurNiche AI: ${rows.map((r) => `${r.qty}x ${r.product.name.split(',')[0]}`).join(', ')}`,
                 })),
-                ...(finishTotal > 0
-                  ? [
-                      {
-                        retailer: "other" as Retailer,
-                        amountUsd: finishTotal,
-                        description: "FurNiche AI: paint and flooring",
-                      },
-                    ]
-                  : []),
+                ...(finishTotal > 0 ? [{ retailer: 'other' as Retailer, amountUsd: finishTotal, description: 'FurNiche AI: paint and flooring' }] : []),
               ]}
             />
-            <p className="mt-3 text-xs text-muted">
-              FurNiche AI doesn&apos;t sell anything. Buy links open each store;
-              prices are a sample and may have changed.
-            </p>
+            <p className="mt-3 text-xs text-muted">FurNiche AI doesn&apos;t sell anything. Buy links open each store; prices are a sample and may have changed.</p>
           </>
         )}
       </main>

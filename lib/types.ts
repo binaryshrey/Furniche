@@ -59,6 +59,8 @@ export type Category =
   | 'wall-art'
   | 'bench'
   | 'bar-stool'
+  | 'mattress' // sits on a bed frame
+  | 'decor' // floor-standing showpieces: vases, baskets, pouffes, plant stands, lanterns
   | 'patio-table'
   | 'patio-chair'
   | 'lounger'
@@ -71,9 +73,14 @@ export type ThemeId = 'midcentury' | 'japandi' | 'scandinavian' | 'industrial' |
 
 export type Placement = 'floor' | 'wall' | 'outdoor';
 
+// A 3D model generated from the shopper's own photo (lib/photo3d.ts), served at
+// /api/photo3d/<id>/<engine>. `yaw` (radians) turns the model so its front faces +Z. `standee`: the
+// model is still being built, so the room shows the photo's cut-out, standing at true size.
+export type PhotoModel = { id: string; engine: 'quick' | 'detail'; yaw: number; standee?: boolean };
+
 export type Product = {
   id: string;
-  source: 'curated' | 'imported';
+  source: 'curated' | 'imported' | 'photo';
   retailer: Retailer;
   name: string;
   url: string;
@@ -86,6 +93,7 @@ export type Product = {
   styles: ThemeId[];
   placement: Placement;
   standIn: boolean;
+  photoModel?: PhotoModel;
 };
 
 export type PlacedItem = {

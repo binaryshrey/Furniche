@@ -45,3 +45,6 @@ matterport_kit/
 
 # Downloaded store 3D models
 .cache/
+
+# Python
+__pycache__/

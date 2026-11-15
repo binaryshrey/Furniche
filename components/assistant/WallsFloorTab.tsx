@@ -1,4 +1,5 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { MATERIALS, materialById, type Material } from '@/catalog/materials';
 import { THEMES } from '@/catalog/themes';
 import { surfaceLines } from '@/components/design/SurfacesBox';
@@ -15,11 +16,17 @@ const swatchBg = (m: Material) =>
 
 // Paint, wallpaper and flooring for the room you're standing in: one-tap theme looks first,
 // then every finish with its name and price, then quantities and cost.
-export default function WallsFloorTab({ geometry, room }: { geometry: ModelGeometry | null; room: Room | null }) {
+export default function WallsFloorTab({ geometry, room: here }: { geometry: ModelGeometry | null; room: Room | null }) {
   const design = useDesign();
   const { setSurface, removeSurface, setTheme } = useStore.getState();
+  // Any room can be finished, not only the one the camera is in: follow the camera by default,
+  // and let the picker choose another (or one while the tour is still loading).
+  const rooms = (geometry?.rooms ?? []).filter((r) => r.areaM2 > 4 && !/closet|void/i.test(r.label));
+  const [picked, setPicked] = useState<string | null>(null);
+  useEffect(() => setPicked(null), [here?.id]);
+  const room = rooms.find((r) => r.id === picked) ?? here ?? rooms[0] ?? null;
 
-  if (!room) return <p className="rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">Walk into a room to try paint, wallpaper and flooring.</p>;
+  if (!room) return <p className="rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">Loading the rooms of this home…</p>;
 
   const current = (target: 'walls' | 'floor') => design.surfaces.find((s) => s.roomId === room.id && s.target === target);
   const toggle = (target: 'walls' | 'floor', m: Material) => {
@@ -51,9 +58,22 @@ export default function WallsFloorTab({ geometry, room }: { geometry: ModelGeome
 
   return (
     <div className="space-y-5">
-      <div className="flex items-baseline justify-between">
-        <h3 className="font-display text-lg font-semibold">{room.label}</h3>
-        <span className="text-xs text-muted">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="sr-only">{room.label}</h3>
+        <select
+          id="finish-room"
+          aria-label="Room to finish"
+          value={room.id}
+          onChange={(e) => setPicked(e.target.value)}
+          className="min-w-0 flex-1 rounded-lg border border-white/15 bg-paper/60 px-2.5 py-1.5 font-display text-base font-semibold"
+        >
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.label} · {r.areaM2.toFixed(0)} m²{r.id === here?.id ? ' (you are here)' : ''}
+            </option>
+          ))}
+        </select>
+        <span className="shrink-0 text-xs text-muted">
           {room.widthM.toFixed(1)} × {room.depthM.toFixed(1)} m
         </span>
       </div>

@@ -97,13 +97,22 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
     startGesture({ kind: 'rotate', uid, center: it.pos, startRot: it.rot, startAngle: Math.atan2(p.y - it.pos.y, p.x - it.pos.x) });
   }
 
+  // A flat rug covers the floor you'd click to walk, so it only catches presses once it's selected
+  // (or in Arrange mode); otherwise the press walks, like clicking the bare floor.
+  const walkable = (uid: string) => {
+    const st = useStore.getState();
+    if (st.selectedUid === uid || st.mode === 'arrange') return false;
+    const it = designRef.current.items.find((i) => i.uid === uid);
+    return it ? st.product(it.productId)?.category === 'rug' : false;
+  };
+
   // Grab furniture without blocking the scan: capture phase runs before Matterport's handlers.
   useEffect(() => {
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || !inside(e) || useStore.getState().pendingProductId) return;
       if ((e.target as HTMLElement)?.closest?.('[data-fn-ui]')) return;
       const hit = raycast(ndcOf(e), floorZ(), true);
-      if (hit?.kind !== 'item') {
+      if (hit?.kind !== 'item' || walkable(hit.uid)) {
         if (useStore.getState().mode !== 'door') useStore.getState().select(null);
         return; // let Matterport walk / look around
       }
@@ -161,16 +170,28 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     };
-    // Show a grab cursor over furniture.
+    // Over furniture: an open hand (pick up), and Matterport's walking circle hidden so the two
+    // don't compete. While dragging: a closed hand. Rugs you aren't moving stay walkable.
     let raf = 0;
+    let lastOver: boolean | null = null;
+    const setCursor = (c: string) => {
+      const host = root.current?.parentElement;
+      if (!host) return;
+      host.style.cursor = c;
+      host.querySelectorAll<HTMLElement>('matterport-viewer, canvas').forEach((el) => (el.style.cursor = c));
+    };
     const hover = (e: PointerEvent) => {
-      if (raf || gestureRef.current) return;
+      if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        const host = root.current?.parentElement;
-        if (!host) return;
-        const over = !useStore.getState().pendingProductId && inside(e) && raycast(ndcOf(e), floorZ(), true)?.kind === 'item';
-        host.style.cursor = over ? (useStore.getState().design().locked ? 'pointer' : 'grab') : '';
+        if (gestureRef.current) return setCursor('grabbing');
+        const hit = !useStore.getState().pendingProductId && inside(e) ? raycast(ndcOf(e), floorZ(), true) : null;
+        const over = hit?.kind === 'item' && !walkable(hit.uid);
+        setCursor(over ? (useStore.getState().design().locked ? 'pointer' : 'grab') : '');
+        if (over !== lastOver) {
+          lastOver = over;
+          useViewerState.getState().sdk?.Pointer?.setVisible?.(!over)?.catch?.(() => {});
+        }
       });
     };
     const wheel = (e: WheelEvent) => {

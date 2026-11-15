@@ -305,7 +305,7 @@ export async function POST(req: Request) {
       )?.[1];
       return NextResponse.json(
         {
-          error: `${retailerOf(url.hostname) === "other" ? "This store" : url.hostname.replace(/^www\./, "")} blocks automatic reading. Use the Add to Furniche AI button on the product page, or paste the page text below.`,
+          error: `${retailerOf(url.hostname) === 'other' ? 'This store' : url.hostname.replace(/^www\./, '')} blocks automatic reading. Use the Add to FurNiche AI button on the product page, or paste the page text below.`,
           blocked: true,
           nameHint: slug ? slug.replace(/-/g, " ") : null,
         },

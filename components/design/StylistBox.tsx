@@ -12,12 +12,13 @@ const EXAMPLES = ['Warm Japandi under $3,000', 'Midcentury with walnut, $2,500',
 export default function StylistBox({ geometry, roomId, onFurnished }: { geometry: ModelGeometry | null; roomId: string | null; onFurnished?: (roomIds: string[]) => void }) {
   const room = geometry?.rooms.find((r) => r.id === roomId) ?? null;
   const design = useDesign();
-  const imported = useStore((s) => s.importedProducts);
+  // Pieces made from the shopper's photos are placed by hand, never picked automatically.
+  const imported = useStore((s) => s.importedProducts).filter((p) => p.source !== 'photo');
   const [prompt, setPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ summary: string; dropped: { name: string; reason: string }[]; method: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const products = useProducts();
+  const products = useProducts().filter((p) => p.source !== 'photo');
   // A defurnished model's mesh still holds the seller's furniture, so its "fixtures" aren't fixed.
   const hasDefurnish = useViewerState((s) => s.hasDefurnish);
   const usd = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });

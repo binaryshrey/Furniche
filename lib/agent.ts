@@ -30,6 +30,7 @@ export type AgentInput = {
   history: ChatTurn[];
   message: string;
   channel: 'web' | 'imessage';
+  scenes?: Ctx['scenes']; // windows and built-ins per room, from the browser
 };
 export type AgentOutput = {
   reply: string;
@@ -40,7 +41,7 @@ export type AgentOutput = {
   method: 'ai' | 'rules';
 };
 
-type State = { design: WorkDesign; lighting: LightPrefs; changedDesign: boolean; changedLight: boolean; actions: string[]; budget: MoveInBudget | null; focus?: string | null };
+type State = { design: WorkDesign; lighting: LightPrefs; changedDesign: boolean; changedLight: boolean; actions: string[]; budget: MoveInBudget | null; focus?: string | null; added?: { uid: string; name: string }[] };
 
 const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 const short = (p: Product) => p.name.split(',')[0];
@@ -280,7 +281,7 @@ async function runTool(name: string, input: any, ctx: Ctx, state: State, roomId:
       const room = resolveRoom(ctx, input, roomId);
       if (!p) return `Unknown product ${input.productId}. Search first.`;
       if (!room) return 'Which room? Give a roomId.';
-      if (p.placement === 'wall') return `${short(p)} hangs on a wall; ask the shopper to drag it from the Shop panel onto the wall they want.`;
+      if (p.placement === 'wall') return `${short(p)} hangs on a wall: open Furniture → Art & mirrors, press Add to room on it, then click the wall where it should go.`;
       const added: string[] = [];
       let d = state.design;
       for (let n = 0; n < (input.quantity ?? 1); n++) {
@@ -289,8 +290,10 @@ async function runTool(name: string, input: any, ctx: Ctx, state: State, roomId:
         d = { ...d, items: [...d.items, spot] };
         added.push(spot.uid);
       }
+      if (!added.length && p.category === 'mattress') return `There is no bed frame without a mattress in the ${room.label} yet; add a bed first and the mattress goes on it.`;
       if (!added.length) return `${short(p)} (${dims(p)}) has no open spot in the ${room.label} that keeps walkways clear. Suggest removing something, a smaller piece, or optimize_space.`;
       commit(d, `Added ${added.length} × ${short(p)} to ${room.label}`);
+      state.added = [...(state.added ?? []), ...added.map((uid) => ({ uid, name: short(p) }))];
       const st = floorStats(room, d.items, ctx.products);
       return `Added ${added.length} × ${short(p)} (${usd(p.priceUsd)} each) to ${room.label}; uids ${added.join(', ')}. Open floor now ${Math.round(st.freeShare * 100)}%. New total ${usd(designTotal(d, ctx.products))}.`;
     }
@@ -421,7 +424,7 @@ async function runTool(name: string, input: any, ctx: Ctx, state: State, roomId:
 
 // ---------- prompt ----------
 
-const SYSTEM = `You are Furniche's design assistant. The shopper is furnishing a real home they are about to move into, inside its Matterport 3D scan, with real products at true size. You can see and edit their design with tools.
+const SYSTEM = `You are FurNiche AI, a design assistant. The shopper is furnishing a real home they are about to move into, inside its Matterport 3D scan, with real products at true size. You can see and edit their design with tools.
 
 What you help with:
 - Questions about pieces: size, price, store, style, whether something fits, what goes with what.
@@ -443,13 +446,13 @@ How to work:
 Themes: ${THEMES.map((t) => `${t.id} (${t.name}: ${t.blurb})`).join('; ')}.
 Finishes: ${MATERIALS.map((m) => `${m.id} = ${m.name} ${m.kind} $${m.priceUsd}/${m.unit}`).join('; ')}.`;
 
-const IMESSAGE_NOTE = 'This conversation is over iMessage. Plain text only, no markdown, no bullet symbols. Keep it to three short sentences at most. The shopper sees the design update live in the Furniche tab on their computer.';
+const IMESSAGE_NOTE = 'This conversation is over iMessage. Plain text only, no markdown, no bullet symbols. Keep it to three short sentences at most. The shopper sees the design update live in the FurNiche AI tab on their computer.';
 
 // ---------- entry point ----------
 
 export async function runAgent(input: AgentInput): Promise<AgentOutput> {
   const geometry = await getModelGeometry(input.sid);
-  const ctx: Ctx = { geometry, products: [...PRODUCTS, ...input.imported] };
+  const ctx: Ctx = { geometry, products: [...PRODUCTS, ...input.imported], scenes: input.scenes };
   const state: State = { design: input.design, lighting: input.lighting, changedDesign: false, changedLight: false, actions: [], budget: null };
 
   const done = (reply: string, method: AgentOutput['method']): AgentOutput => ({
@@ -564,6 +567,9 @@ export function suggestNext(ctx: Ctx, state: State, roomId: string | null, last:
     if (floorStats(room, state.design.items, ctx.products).freeShare < 0.7) out.push(`Make the ${name} feel bigger`);
   }
   out.push(state.lighting.warmth > 0.2 ? 'Bright daylight' : 'Warmer evening light');
+  // Whatever this reply added can be taken out again in one tap.
+  const justAdded = [...new Set((state.added ?? []).filter((a) => state.design.items.some((i) => i.uid === a.uid)).map((a) => a.name))].slice(0, 2);
+  out.unshift(...justAdded.map((n) => `Remove the ${n}`));
   if (!/afford|budget/i.test(last)) out.push('What can I afford?');
   const emptyOther = rooms.find((r) => r.id !== room.id && !state.design.items.some((i) => i.roomId === r.id));
   if (emptyOther && mine.length) out.push(`Furnish the ${emptyOther.label.toLowerCase()} too`);
@@ -590,9 +596,11 @@ const CATEGORY_WORDS: [RegExp, Category][] = [
   [/\b(dining chairs?|chairs?|seats?)\b/, 'dining-chair'],
   [/\b(dressers?|chests? of drawers)\b/, 'dresser'],
   [/\b(wardrobes?|armoires?)\b/, 'wardrobe'],
+  [/\bmattress(es)?\b/, 'mattress'],
+  [/\b(vases?|baskets?|pouffes?|poufs?|ottomans?|plant stands?|lanterns?|showpieces?|show pieces?|sculptures?|decorations?|decor|candle ?(holders?|sticks?))\b/, 'decor'],
   [/\bbeds?\b/, 'bed'],
   [/\bdesks?\b/, 'desk'],
-  [/\b(floor lamps?|lamps?)\b/, 'floor-lamp'],
+  [/\b(floor lamps?|lamps?|uplighters?|floor uplighters?)\b/, 'floor-lamp'],
   [/\b(rugs?|carpets?)\b/, 'rug'],
   [/\b(plants?|greenery|ficus)\b/, 'plant'],
   [/\bmirrors?\b/, 'mirror'],
@@ -601,20 +609,21 @@ const CATEGORY_WORDS: [RegExp, Category][] = [
 ];
 const NUMBER_WORDS: Record<string, number> = { a: 1, an: 1, one: 1, another: 1, two: 2, pair: 2, couple: 2, three: 3, four: 4, five: 5, six: 6 };
 
-function findCategories(clause: string): { cat: Category; qty: number }[] {
+function findCategories(clause: string): { cat: Category; qty: number; word?: string }[] {
   let s = ` ${clause} `;
-  const found: { cat: Category; qty: number; at: number }[] = [];
+  const found: { cat: Category; qty: number; at: number; word: string }[] = [];
   for (const [re, cat] of CATEGORY_WORDS) {
     const g = new RegExp(re.source, 'g');
     let m: RegExpExecArray | null;
     while ((m = g.exec(s))) {
       const before = s.slice(0, m.index).trim().split(/\s+/).slice(-2);
       const n = before.map((w) => Number(w) || NUMBER_WORDS[w]).filter(Boolean).pop() ?? 1;
-      if (!found.some((f) => f.cat === cat)) found.push({ cat, qty: Math.min(8, n), at: m.index });
+      const word = m[0].trim().replace(/(es|s)$/, '').replace(/^pouffe?$/, 'pouf');
+      if (!found.some((f) => f.cat === cat && f.word === word)) found.push({ cat, qty: Math.min(8, n), at: m.index, word });
       s = s.slice(0, m.index) + ' '.repeat(m[0].length) + s.slice(m.index + m[0].length);
     }
   }
-  return found.sort((a, b) => a.at - b.at).map(({ cat, qty }) => ({ cat, qty }));
+  return found.sort((a, b) => a.at - b.at).map(({ cat, qty, word }) => ({ cat, qty, word }));
 }
 
 // Split "add a rug, make it warmer and then check my budget" into separate requests. "and" splits
@@ -634,9 +643,10 @@ const money = (s: string) => Number(s.match(/\$\s?([\d,]+(?:\.\d+)?)\s*(k)?/)?.[
 // Words in the message that narrow the product (colour, material, size).
 const DESCRIPTORS = ['white', 'black', 'grey', 'gray', 'oak', 'walnut', 'birch', 'pine', 'teak', 'rattan', 'linen', 'velvet', 'leather', 'boucle', 'jute', 'wool', 'brass', 'metal', 'glass', 'marble', 'green', 'blue', 'beige', 'brown', 'round', 'small', 'large', 'modular'];
 
-function pickProduct(cat: Category, clause: string, room: Room, state: State, ctx: Ctx): Product | null {
+function pickProduct(cat: Category, clause: string, room: Room, state: State, ctx: Ctx, noun?: string): Product | null {
   const theme = themeOfRoom(room.id, state, ctx);
-  const words = DESCRIPTORS.filter((w) => clause.includes(w));
+  // The noun itself ("vase", "pouffe", "lantern") narrows a broad category like showpieces.
+  const words = [...DESCRIPTORS.filter((w) => clause.includes(w)), ...(noun && noun.length > 2 ? [noun] : [])];
   const cap = money(clause);
   let pool = ctx.products.filter((p) => p.category === cat && p.placement !== 'outdoor' && productFitsRoom(p, room));
   if (cap) pool = pool.filter((p) => p.priceUsd <= cap);
@@ -699,7 +709,31 @@ async function rulesReply(input: AgentInput, ctx: Ctx, state: State): Promise<st
       break;
     }
 
-    if (/(fit|stay|keep|get|bring|trim|cut).*(budget|afford|(within|under|below) \$)|within (my )?budget|(within|under|below) \$[\d,]+ (total|overall)|under (my )?budget|cut (the )?costs?|save money|reduce (the )?(total|cost)|too expensive/.test(c)) {
+    // Removing comes first: product names like "floor uplighter" must not read as flooring.
+    if (/^(please )?(remove|delete|get rid of|take (out|away)|drop|clear|empty)\b|\b(remove|delete|get rid of)\b/.test(c)) {
+      // A named product ("remove the KIVIK sofa", from the chip after adding it) takes out the most
+      // recently added piece of exactly that product; otherwise a category, or the whole room.
+      const byIdR = new Map(ctx.products.map((p) => [p.id, p]));
+      const named = [...state.design.items].reverse().find((i) => {
+        const p = byIdR.get(i.productId);
+        return p && c.includes(short(p).toLowerCase());
+      });
+      if (named) replies.push(await run('remove_furniture', { uids: [named.uid] }, room));
+      else if (cats.length)
+        for (const x of cats) {
+          const byId = new Map(ctx.products.map((p) => [p.id, p]));
+          const inRoom = state.design.items.some((i) => i.roomId === room.id && byId.get(i.productId)?.category === x.cat);
+          const anywhere = state.design.items.some((i) => byId.get(i.productId)?.category === x.cat);
+          if (inRoom) replies.push(await run('remove_furniture', { roomId: room.id, category: x.cat }, room));
+          else if (anywhere) replies.push(await run('remove_furniture', { category: x.cat }, room));
+          else replies.push(`There is no ${one(x.cat)} in the design to remove.`);
+        }
+      else if (/everything|all|clear|empty|whole/.test(c)) replies.push(await run('remove_furniture', { roomId: room.id, clearRoom: true }, room));
+      else if (state.design.items.length) {
+        const lastAdded = state.design.items[state.design.items.length - 1];
+        replies.push(await run('remove_furniture', { uids: [lastAdded.uid] }, room));
+      }
+    } else if (/(fit|stay|keep|get|bring|trim|cut).*(budget|afford|(within|under|below) \$)|within (my )?budget|(within|under|below) \$[\d,]+ (total|overall)|under (my )?budget|cut (the )?costs?|save money|reduce (the )?(total|cost)|too expensive/.test(c)) {
       replies.push(await run('fit_budget', { targetUsd: money(c) }, room));
     } else if (/\b(afford|budget|spend|bank|capital one|accounts?|money|savings|paycheck)\b/.test(c)) {
       state.budget ??= await loadBudget(state, ctx);
@@ -775,21 +809,6 @@ async function rulesReply(input: AgentInput, ctx: Ctx, state: State): Promise<st
         const placed = state.design.items.some((i) => byId.get(i.productId)?.category === cat && i.roomId === room.id);
         replies.push(placed ? await run('swap_to', { category: cat, roomId: room.id, want }, room) : await addPieces([{ cat, qty: 1 }], c, room, ctx, state));
       }
-    } else if (/remove|delete|get rid|take (out|away)|drop|clear|empty|don't want|do not want|no more|without/.test(c)) {
-      if (cats.length)
-        for (const x of cats) {
-          const byId = new Map(ctx.products.map((p) => [p.id, p]));
-          const inRoom = state.design.items.some((i) => i.roomId === room.id && byId.get(i.productId)?.category === x.cat);
-          const anywhere = state.design.items.some((i) => byId.get(i.productId)?.category === x.cat);
-          if (inRoom) replies.push(await run('remove_furniture', { roomId: room.id, category: x.cat }, room));
-          else if (anywhere) replies.push(await run('remove_furniture', { category: x.cat }, room));
-          else replies.push(`There is no ${one(x.cat)} in the design to remove.`);
-        }
-      else if (/everything|all|clear|empty|whole/.test(c)) replies.push(await run('remove_furniture', { roomId: room.id, clearRoom: true }, room));
-      else if (state.design.items.length) {
-        const lastAdded = state.design.items[state.design.items.length - 1];
-        replies.push(await run('remove_furniture', { uids: [lastAdded.uid] }, room));
-      }
     } else if (cats.length && /how (big|much|wide|tall|long|deep)|what size|price of|cost of|dimensions|does .* fit|will .* fit/.test(c)) {
       const byId = new Map(ctx.products.map((p) => [p.id, p]));
       for (const x of cats) {
@@ -822,32 +841,43 @@ async function rulesReply(input: AgentInput, ctx: Ctx, state: State): Promise<st
   return replies.join(' ');
 }
 
-async function addPieces(cats: { cat: Category; qty: number }[], clause: string, room: Room, ctx: Ctx, state: State): Promise<string> {
+async function addPieces(cats: { cat: Category; qty: number; word?: string }[], clause: string, roomIn: Room, ctx: Ctx, state: State): Promise<string> {
   const parts: string[] = [];
   const failed: string[] = [];
+  let room = roomIn;
   for (const x of cats) {
-    const p = pickProduct(x.cat, clause, room, state, ctx);
+    // A mattress needs a bed frame: if this room has none free, use a room that does.
+    if (x.cat === 'mattress') {
+      const byId = new Map(ctx.products.map((p) => [p.id, p]));
+      const freeBed = (r: Room) =>
+        state.design.items.some(
+          (b) => b.roomId === r.id && byId.get(b.productId)?.category === 'bed' && !state.design.items.some((m) => m.roomId === r.id && byId.get(m.productId)?.category === 'mattress' && Math.hypot(m.pos.x - b.pos.x, m.pos.y - b.pos.y) < 0.3),
+        );
+      if (!freeBed(room)) room = furnishableRooms(ctx.geometry).find((r) => freeBed(r) && /bed/i.test(r.label)) ?? furnishableRooms(ctx.geometry).find(freeBed) ?? room;
+    }
+    const p = pickProduct(x.cat, clause, room, state, ctx, x.word);
     if (!p) {
       failed.push(`no ${one(x.cat)} in the catalogue fits`);
       continue;
     }
     const res = await runTool('add_furniture', { productId: p.id, roomId: room.id, quantity: x.qty }, ctx, state, room.id);
     if (res.startsWith('Added')) parts.push(`${x.qty > 1 ? x.qty + ' × ' : ''}${short(p)} (${usd(p.priceUsd)}${x.qty > 1 ? ' each' : ''})`);
+    else if (p.category === 'mattress' || p.placement === 'wall') failed.push(res.replace(/\.$/, ''));
     else failed.push(`no open spot for the ${short(p)}`);
   }
   const st = floorStats(room, state.design.items, ctx.products);
   return [
     parts.length ? `Added ${parts.join(', ')} to the ${room.label.toLowerCase()}, placed clear of walkways. ${Math.round(st.freeShare * 100)}% of the floor is still open; design total ${usd(designTotal(state.design, ctx.products))}.` : '',
-    failed.length ? `Couldn't add: ${failed.join('; ')}. Try "make the room feel bigger" first.` : '',
+    failed.length ? `Couldn't add: ${failed.join('; ')}.${failed.some((f) => f.startsWith('no open spot')) ? ' Try "make the room feel bigger" first.' : ''}` : '',
   ]
     .filter(Boolean)
     .join(' ');
 }
 
 // Opening chips for the chat, before the shopper has typed anything.
-export async function suggestFor(input: Pick<AgentInput, 'sid' | 'roomId' | 'design' | 'imported' | 'lighting'>): Promise<string[]> {
+export async function suggestFor(input: Pick<AgentInput, 'sid' | 'roomId' | 'design' | 'imported' | 'lighting' | 'scenes'>): Promise<string[]> {
   const geometry = await getModelGeometry(input.sid);
-  const ctx: Ctx = { geometry, products: [...PRODUCTS, ...input.imported] };
+  const ctx: Ctx = { geometry, products: [...PRODUCTS, ...input.imported], scenes: input.scenes };
   const state: State = { design: input.design, lighting: input.lighting, changedDesign: false, changedLight: false, actions: [], budget: null };
   return suggestNext(ctx, state, input.roomId, '');
 }
