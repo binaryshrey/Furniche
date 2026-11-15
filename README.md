@@ -1,4 +1,4 @@
-# Furniche
+# Furniche AI
 
 Furnish a real Houston listing before you move in. Open the home's Matterport scan in its
 empty-room view, shop furniture from IKEA, Amazon, West Elm, Wayfair and Target, and drop each
