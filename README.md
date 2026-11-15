@@ -1,13 +1,12 @@
 # FurNiche AI
 
-
 **Live demo:** [furniche-ai.vercel.app](https://furniche-ai.vercel.app)
 
-Furnish a real Houston listing before you move in. Open the home's Matterport scan in its
-empty-room view, shop furniture from IKEA, Amazon, West Elm, Wayfair and Target, and drop each
-piece into the room at its true size. FurNiche AI checks the fit, styles a room for you, prices
-paint and flooring, plans the yard on a Vexcel aerial image, and checks out through a Capital One
-sandbox account.
+Furnish a real Houston listing before you move in. Find a home on a Vexcel aerial map, fly in
+over Vexcel's 3D city, and open the home's Matterport scan in its empty-room view. Shop furniture
+from IKEA, Amazon, West Elm, Wayfair and Target, and drop each piece into the room at its true
+size. FurNiche AI checks the fit, styles a room for you, prices paint and flooring, plans the yard
+on a Vexcel aerial image, and checks out through a Capital One sandbox account.
 
 Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built World" track.
 
