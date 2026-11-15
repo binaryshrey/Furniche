@@ -117,9 +117,14 @@ export default function ChatPanel({
   const roomId = useViewerState((s) => s.currentRoomId);
   const room = geometry?.rooms.find((r) => r.id === roomId) ?? null;
   const productOf = useStore((s) => s.product);
-  // Furniture plus paint and flooring, the same total the cart and My design show.
+  // Furniture plus paint and flooring, for the move-in budget. Pieces from My Scans are the
+  // mover's own, so they cost nothing here.
   const planned = useMemo(
-    () => design.items.reduce((s, i) => s + (productOf(i.productId)?.priceUsd ?? 0), 0) + surfaceLines(geometry, design.surfaces, design.doors).reduce((s, f) => s + f.cost, 0),
+    () =>
+      design.items.reduce((s, i) => {
+        const p = productOf(i.productId);
+        return s + (p && p.source !== 'photo' ? p.priceUsd : 0);
+      }, 0) + surfaceLines(geometry, design.surfaces, design.doors).reduce((s, f) => s + f.cost, 0),
     [design.items, design.surfaces, design.doors, geometry, productOf],
   );
   const budget = useBudget(planned, msgs.length);
