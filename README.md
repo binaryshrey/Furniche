@@ -1,14 +1,5 @@
 # FurNiche AI
 
-![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
-![three.js](https://img.shields.io/badge/three.js-r184-000000?logo=threedotjs&logoColor=white)
-![Matterport](https://img.shields.io/badge/Matterport-Showcase%20SDK-1A1A1A)
-![Vexcel](https://img.shields.io/badge/Vexcel-3D%20city%20%2B%20aerial-0B6E4F)
-![Claude](https://img.shields.io/badge/Claude-stylist%20%2B%20chat-D97757)
-![Capital One](https://img.shields.io/badge/Capital%20One-Nessie%20sandbox-D03027)
-![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?logo=vercel&logoColor=white)
 
 **Live demo:** [furniche-ai.vercel.app](https://furniche-ai.vercel.app)
 
@@ -44,8 +35,6 @@ What it lets a mover do:
 - Pay for the cart from a Capital One sandbox account and see the result in a banking dashboard
 
 ## Built with
-
-**Frontend**
 
 - Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, zustand
 - `@matterport/webcomponent` and `@matterport/r3f` host the scan; furniture is rendered with
@@ -256,17 +245,6 @@ Git-triggered deploys are turned off in `vercel.json`, because the build needs t
   daily limit, use `scripts/photo3d_local.py` on this computer or `scripts/photo3d_gpu.ipynb` on a
   free Kaggle or Colab GPU, and set `PHOTO3D_GPU_URL`.
 - Designs are saved in the browser; there are no accounts and nothing is sold.
-
-## Known limits
-
-- Closets and doors that are not separate rooms in the scan (for example louvered closet doors)
-  cannot be detected from the mesh. Auto-furnish can place a piece in front of one; mark the door
-  in the floor plan and run it again.
-- Vexcel's 3D collection covers Houston only; the mesh stops at about 29.84 N.
-- Capital One data is the Nessie sandbox: nothing real is charged, and some dashboard activity is
-  generated sample data, labelled as such.
-- The product catalogue is a curated sample; prices and sizes were checked on the date shown in
-  the cart and may have changed.
 
 ## Data and credits
 
