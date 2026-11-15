@@ -1,9 +1,8 @@
 'use client';
 import QRCode from 'qrcode';
 import { useEffect, useRef, useState } from 'react';
-import { panoForRoom } from '@/lib/fit';
 import { useLighting, LIGHT_PRESETS } from '@/lib/lighting';
-import { look, step } from '@/lib/remoteActions';
+import { guardInside, interiorPano, look, step } from '@/lib/remoteActions';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useStore } from '@/lib/store';
 import type { ModelGeometry } from '@/lib/types';
@@ -38,6 +37,7 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
   const [problem, setProblem] = useState<string | null>(null);
   const [phoneOn, setPhoneOn] = useState(false);
   const reply = useRef<{ text: string; suggestions: string[] } | null>(null);
+  const note = useRef<{ text: string; at: number } | null>(null);
   const geo = useRef(geometry);
   geo.current = geometry;
 
@@ -94,11 +94,13 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
       switch (c.type) {
         case 'look':
           return look(sdk, c.dx, c.dy);
-        case 'step':
-          return step(sdk, geo.current, c.dir, (s, pano) => moveToPano(s, pano, false, 2));
+        case 'step': {
+          const r = await step(sdk, geo.current, c.dir, (s, pano) => moveToPano(s, pano, false, 2));
+          note.current = r.note ? { text: r.note, at: Date.now() } : null;
+          return;
+        }
         case 'room': {
-          const room = geo.current?.rooms.find((r) => r.id === c.id);
-          const pano = room && geo.current ? panoForRoom(room, geo.current.panos) : null;
+          const pano = geo.current ? interiorPano(geo.current, c.id) : null;
           if (sdk && pano) moveToPano(sdk, pano.id, false, 2);
           return;
         }
@@ -114,6 +116,15 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
     };
     return () => es.close();
   }, [id]);
+
+  // While a phone drives the tour, keep the camera inside the building.
+  const sdk = useViewerState((v) => v.sdk);
+  useEffect(() => {
+    if (!phoneOn || !sdk || !geometry) return;
+    let stop = () => {};
+    import('@/components/viewer/MatterportHost').then(({ moveToPano }) => (stop = guardInside(sdk, geometry, (s, id) => moveToPano(s, id, false, 2))));
+    return () => stop();
+  }, [phoneOn, sdk, geometry]);
 
   // Keep the assistant's latest reply for the phone.
   useEffect(() => {
@@ -133,7 +144,8 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
       const v = useViewerState.getState();
       const state = {
         title,
-        rooms: (g?.rooms ?? []).filter((r) => r.areaM2 > 4 && !/closet|void|hallway/i.test(r.label)).map((r) => ({ id: r.id, label: r.label, area: Math.round(r.areaM2) })),
+        // Only rooms the phone can actually take you to: with a viewpoint inside the building.
+        rooms: (g?.rooms ?? []).filter((r) => r.areaM2 > 4 && !/closet|void|hallway/i.test(r.label) && !!g && !!interiorPano(g, r.id)).map((r) => ({ id: r.id, label: r.label, area: Math.round(r.areaM2) })),
         roomId: v.currentRoomId,
         light: lightName(),
         total: d.items.reduce((s, i) => s + (st.product(i.productId)?.priceUsd ?? 0), 0),
@@ -143,6 +155,7 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
         ready: !!v.sdk,
         reply: reply.current?.text ?? null,
         suggestions: reply.current?.suggestions ?? [],
+        note: note.current && Date.now() - note.current.at < 3500 ? note.current.text : null,
       };
       try {
         const r = await fetch(`/api/remote/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state }) });

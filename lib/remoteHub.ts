@@ -27,6 +27,7 @@ export type RemoteState = {
   ready: boolean;
   reply: string | null; // the assistant's latest reply, so the phone sees answers to its chat
   suggestions: string[];
+  note?: string | null; // a short message for the phone, e.g. why a step didn't move
 };
 
 type Session = {
