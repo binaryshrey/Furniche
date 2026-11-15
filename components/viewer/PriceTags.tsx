@@ -7,7 +7,7 @@ import { bridge, useGhost, useViewerState } from "@/lib/sceneBridge";
 import { useDesign, useStore } from "@/lib/store";
 import type { PlacedItem, Product } from "@/lib/types";
 
-// A price tag over every IKEA piece in the room you're in, with today's price from ikea.com.
+// A price tag over every IKEA piece on the floor you're on, with today's price from ikea.com.
 // Click it to open the product on IKEA's site. Tags follow the pieces as the camera moves and
 // hide behind walls and off screen.
 
@@ -23,7 +23,8 @@ ray.layers.enableAll();
 export default function PriceTags() {
   const design = useDesign();
   const product = useStore((s) => s.product);
-  const roomId = useViewerState((s) => s.currentRoomId);
+  // Pieces on the floor you're on (open-plan rooms share one view; walls hide the rest below).
+  const floorZ = useViewerState((s) => s.cameraFloorZ);
   const showing = useViewerState((s) => s.showingRoom);
   const ghost = useGhost((s) => s.ghost);
   const { prices, want, show: on } = useLivePrices();
@@ -37,7 +38,8 @@ export default function PriceTags() {
       .filter((x): x is { item: PlacedItem; p: Product } => !!x.p);
     const mine = all.filter(
       ({ item, p }) =>
-        item.roomId === roomId &&
+        item.pos.z > floorZ - 0.5 &&
+        item.pos.z < floorZ + 2.4 &&
         p.retailer === "ikea" &&
         !(
           p.category === "mattress" &&
@@ -73,7 +75,7 @@ export default function PriceTags() {
       }
     }
     return groups;
-  }, [design.items, product, roomId]);
+  }, [design.items, product, floorZ]);
 
   useEffect(() => {
     if (on && items.length) want([...new Set(items.map((x) => x.p.id))]);

@@ -115,6 +115,19 @@ class Planner {
     this.c = centroid(room.polygon);
   }
 
+  // Every product for a role, best first (to fall back to a smaller one when the best won't fit).
+  pickAll(cats: Category[], o: Parameters<Planner['pick']>[1] = {}): Product[] {
+    const out: Product[] = [];
+    const seen = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      const p = this.pick(cats, { ...o, prefer: (q) => (seen.has(q.id) ? -1000 : 0) + (o.prefer?.(q) ?? 0) });
+      if (!p || seen.has(p.id)) break;
+      seen.add(p.id);
+      out.push(p);
+    }
+    return out;
+  }
+
   // Best product for a role: right kind, fits the wall/room, closest to the colour family.
   pick(cats: Category[], o: { maxW?: number; maxD?: number; maxH?: number; minW?: number; prefer?: (p: Product) => number; placement?: 'floor' | 'wall' } = {}): Product | null {
     const pool = this.products
@@ -233,6 +246,9 @@ class Planner {
     const pos = add(add(side.a, side.t, at), side.n, D(p) / 2 + HANG_GAP);
     this.put(role, p, pos, faceRot(side.n), this.room.floorZ + bottom);
     this.hung.push({ side, from: at - w / 2, to: at + w / 2, lo: bottom, hi: bottom + H(p) });
+    // A piece that comes down to the floor (a leaning full-length mirror) also keeps its strip of
+    // floor clear, so nothing is put in front of it.
+    if (bottom < 0.5) this.boxes.push({ fp: rectCorners(add(add(side.a, side.t, at), side.n, 0.2), w + 0.1, 0.4, faceRot(side.n)), cat: p.category, h: bottom + H(p) });
     return true;
   }
 
@@ -284,17 +300,19 @@ class Planner {
 
 // Pieces that hang: art over the anchor, centred, bottom ~25 cm above it.
 function artOver(pl: Planner, side: Side, s: number, anchorW: number, anchorTop: number, role = 'wall art') {
-  const art = pl.pick(['wall-art'], { maxW: Math.min(side.len - 0.3, Math.max(anchorW * 0.95, 0.9)), placement: 'wall', prefer: (p) => W(p) * 1.4 }); // as big as fits
-  if (!art) return false;
-  const bottom = Math.max(anchorTop + 0.25, 1.05);
-  return pl.hang(role, art, side, s, bottom);
+  // As big as suits the piece below (a little wider than a narrow bed is fine), never past the wall.
+  const maxW = Math.min(side.len - 0.3, Math.max(anchorW * 0.95, Math.min(anchorW * 1.15, 1.25), 0.9));
+  for (const art of pl.pickAll(['wall-art'], { maxW, placement: 'wall', prefer: (p) => W(p) * 1.4 })) {
+    if (pl.hang(role, art, side, s, Math.max(anchorTop + 0.25, 1.05))) return true;
+  }
+  return false;
 }
 
 function stageBedroom(pl: Planner): void {
   const longest = Math.max(pl.room.widthM, pl.room.depthM);
   const shortest = Math.min(pl.room.widthM, pl.room.depthM);
   const bedMax = { maxW: longest - 0.6, maxD: shortest - 0.75 };
-  const bed = pl.pick(['bed'], { ...bedMax, prefer: (p) => (W(p) >= 1.5 ? 0.6 : 0) });
+  const bed = pl.pick(['bed'], { ...bedMax, prefer: (p) => (pl.room.areaM2 >= 11 ? (W(p) >= 1.5 ? 0.6 : 0) : -W(p) * 2) }); // small rooms: the narrower bed
   if (!bed) return pl.need('bed', false);
   // Headboard on the longest free wall, centred; the bed needs walking room on both long sides.
   const headSides = [...pl.sides].sort((a, b) => b.len - a.len);
@@ -323,34 +341,66 @@ function stageBedroom(pl: Planner): void {
   // The big painting over the bed.
   pl.need('painting over the bed', artOver(pl, head, hs, W(bed), Math.max(H(bed), 1.0) - 0.05));
 
-  // A big floor lamp by a nightstand (or the bed).
-  const lamp = pl.pick(['floor-lamp'], { prefer: (p) => H(p) * 0.8 });
-  if (lamp) {
+  const others = pl.sides.filter((x) => x !== head);
+  const facingBed = (side: Side) => -(side.n.x * head.n.x + side.n.y * head.n.y); // 1 = opposite wall
+
+  // Closet first (the biggest piece after the bed): a side or facing wall, ideally in a corner;
+  // a smaller wardrobe if the best one won't fit. Skipped when the room already has a closet.
+  let closetSide: Side | null = null;
+  if (!pl.hasCloset) {
     let ok = false;
-    for (const sgn of [1, -1]) {
-      const s = hs + sgn * (W(bed) / 2 + (nightstands ? W(ns!) + 0.12 : 0.06) + W(lamp) / 2);
-      const pos = add(add(head.a, head.t, s), head.n, D(lamp) / 2 + WALL_GAP + 0.05);
-      if (s > 0.2 && s < head.len - 0.2 && pl.ok(lamp, pos, 0)) {
-        pl.put('floor lamp', lamp, pos, rot);
+    for (const closet of pl.pickAll(['wardrobe'], { maxD: 0.65 })) {
+      const placed =
+        pl.againstWall('closet', closet, (side, s) => -Math.abs(facingBed(side)) * 0.5 + Math.max(s, side.len - s) * 0.4 + side.len * 0.2, others) ??
+        pl.againstWall('closet', closet, (side, s) => Math.max(s, side.len - s), [head]); // beside the bed as a last resort
+      if (placed) {
+        closetSide = placed.side;
         ok = true;
         break;
       }
     }
-    if (!ok) ok = pl.corner('floor lamp', lamp);
-    pl.need('floor lamp', ok);
+    pl.need('closet', ok);
   }
 
-  const others = pl.sides.filter((x) => x !== head);
-  const facingBed = (side: Side) => -(side.n.x * head.n.x + side.n.y * head.n.y); // 1 = opposite wall
+  // Dressing table with a mirror over it: only where a mirror can hang above it (not under a
+  // window or the TV). Failing that, a full-length mirror leaning beside it.
+  let dresserSide: Side | null = null;
+  {
+    const dressers = pl.pickAll(['dresser'], { maxH: 1.0, maxD: 0.55, prefer: (p) => (W(p) <= 1.45 ? 0.5 : 0) - (pl.room.areaM2 < 11 ? W(p) : 0) });
+    const mirrors = (d: Product) => pl.pickAll(['mirror'], { maxW: W(d) * 0.95, maxH: pl.ceiling - H(d) - 0.3, placement: 'wall', prefer: (p) => H(p) * 0.5 });
+    let done = false;
+    for (const dresser of dressers) {
+      const mir = mirrors(dresser);
+      const fits = (side: Side, s: number) => mir.some((m) => pl.slots(side, W(m), H(dresser) + 0.15, H(dresser) + 0.15 + H(m)).some((x) => Math.abs(x - s) < 0.06));
+      const placed = pl.againstWall('dressing table', dresser, (side, s) => (fits(side, s) ? 10 : -100) + (side === closetSide ? -1 : 0) - Math.abs(s - side.len / 2) * 0.2, others);
+      if (!placed) continue;
+      dresserSide = placed.side;
+      done = true;
+      let hung = false;
+      for (const m of mir) if ((hung = pl.hang('mirror', m, placed.side, placed.s, H(dresser) + 0.15, 0.06))) break;
+      if (!hung) {
+        // A full-length mirror leaning on the wall next to the dressing table, or on any free wall.
+        for (const m of pl.pickAll(['mirror'], { placement: 'wall', prefer: (p) => (H(p) >= 1.5 ? 5 : 0) })) {
+          if (H(m) < 1.4) continue;
+          const beside = [placed.s - W(dresser) / 2 - W(m) / 2 - 0.1, placed.s + W(dresser) / 2 + W(m) / 2 + 0.1];
+          if ((hung = beside.some((s) => pl.hang('mirror', m, placed.side, s, 0.04, 0.3)))) break;
+          for (const side of others) if ((hung = pl.hang('mirror', m, side, side.len / 2, 0.04, side.len))) break;
+          if (hung) break;
+        }
+      }
+      pl.need('mirror', hung);
+      break;
+    }
+    pl.need('dressing table', done);
+  }
 
-  // TV on the wall facing the bed, at eye height from bed.
+  // TV on the wall facing the bed (else a side wall), sized to the empty stretch.
   let tvSide: Side | null = null;
   {
     const cands = [...others].sort((a, b) => facingBed(b) - facingBed(a));
     for (const side of cands) {
-      if (facingBed(side) < -0.3) break; // never behind the bed
       const u = (bp.x - side.a.x) * side.t.x + (bp.y - side.a.y) * side.t.y;
-      if (pl.hangTv(side, Math.max(0.6, Math.min(side.len - 0.6, u)), 1.0)) {
+      if (pl.hangTv(side, Math.max(0.6, Math.min(side.len - 0.6, u)), side === dresserSide ? 1.25 : 1.0)) {
         tvSide = side;
         break;
       }
@@ -358,27 +408,28 @@ function stageBedroom(pl: Planner): void {
     pl.need('TV', !!tvSide);
   }
 
-  // Closet: the tallest piece, on a side wall, ideally in a corner.
-  const closet = pl.hasCloset ? null : pl.pick(['wardrobe'], { maxW: Math.max(...others.map((x) => x.len)) - 0.2, maxD: shortest - 1.6 - D(bed) > 0 ? 0.65 : 0.62 });
-  if (closet) {
-    const placed = pl.againstWall('closet', closet, (side, s) => (side === tvSide ? -5 : 0) + Math.abs(facingBed(side)) * -1 + Math.max(s, side.len - s) * 0.4 + side.len * 0.2, others);
-    pl.need('closet', !!placed);
-  }
-
-  // Dressing table with a mirror over it.
-  const dresser = pl.pick(['dresser'], { maxH: 1.0, maxD: 0.55, prefer: (p) => (W(p) <= 1.45 ? 0.5 : 0) });
-  if (dresser) {
-    const placed = pl.againstWall('dressing table', dresser, (side, s) => (side === tvSide ? -2 : 0) - Math.abs(s - side.len / 2) * 0.3 + side.len * 0.1, others);
-    pl.need('dressing table', !!placed);
-    if (placed) {
-      const mirror = pl.pick(['mirror'], { maxW: W(dresser) * 0.9, maxH: pl.ceiling - H(dresser) - 0.35, placement: 'wall', prefer: (p) => H(p) * 0.5 });
-      pl.need('mirror', !!mirror && pl.hang('mirror', mirror, placed.side, placed.s, H(dresser) + 0.15));
+  // A big floor lamp by a nightstand or the bed, else in a free corner; a slimmer one if needed.
+  {
+    let ok = false;
+    for (const lamp of pl.pickAll(['floor-lamp'], { prefer: (p) => H(p) * 0.8 })) {
+      for (const sgn of [1, -1]) {
+        const s = hs + sgn * (W(bed) / 2 + (nightstands ? W(ns!) + 0.12 : 0.06) + W(lamp) / 2);
+        const pos = add(add(head.a, head.t, s), head.n, D(lamp) / 2 + WALL_GAP + 0.05);
+        if (s > 0.2 && s < head.len - 0.2 && pl.ok(lamp, pos, 0)) {
+          pl.put('floor lamp', lamp, pos, rot);
+          ok = true;
+          break;
+        }
+      }
+      if (!ok) ok = pl.corner('floor lamp', lamp);
+      if (ok) break;
     }
+    pl.need('floor lamp', ok);
   }
 
   // A vase in a free corner, a rug at the foot of the bed.
   const vase = pl.pick(['decor'], { prefer: (p) => (/vase/i.test(p.name) ? 3 : 0) });
-  if (vase) pl.need('flower vase', pl.corner('flower vase', vase));
+  if (vase) pl.need('flower vase', pl.corner('flower vase', vase) || !!pl.againstWall('flower vase', vase, (side, s) => -Math.abs(s - side.len / 2)));
   const rug = pl.pick(['rug'], { maxW: Math.min(W(bed) + 0.9, longest - 0.5) });
   if (rug) {
     const pos = add(bp, head.n, D(bed) * 0.22);
