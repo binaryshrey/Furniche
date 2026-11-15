@@ -29,7 +29,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
-      <TopNav name="Furniche AI" />
+      <TopNav name="Furniche AI" home />
 
       <section className="px-4 pb-10 pt-12 sm:px-6 md:pt-16">
         <div className="mx-auto max-w-5xl text-center">

@@ -4,7 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Entry } from '@/components/sky/SkyView';
+import { Button } from '@/components/ui/button';
+import BedsFilter from '@/components/home/BedsFilter';
+import LocationFilter from '@/components/home/LocationFilter';
+import PriceFilter, { NO_PRICE, inRange, type PriceRange } from '@/components/home/PriceFilter';
+import { Input } from '@/components/ui/input';
+import { toggleVariants } from '@/components/ui/toggle';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { cn } from '@/lib/utils';
+import { type BedFilter, inBeds, NO_BEDS } from '@/lib/beds';
 import { getEntry, preloadEntry } from '@/lib/entryCache';
+import { loadFavorites, saveFavorites } from '@/lib/favorites';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useOnMesh } from '@/lib/coverage';
 import type { SearchResult } from '@/lib/search';
@@ -25,19 +35,17 @@ const SETTLE_MS = 700; // let the first panorama paint before revealing it
 const FADE_MS = 1300; // crossfade, timed with the camera's dive into the house
 const TOUR_TIMEOUT_MS = 25000;
 
-// Quick filters, each a plain-language search.
+// Quick filters, each a plain-language search. The first one is the default (all apartments);
+// it is labelled "Filters".
 const PILLS: { label: string; q: string }[] = [
-  { label: 'All apartments', q: 'apartments' },
+  { label: 'Filters', q: 'apartments' },
   { label: 'Studios', q: 'studio apartments' },
   { label: '1 bed', q: '1 bed apartments' },
   { label: '2 beds', q: '2 bed apartments' },
   { label: '3+ beds', q: '3+ bed apartments' },
   { label: 'Under $1,000', q: 'apartments under $1,000' },
   { label: 'Under $1,500', q: 'apartments under $1,500' },
-  { label: 'Homes for sale', q: 'homes for sale' },
-  { label: 'Montrose', q: 'apartments in Montrose' },
   { label: 'The Heights', q: 'apartments in the Heights' },
-  { label: 'Midtown', q: 'apartments in Midtown' },
   { label: 'Downtown', q: 'apartments in Downtown' },
 ];
 const PAGE = 24;
@@ -48,45 +56,67 @@ const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.len
 function Card({
   r,
   active,
+  saved,
+  onToggleSave,
   onHover,
   onBroken,
   onOpen,
 }: {
   r: SearchResult;
   active: boolean;
+  saved: boolean; // the heart is filled
+  onToggleSave: () => void;
   onHover: (sid: string | null) => void;
   onBroken: () => void;
   onOpen?: () => void; // fly in from the 3D city instead of a plain page load
 }) {
-  const [amount, unit] = r.rent ? [r.priceLabel.replace('/mo', ''), 'month'] : [r.priceLabel, 'for sale'];
+  const [amount, unit] = r.rent ? [r.priceLabel.replace('/mo', ''), 'total'] : [r.priceLabel, 'for sale'];
   return (
-    <Link
-      href={`/space/${r.sid}`}
-      className="group block"
-      onMouseEnter={() => onHover(r.sid)}
-      onMouseLeave={() => onHover(null)}
-      onClick={(e) => {
-        if (!onOpen || e.metaKey || e.ctrlKey || e.shiftKey) return;
-        e.preventDefault();
-        onOpen();
-      }}
-    >
-      <div className={`relative aspect-[20/19] overflow-hidden rounded-xl bg-panel ring-2 transition ${active ? 'ring-brand' : 'ring-transparent'}`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={thumb(r.sid)} alt="" loading="lazy" onError={onBroken} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" />
-        <span className="absolute left-3 top-3 rounded-full bg-paper/85 px-2.5 py-1 text-[11px] font-semibold backdrop-blur">Empty-room 3D</span>
-      </div>
-      <div className="mt-3 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="truncate text-[15px] font-semibold">{r.title}</div>
-          <div className="truncate text-sm text-muted">{r.subtitle}</div>
+    // The wrapper carries the hover handlers and the heart, which sits over the photo's top-right
+    // corner; a button cannot live inside the Link without being invalid HTML.
+    <div className="relative" onMouseEnter={() => onHover(r.sid)} onMouseLeave={() => onHover(null)}>
+      <Link
+        href={`/space/${r.sid}`}
+        className="group block"
+        onClick={(e) => {
+          if (!onOpen || e.metaKey || e.ctrlKey || e.shiftKey) return;
+          e.preventDefault();
+          onOpen();
+        }}
+      >
+        <div className={`relative aspect-[20/19] overflow-hidden rounded-xl bg-panel ring-2 transition ${active ? 'ring-brand' : 'ring-transparent'}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumb(r.sid)} alt="" loading="lazy" onError={onBroken} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" />
         </div>
-        {r.beds != null && <span className="shrink-0 text-sm">{r.beds === 0 ? 'Studio' : `${r.beds} bd`}</span>}
-      </div>
-      <div className="mt-1 text-[15px]">
-        <span className="font-semibold">{amount}</span> <span className="text-muted">{unit}</span>
-      </div>
-    </Link>
+        <div className="mt-3 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-semibold">{r.title}</div>
+            <div className="truncate text-sm text-muted">{r.subtitle}</div>
+          </div>
+          {r.beds != null && <span className="shrink-0 text-sm">{r.beds === 0 ? 'Studio' : `${r.beds} bd`}</span>}
+        </div>
+        <div className="mt-1 text-[15px]">
+          <span className="font-semibold">{amount}</span> <span className="text-muted">{unit}</span>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={onToggleSave}
+        aria-pressed={saved}
+        aria-label={saved ? 'Remove from favourites' : 'Save to favourites'}
+        className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-white transition hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden className="drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+          <path
+            d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"
+            fill={saved ? '#fc7249' : 'rgba(0,0,0,0.4)'}
+            stroke={saved ? '#fc7249' : '#fff'}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
   );
 }
 
@@ -102,6 +132,18 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
   const [flyTo, setFlyTo] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
   const [broken, setBroken] = useState<Set<string>>(new Set());
+  const [price, setPrice] = useState<PriceRange>(NO_PRICE);
+  const [beds, setBeds] = useState<BedFilter>(NO_BEDS);
+  // Hearted listings, remembered in this browser. They are read after the first paint so the
+  // server and browser render the same page.
+  const [favs, setFavs] = useState<Set<string>>(new Set());
+  useEffect(() => setFavs(loadFavorites()), []);
+  const toggleFav = (sid: string) => {
+    const next = new Set(favs);
+    if (!next.delete(sid)) next.add(sid);
+    setFavs(next);
+    saveFavorites(next);
+  };
   // The page waits behind a loading screen until the whole 3D city is local and the first view
   // is at full detail, so it is crystal clear from the first frame.
   const [city, setCity] = useState({ done: 0, total: 0, sharp: false });
@@ -154,7 +196,13 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
     };
   }, [q, initial.q]);
 
-  const results = useMemo(() => (data?.results ?? []).filter((r) => !broken.has(r.sid)), [data, broken]);
+  const available = useMemo(() => (data?.results ?? []).filter((r) => !broken.has(r.sid)), [data, broken]);
+  const prices = useMemo(() => available.map((r) => r.price).filter((p): p is number => p != null), [available]);
+  // The Price and Beds tabs narrow whatever the current search returned.
+  const results = useMemo(
+    () => available.filter((r) => inRange(r.price, price) && inBeds(r.beds, beds.range)),
+    [available, price, beds],
+  );
   const onMesh = useOnMesh();
   const inCity = useMemo(() => results.filter(onMesh).slice(0, MAX_PINS), [results, onMesh]);
   const pins = useMemo(() => inCity.map((r) => ({ sid: r.sid, lat: r.lat, lon: r.lon, label: r.priceLabel })), [inCity]);
@@ -171,6 +219,10 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
     setHover(null);
     setFlyTo(null);
   };
+  // The Location tab searches "apartments in <place>". It shows as active only for a place typed
+  // there; the quick-filter pills (The Heights, Downtown) keep their own highlight.
+  const location = useMemo(() => (PILLS.some((p) => p.q === q) ? '' : (q.match(/^apartments in (.+)$/i)?.[1] ?? '')), [q]);
+  const applyLocation = (place: string) => choose(place ? `apartments in ${place}` : PILLS[0].q);
   // Warm the server for a likely click: the entry (floor plan + 360° photo links) is what the
   // fly-in needs, and the first lookup for a home takes a couple of seconds.
   const warmed = useRef(new Set<string>());
@@ -186,6 +238,11 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
   };
 
   const pct = city.total ? Math.round((city.done / city.total) * 100) : 0;
+  // The list heading is "<number> <what was searched>", e.g. "1,707 Apartments in Houston".
+  const heading = data?.summary || 'Houston listings';
+  // The server total, unless Price or Beds narrow the list: then the count of what is shown.
+  const narrowed = price.min != null || price.max != null || beds.range != null;
+  const count = narrowed ? results.length : (data?.total ?? 0);
 
   // One continuous scene into a home: the city panel grows to full screen, the camera glides
   // down beside the house while its tour loads underneath, then dives in as the city crossfades
@@ -285,6 +342,7 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
       {/* Search and quick filters stay on top while the list scrolls. */}
       <div className="sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-3 px-4 py-4 sm:px-6">
+          {/* Search: shadcn Input + Button. */}
           <form
             role="search"
             onSubmit={(e) => {
@@ -295,34 +353,62 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
           >
             <label className="min-w-0 flex-1">
               <span className="block text-[11px] font-semibold">Where · what · budget</span>
-              <input
+              <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="3 bed apartments under $2,000"
                 aria-label="Search homes and apartments"
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
+                className="h-auto rounded-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0 md:text-sm"
               />
             </label>
-            <button type="submit" aria-label="Search" className="btn-brand grid h-11 w-11 shrink-0 place-items-center rounded-full">
-              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+            {/* The round orange search button, inside the bar on the right. */}
+            <Button type="submit" size="icon" aria-label="Search" className="h-11 w-11 shrink-0 rounded-full">
+              <svg viewBox="0 0 24 24" aria-hidden>
                 <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="3" />
                 <path d="m20 20-3.5-3.5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
               </svg>
-            </button>
+            </Button>
           </form>
-          <div className="scroll-thin flex max-w-full gap-2 overflow-x-auto pb-1">
-            {PILLS.map((p) => (
-              <button
+          {/* Quick filters: a single-choice shadcn ToggleGroup. */}
+          <ToggleGroup
+            type="single"
+            value={PILLS.slice(1).some((p) => p.q === q) ? q : ''}
+            onValueChange={(v) => v && choose(v)}
+            className="scroll-thin max-w-full justify-start gap-2 overflow-x-auto pb-1"
+          >
+            {/* "Filters" is a plain button with the sliders icon, not a selectable tab: it clears the
+                price range and goes back to the default search, all apartments. */}
+            <button
+              type="button"
+              onClick={() => {
+                setPrice(NO_PRICE);
+                setBeds(NO_BEDS);
+                choose(PILLS[0].q);
+              }}
+              className={cn(toggleVariants({ variant: 'outline' }), 'shrink-0 rounded-full border-transparent px-4 shadow-none')}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M4 8h9M17 8h3M4 16h3M11 16h9" />
+                <circle cx="15" cy="8" r="2" />
+                <circle cx="9" cy="16" r="2" />
+              </svg>
+              Filters
+            </button>
+            {/* Location and Beds open text boxes and Price a slider box; they come right after Filters. */}
+            <LocationFilter value={location} onApply={applyLocation} />
+            <BedsFilter value={beds} onChange={setBeds} />
+            <PriceFilter prices={prices} value={price} onChange={setPrice} />
+            {PILLS.slice(1).map((p) => (
+              <ToggleGroupItem
                 key={p.q}
-                onClick={() => choose(p.q)}
-                className={`shrink-0 rounded-full border px-4 py-2 text-sm transition ${
-                  q === p.q ? 'border-ink bg-ink font-semibold text-paper' : 'border-line hover:border-ink/40'
-                }`}
+                value={p.q}
+                variant="outline"
+                className="shrink-0 rounded-full px-4 data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:font-semibold data-[state=on]:text-background"
               >
                 {p.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         </div>
       </div>
 
@@ -388,33 +474,32 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
         )}
 
         <div className="lg:order-1">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h2 className="font-display text-2xl">
-                {data ? `${data.total.toLocaleString()} ${data.total === 1 ? 'home' : 'homes'}` : 'Searching…'}
-                {loading && <span className="ml-2 text-sm font-normal text-muted">updating…</span>}
-              </h2>
-              <p className="mt-1 text-sm text-muted">
-                {data?.summary || 'Houston listings'} · {inCity.length.toLocaleString()} on the 3D city
-              </p>
-            </div>
-            <div className="flex shrink-0 gap-3 text-sm font-semibold">
-              <Link href={`/search?q=${encodeURIComponent(q)}`} className="underline underline-offset-4">
-                Map
-              </Link>
-              <Link href={`/sky?q=${encodeURIComponent(q)}`} className="underline underline-offset-4">
-                Full-screen 3D
-              </Link>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <h2 className="font-display text-2xl">
+              {data ? `${count.toLocaleString()}${/^\d/.test(heading) ? ' · ' : ' '}${heading}` : 'Searching…'}
+              {loading && <span className="ml-2 text-sm font-normal text-muted">updating…</span>}
+            </h2>
+            <p className="flex shrink-0 items-center gap-2.5 text-sm font-semibold">
+              <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden className="text-brand">
+                <path
+                  d="M4 5a1 1 0 0 1 1-1h10.2a2 2 0 0 1 1.4.6l12 12a2 2 0 0 1 0 2.8l-8.4 8.4a2 2 0 0 1-2.8 0l-12-12A2 2 0 0 1 4 15.2z"
+                  fill="currentColor"
+                />
+                <circle cx="10" cy="10" r="2.2" className="fill-paper" />
+              </svg>
+              Prices include all fees
+            </p>
           </div>
 
           {data && !results.length && <p className="mt-10 text-sm text-muted">No listings match. Try another search or a quick filter.</p>}
-          <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2">
             {results.slice(0, limit).map((r) => (
               <Card
                 key={r.sid}
                 r={r}
                 active={hover === r.sid}
+                saved={favs.has(r.sid)}
+                onToggleSave={() => toggleFav(r.sid)}
                 onHover={hoverCard}
                 onBroken={() => setBroken((b) => new Set(b).add(r.sid))}
                 onOpen={pinned.has(r.sid) ? () => enter(r) : undefined}

@@ -5,15 +5,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Dark theme everywhere, Airbnb-style: neutral greys, one coral brand colour for actions.
+        // Dark theme everywhere, Airbnb-style: neutral greys, one orange brand colour for actions.
         paper: '#0f0f0f',
         card: '#1b1b1b',
         panel: '#232323',
         ink: '#f7f7f7',
         muted: '#a3a3a3',
         line: '#2c2c2c',
-        brand: '#ff385c',
-        'brand-deep': '#e31c5f',
+        // Orchestral-AI's orange (github.com/binaryshrey/Orchestral-AI, app/globals.css).
+        brand: '#fc7249',
+        'brand-deep': '#ff6632',
+        'brand-soft': '#ffab91',
+        // shadcn/ui tokens, mapped onto the palette above.
+        background: '#0f0f0f',
+        foreground: '#f7f7f7',
+        border: '#2c2c2c',
+        input: '#2c2c2c',
+        ring: '#fc7249',
+        primary: { DEFAULT: '#fc7249', foreground: '#ffffff' },
+        accent: { DEFAULT: '#232323', foreground: '#f7f7f7' },
+        'muted-foreground': '#a3a3a3',
+        destructive: { DEFAULT: '#ea6a58', foreground: '#ffffff' },
         sage: '#a3b496',
         clay: '#d9976f',
         ok: '#6cc08a',
