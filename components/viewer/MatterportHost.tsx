@@ -42,10 +42,28 @@ if (typeof window !== 'undefined' && !(window as any).__fnTeardownGuard) {
 // alt: the same pano under another id, tried from the second attempt. With the empty (defurnished)
 // view active, Showcase knows a pano as "<viewId>:<panoId>" and rejects the plain id with "not
 // available in view", which used to burn every retry.
+// The sweep the camera stands on now ('' mid-transition), without the "<viewId>:" prefix.
+function currentSid(sdk: any): Promise<string> {
+  return new Promise((res) => {
+    let sub: any = null;
+    const t = setTimeout(() => res(''), 800);
+    sub = sdk.Sweep.current.subscribe((sw: any) => {
+      clearTimeout(t);
+      res(String(sw?.sid ?? ''));
+      setTimeout(() => sub?.cancel?.(), 0);
+    });
+  });
+}
+const bareId = (id: string) => id.slice(id.lastIndexOf(':') + 1);
+
 export async function moveToPano(sdk: any, panoId: string, instant = false, tries = 6, alt?: () => string) {
+  // Already standing there: a fly move of zero length leaves Showcase's camera at NaN, which
+  // renders black. Nothing to do.
   for (let i = 0; i < tries; i++) {
+    const id = i > 0 && alt ? alt() : panoId;
+    const here = await currentSid(sdk).catch(() => '');
+    if (here && bareId(here) === bareId(id)) return true; // (a retry may find it already there)
     try {
-      const id = i > 0 && alt ? alt() : panoId;
       await sdk.Sweep.moveTo(id, { transition: instant ? sdk.Sweep.Transition.INSTANT : sdk.Sweep.Transition.FLY });
       return true;
     } catch {
@@ -71,6 +89,21 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
   geomRef.current = geometry;
 
   useEffect(() => () => setPartial({ sdk: null, ready: false, currentRoomId: null, showingRoom: false, embedOnly: false }), [setPartial]);
+
+  // Last resort from the camera watchdog (lib/remoteActions.ts): Showcase is stuck on a black
+  // frame that no move fixes, so start a fresh viewer. The design is untouched.
+  useEffect(() => {
+    let last = 0;
+    const reset = () => {
+      if (Date.now() - last < 60000) return; // at most once a minute
+      last = Date.now();
+      viewsRef.current = { base: null, defurnish: null };
+      setPartial({ sdk: null, ready: false, currentRoomId: null, showingRoom: false });
+      setAttempt((a) => a + 1);
+    };
+    window.addEventListener('fn-viewer-reset', reset);
+    return () => window.removeEventListener('fn-viewer-reset', reset);
+  }, [setPartial]);
 
   const attemptRef = useRef(0);
   function remount() {
@@ -120,6 +153,7 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
   async function onConnected(sdk: MpSdk) {
     const s: any = sdk;
     setPartial({ sdk: s });
+    if (process.env.NODE_ENV === 'development') Object.assign(window, { __fnSdk: s }); // for debugging in the console
     let viewsSeen = false;
     s.View.views.subscribe({
       onCollectionUpdated(views: Record<string, any>) {
@@ -159,12 +193,10 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
     for (let i = 0; i < 12 && !viewsSeen; i++) await new Promise((r) => setTimeout(r, 250));
     const wantEmpty = () => !!viewsRef.current.defurnish && !useStore.getState().showFurnished;
     const emptyActive = () => !wantEmpty() || !!viewsRef.current.defurnish?.active;
-    // Switch to the empty (defurnished) view first: activating a view puts the camera back at
-    // that view's own start, which would undo the move below.
-    if (wantEmpty()) await viewsRef.current.defurnish.setActive().catch(() => {});
-    // Showcase's own quick start (play=1) starts a view-mode transition at boot, and a move of ours
-    // during it is rejected ("another transition was active") on every retry until it ends. Let
-    // it finish (inside the home) first, but never wait long: drone-start models stay outside.
+    // Showcase's own quick start (play=1) starts a view-mode transition at boot. Anything of ours
+    // that starts a transition during it (switching to the empty view, a move) breaks Showcase's
+    // transition state: later moves hang and the camera can end up nowhere (a black screen). So
+    // let it finish (inside the home) first, but never wait long: drone-start models stay outside.
     await new Promise<void>((res) => {
       const subs: any[] = []; // filled below; done() may run before or after
       const done = () => {
@@ -175,6 +207,29 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
       const cap = setTimeout(done, QUICKSTART_WAIT_MS);
       subs.push(s.Mode.current.subscribe((m: string) => m === s.Mode.Mode.INSIDE && done()));
     });
+    await new Promise((r) => setTimeout(r, 400)); // the quick start's last camera settle
+    // Then the empty (defurnished) view: activating a view puts the camera back at that view's
+    // own start, so do it before the move below.
+    if (wantEmpty()) {
+      await viewsRef.current.defurnish.setActive().catch(() => {});
+      // The switch is itself a transition: wait until the camera stands on a pano again (empty
+      // mid-transition), so the move below isn't rejected over and over.
+      await new Promise<void>((res) => {
+        let sub: any = null;
+        const done = () => {
+          clearTimeout(cap);
+          setTimeout(() => sub?.cancel?.(), 0);
+          res();
+        };
+        const cap = setTimeout(done, 5000);
+        let seenEmpty = false;
+        sub = s.Sweep.current.subscribe((sw: any) => {
+          if (!sw?.sid) seenEmpty = true;
+          else if (seenEmpty) done();
+        });
+        setTimeout(() => !seenEmpty && done(), 1200); // no transition happened
+      });
+    }
     // Pano tiles can be slow when Matterport is under load, so retry for ~20 s, then let
     // Showcase pick its own way inside rather than leaving the user in the dollhouse.
     const inside = target ? await moveToPano(s, qualify(target), true, 16, () => qualify(target)) : false;
@@ -220,6 +275,7 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
       showing();
     });
     setPartial({ ready: true });
+    s.Pointer?.setVisible?.(true)?.catch?.(() => {}); // the walking circle is always on
 
     // Showcase sometimes lands on its own start pano, flips back to the furnished view, or
     // stays on the dollhouse (seen when the tour loads behind the 3D-city flight). Check and

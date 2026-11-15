@@ -238,8 +238,8 @@ export default function Remote({ params }: { params: { id: string } }) {
           <Shoulder side="l" onPress={() => nextRoom(-1)}>
             L1 ◀ Room
           </Shoulder>
-          <Shoulder side="l" active={light === 'evening'} onPress={() => (send({ type: 'light', preset: light === 'evening' ? 'neutral' : 'evening' }), say(light === 'evening' ? 'Neutral light' : 'Evening light'))}>
-            L2 🌆 Evening
+          <Shoulder side="l" active={light === 'evening'} onPress={() => (send({ type: 'light', preset: light === 'evening' ? 'neutral' : 'evening' }), say(light === 'evening' ? 'Sunlight off' : 'Sunset light'))}>
+            L2 🌇 Sunset
           </Shoulder>
         </div>
 
@@ -260,8 +260,8 @@ export default function Remote({ params }: { params: { id: string } }) {
           <Shoulder side="r" onPress={() => nextRoom(1)}>
             Room ▶ R1
           </Shoulder>
-          <Shoulder side="r" active={light === 'daylight'} onPress={() => (send({ type: 'light', preset: light === 'daylight' ? 'neutral' : 'daylight' }), say(light === 'daylight' ? 'Neutral light' : 'Daylight'))}>
-            ☀️ Daylight R2
+          <Shoulder side="r" active={light === 'daylight'} onPress={() => (send({ type: 'light', preset: light === 'daylight' ? 'neutral' : 'daylight' }), say(light === 'daylight' ? 'Sunlight off' : 'Morning sun'))}>
+            🌅 Morning R2
           </Shoulder>
         </div>
       </div>

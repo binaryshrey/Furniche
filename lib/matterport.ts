@@ -32,7 +32,7 @@ const GEOMETRY_QUERY = `query($id: ID!) {
     address { address }
     geolocation { lat long }
     views { id type }
-    floors { id label vertices { id position { x y } } edges { id type thickness vertices { id } } }
+    floors { id label vertices { id position { x y } } edges { id type thickness vertices { id } openings { type width height lowerElevation relativeCenter } } }
     rooms {
       id floor { id }
       classifications { label }
@@ -114,7 +114,12 @@ export async function getModelGeometry(sid: string): Promise<ModelGeometry> {
       const [a, b] = (e.vertices ?? []).map((v: any) => v.id);
       if (!a || !b || !vmap[a] || !vmap[b]) continue;
       edgeVerts.set(e.id, [a, b]);
-      walls[f.id].push({ id: e.id, a: vmap[a], b: vmap[b], thickness: e.thickness ?? 0.1 });
+      // Windows and doorways the scan processing marked on this wall (position along it, size,
+      // sill height above the floor), for sunlight through them.
+      const openings = (e.openings ?? [])
+        .filter((o: any) => (o.type === 'window' || o.type === 'doorway' || o.type === 'opening') && o.width > 0.2)
+        .map((o: any) => ({ type: o.type, at: Number(o.relativeCenter) || 0.5, width: Number(o.width), sill: Math.max(0, Number(o.lowerElevation) || 0), height: Number(o.height) || (o.type === 'window' ? 1.2 : 2.03) }));
+      walls[f.id].push({ id: e.id, a: vmap[a], b: vmap[b], thickness: e.thickness ?? 0.1, ...(openings.length ? { openings } : {}) });
     }
   }
 

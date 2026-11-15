@@ -170,3 +170,88 @@ export function senseRoom(room: Room, opts: { fixtures?: boolean } = {}): RoomSe
   }
   return { doors, windows, fixtures, probe: wallProbe, counters: counterSpots(room) };
 }
+
+// Built-ins that stand proud of a wall: a fireplace surround, a column, a bump-out, shelving.
+// From a metre inside the room, rays toward the wall should travel about a metre; where they stop
+// well short at that height, something is built out from the wall. Returned as spans along the
+// outline with the height range they cover (lo..hi above the floor).
+export function senseBuiltins(room: Room, opts: { tallOnly?: boolean } = {}): { a: Vec2; b: Vec2; sill: number; head: number }[] {
+  if (!bridge.scan.length) return [];
+  const out: { a: Vec2; b: Vec2; sill: number; head: number }[] = [];
+  const BACK = 1.0;
+  const HEIGHTS = [0.4, 1.0, 1.6, 2.1];
+  for (const [a, b] of segmentsOfPolygon(room.polygon)) {
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len < 0.8) continue;
+    const t = { x: (b.x - a.x) / len, y: (b.y - a.y) / len };
+    let n = { x: -t.y, y: t.x };
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (!pointInPolygon({ x: mid.x + n.x * 0.15, y: mid.y + n.y * 0.15 }, room.polygon)) n = { x: t.y, y: -t.x };
+    const dir = new THREE.Vector3(-n.x, 0, n.y);
+    const steps = Math.max(2, Math.round(len / STEP));
+    const proud: boolean[][] = HEIGHTS.map(() => []);
+    for (let k = 0; k <= steps; k++) {
+      const s = Math.min(Math.max((k / steps) * len, 0.2), len - 0.2);
+      const p = { x: a.x + t.x * s + n.x * BACK, y: a.y + t.y * s + n.y * BACK };
+      const y0 = groundY(p.x, -p.y, room.floorZ);
+      HEIGHTS.forEach((h, i) => {
+        ray.set(new THREE.Vector3(p.x, y0 + h, -p.y), dir);
+        ray.far = BACK + 0.3;
+        const hit = ray.intersectObjects(bridge.scan, false)[0];
+        // The wall face is ~7 cm short of the outline; 22 cm or more short is something built out.
+        proud[i].push(!!hit && hit.distance < BACK - 0.22 && hit.distance > 0.15);
+      });
+    }
+    const any = proud[0].map((_, k) => proud.some((row) => row[k]));
+    for (const r of runs(any, a, b, 0.3)) {
+      // Which heights it covers, from the samples inside the run.
+      const covered = HEIGHTS.filter((_, i) => {
+        const k0 = Math.round((Math.hypot(r.a.x - a.x, r.a.y - a.y) / len) * steps);
+        const k1 = Math.round((Math.hypot(r.b.x - a.x, r.b.y - a.y) / len) * steps);
+        let c = 0;
+        for (let k = k0; k <= k1; k++) if (proud[i][k]) c++;
+        return c >= Math.max(1, (k1 - k0 + 1) * 0.5);
+      });
+      if (!covered.length) continue;
+      // In a model whose mesh still holds the seller's furniture, only tall things are built in.
+      if (opts.tallOnly && Math.max(...covered) < 1.6) continue;
+      out.push({ a: r.a, b: r.b, sill: Math.max(0, Math.min(...covered) - 0.35), head: Math.max(...covered) + 0.35 });
+    }
+  }
+  return out;
+}
+
+// Reach-in closets: along the outline, an opening from the floor to head height with a back wall
+// a short way behind it (closets are 0.4-1 m deep; a doorway into another room looks much
+// further). Returned as spans along the outline.
+export function senseClosets(room: Room): { a: Vec2; b: Vec2 }[] {
+  if (!bridge.scan.length) return [];
+  const out: { a: Vec2; b: Vec2 }[] = [];
+  const BACK = 1.0;
+  for (const [a, b] of segmentsOfPolygon(room.polygon)) {
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len < 0.8) continue;
+    const t = { x: (b.x - a.x) / len, y: (b.y - a.y) / len };
+    let n = { x: -t.y, y: t.x };
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (!pointInPolygon({ x: mid.x + n.x * 0.15, y: mid.y + n.y * 0.15 }, room.polygon)) n = { x: t.y, y: -t.x };
+    const dir = new THREE.Vector3(-n.x, 0, n.y);
+    const steps = Math.max(2, Math.round(len / STEP));
+    const flags: boolean[] = [];
+    for (let k = 0; k <= steps; k++) {
+      const s = Math.min(Math.max((k / steps) * len, 0.2), len - 0.2);
+      const p = { x: a.x + t.x * s + n.x * BACK, y: a.y + t.y * s + n.y * BACK };
+      const y0 = groundY(p.x, -p.y, room.floorZ);
+      flags.push(
+        [0.5, 1.2, 1.8].every((h) => {
+          ray.set(new THREE.Vector3(p.x, y0 + h, -p.y), dir);
+          ray.far = BACK + 1.4;
+          const hit = ray.intersectObjects(bridge.scan, false)[0];
+          return !!hit && hit.distance > BACK + 0.3 && hit.distance < BACK + 1.1;
+        }),
+      );
+    }
+    out.push(...runs(flags, a, b, 0.7).map((r) => ({ a: r.a, b: r.b })));
+  }
+  return out;
+}

@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { toThree } from '@/lib/coords';
 import { checkFit, roomAt } from '@/lib/fit';
-import { bridge, raycast, useGhost, useViewerState } from '@/lib/sceneBridge';
+import { bridge, raycast, scanPoint, useGhost, useViewerState } from '@/lib/sceneBridge';
+import { hangAt } from '@/lib/stage';
 import { useDesign, useStore } from '@/lib/store';
 import type { FitLevel, ModelGeometry, PlacedItem, Product, Vec2, Vec3 } from '@/lib/types';
 
@@ -50,6 +51,15 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
     const hit = raycast(ndcOf(e), floorZ(), false);
     return hit?.kind === 'floor' ? hit.point : null;
   };
+  // Art, mirrors and TVs go flat on the wall under the cursor, centred on it, facing the room.
+  const wallSpot = (e: { clientX: number; clientY: number }, product: Product, roomId: string | null) => {
+    if (!geometry) return null;
+    const p = scanPoint(ndcOf(e)) ?? floorPoint(e);
+    if (!p) return null;
+    const room = roomAt(p, geometry.rooms) ?? geometry.rooms.find((r) => r.id === roomId) ?? geometry.rooms.find((r) => r.id === useViewerState.getState().currentRoomId);
+    if (!room) return null;
+    return { ...hangAt(p, product, room, p.z - product.dimsCm.h / 200), roomId: room.id };
+  };
 
   // Fit issues for the selected piece, shown in a label that floats next to it.
   const resolved = useMemo(
@@ -70,7 +80,17 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
       const cur = gestureRef.current;
       const p = floorPoint(e);
       const it = designRef.current.items.find((i) => i.uid === cur?.uid);
-      if (!cur || !p || !it) return;
+      if (!cur || !it) return;
+      const prod = productOf(it.productId);
+      if (prod?.placement === 'wall') {
+        if (cur.kind !== 'move') return; // wall pieces always face the room
+        const spot = wallSpot(e, prod, it.roomId);
+        if (!spot) return;
+        useStore.getState().moveItem(cur.uid, spot.pos, spot.roomId);
+        useStore.getState().rotateItem(cur.uid, spot.rot - it.rot);
+        return;
+      }
+      if (!p) return;
       if (cur.kind === 'move') {
         const pos = { x: p.x + cur.offset.x, y: p.y + cur.offset.y, z: it.pos.z };
         useStore.getState().moveItem(cur.uid, pos, roomIdAt(pos));
@@ -97,13 +117,14 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
     startGesture({ kind: 'rotate', uid, center: it.pos, startRot: it.rot, startAngle: Math.atan2(p.y - it.pos.y, p.x - it.pos.x) });
   }
 
-  // A flat rug covers the floor you'd click to walk, so it only catches presses once it's selected
-  // (or in Arrange mode); otherwise the press walks, like clicking the bare floor.
+  // Low pieces (a rug, a coffee table, an ottoman) sit on the floor you'd click to walk, so they
+  // only catch presses once selected (or in Arrange mode); otherwise the press walks there.
   const walkable = (uid: string) => {
     const st = useStore.getState();
     if (st.selectedUid === uid || st.mode === 'arrange') return false;
     const it = designRef.current.items.find((i) => i.uid === uid);
-    return it ? st.product(it.productId)?.category === 'rug' : false;
+    const p = it ? st.product(it.productId) : undefined;
+    return !!p && p.placement !== 'wall' && (p.category === 'rug' || p.dimsCm.h <= 55);
   };
 
   // Grab furniture without blocking the scan: capture phase runs before Matterport's handlers.
@@ -144,7 +165,7 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
         busy = true;
         const { h, v } = pending;
         pending = { h: 0, v: 0 };
-        Promise.resolve(sdk.Camera.rotate(h, v, { speed: 360 }))
+        Promise.resolve(Number.isFinite(h) && Number.isFinite(v) ? sdk.Camera.rotate(h, v, { speed: 360 }) : null)
           .catch(() => {})
           .finally(() => {
             busy = false;
@@ -170,8 +191,8 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     };
-    // Over furniture: an open hand (pick up), and Matterport's walking circle hidden so the two
-    // don't compete. While dragging: a closed hand. Rugs you aren't moving stay walkable.
+    // Over furniture: an open hand (pick up). While dragging: a closed hand. Low pieces you aren't
+    // moving stay walkable.
     let raf = 0;
     let lastOver: boolean | null = null;
     const setCursor = (c: string) => {
@@ -188,10 +209,9 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
         const hit = !useStore.getState().pendingProductId && inside(e) ? raycast(ndcOf(e), floorZ(), true) : null;
         const over = hit?.kind === 'item' && !walkable(hit.uid);
         setCursor(over ? (useStore.getState().design().locked ? 'pointer' : 'grab') : '');
-        if (over !== lastOver) {
-          lastOver = over;
-          useViewerState.getState().sdk?.Pointer?.setVisible?.(!over)?.catch?.(() => {});
-        }
+        // Matterport's walking circle stays visible: hiding it over furniture made a quick click on
+        // the floor next to a piece get ignored until it came back.
+        if (over !== lastOver) lastOver = over;
       });
     };
     const wheel = (e: WheelEvent) => {
@@ -223,10 +243,15 @@ export default function ArrangeOverlay({ geometry }: { geometry: ModelGeometry |
       return;
     }
     enteredWhilePressed.current = false;
-    setHint('Release on the floor to place · R rotates · Esc cancels');
+    setHint(productOf(pending)?.placement === 'wall' ? 'Click a wall to hang it · Esc cancels' : 'Release on the floor to place · R rotates · Esc cancels');
     const move = (e: PointerEvent) => {
       if (!inside(e)) return setGhost(null);
       if (e.buttons) enteredWhilePressed.current = true;
+      const prod = productOf(pending);
+      if (prod?.placement === 'wall') {
+        const spot = wallSpot(e, prod, null);
+        return setGhost(spot ? { productId: pending, pos: spot.pos, rot: spot.rot } : null);
+      }
       const p = floorPoint(e);
       if (p) setGhost({ productId: pending, pos: { ...p, z: floorZ() }, rot: useGhost.getState().ghost?.rot ?? 0 });
       else setGhost(null);

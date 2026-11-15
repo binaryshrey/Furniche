@@ -2,6 +2,7 @@
 import QRCode from 'qrcode';
 import { useEffect, useRef, useState } from 'react';
 import { useLighting, LIGHT_PRESETS } from '@/lib/lighting';
+import { momentTime, useSite } from '@/lib/sun';
 import { guardInside, interiorPano, look, step } from '@/lib/remoteActions';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useStore } from '@/lib/store';
@@ -20,8 +21,16 @@ type Command =
 const KEY = 'furniche:remote';
 const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => (b % 36).toString(36)).join('') + Date.now().toString(36);
 
+// The phone's shoulder buttons: L2 sunset, R2 morning sun (real sunlight through the windows).
+const SUN_FOR = { evening: 'golden', daylight: 'morning' } as const;
+
 function lightName(): 'evening' | 'daylight' | 'neutral' | 'custom' {
-  const { brightness, warmth } = useLighting.getState();
+  const { brightness, warmth, sun } = useLighting.getState();
+  if (sun != null) {
+    const { lat, lon } = useSite.getState();
+    for (const [k, m] of Object.entries(SUN_FOR)) if (Math.abs(momentTime(m, lat, lon) - sun) < 8) return k as 'evening' | 'daylight';
+    return 'custom';
+  }
   for (const [k, v] of Object.entries(LIGHT_PRESETS)) if (Math.abs(v.brightness - brightness) < 0.02 && Math.abs(v.warmth - warmth) < 0.02) return k as 'evening' | 'daylight' | 'neutral';
   return 'custom';
 }
@@ -105,7 +114,11 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
           return;
         }
         case 'light':
-          return useLighting.getState().set(LIGHT_PRESETS[c.preset] ?? LIGHT_PRESETS.neutral);
+          if (c.preset === 'evening' || c.preset === 'daylight') {
+            const { lat, lon } = useSite.getState();
+            return useLighting.getState().set({ sun: momentTime(SUN_FOR[c.preset], lat, lon) });
+          }
+          return useLighting.getState().set({ ...LIGHT_PRESETS.neutral, sun: null });
         case 'furnished':
           return useStore.getState().setShowFurnished(!!c.on);
         case 'chat':
@@ -117,14 +130,23 @@ export default function PhoneRemote({ geometry, title }: { geometry: ModelGeomet
     return () => es.close();
   }, [id]);
 
-  // While a phone drives the tour, keep the camera inside the building.
+  // Keep the camera inside the building (phone or not): never settle on a black viewpoint.
+  // Waits until the room is actually showing, so it never fights the opening fly-in. Without a
+  // phone it only steps in for a black frame; with one it also keeps to viewpoints inside.
   const sdk = useViewerState((v) => v.sdk);
+  const showing = useViewerState((v) => v.showingRoom);
   useEffect(() => {
-    if (!phoneOn || !sdk || !geometry) return;
+    if (!sdk || !geometry || !showing) return;
     let stop = () => {};
-    import('@/components/viewer/MatterportHost').then(({ moveToPano }) => (stop = guardInside(sdk, geometry, (s, id) => moveToPano(s, id, false, 2))));
-    return () => stop();
-  }, [phoneOn, sdk, geometry]);
+    let alive = true;
+    import('@/components/viewer/MatterportHost').then(({ moveToPano }) => {
+      if (alive) stop = guardInside(sdk, geometry, (s, id) => moveToPano(s, id, false, 2), phoneOn);
+    });
+    return () => {
+      alive = false;
+      stop();
+    };
+  }, [sdk, geometry, showing, phoneOn]);
 
   // Keep the assistant's latest reply for the phone.
   useEffect(() => {

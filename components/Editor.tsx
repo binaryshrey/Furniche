@@ -10,6 +10,8 @@ import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
 import LightGrade from './viewer/LightGrade';
+import PriceTags, { PriceTagToggle } from './viewer/PriceTags';
+import SunControl from './viewer/SunControl';
 import ChatPanel from './chat/ChatPanel';
 import PhoneRemote from './remote/PhoneRemote';
 import PlanView from './plan/PlanView';
@@ -179,6 +181,8 @@ export default function Editor({ sid }: { sid: string }) {
                 </option>
               ))}
             </select>
+            {ready && view === '3d' && <SunControl geometry={geometry} />}
+            {ready && view === '3d' && <PriceTagToggle />}
             <span className="ml-auto text-muted">{ready ? (locked ? 'Furniture locked · click the floor to walk, drag to look around · click a piece to swap it' : 'Click the floor to walk · click a piece to select it, then drag it to move · drag ↻ to rotate') : embedOnly ? 'Walk-through tour · switch to Floor plan to furnish' : 'Connecting to Matterport…'}</span>
           </div>
 
@@ -187,6 +191,7 @@ export default function Editor({ sid }: { sid: string }) {
             <div className={view === '3d' ? 'absolute inset-0' : 'invisible absolute inset-0'}>
               <MatterportHost sid={sid} geometry={geometry} />
               <LightGrade />
+              <PriceTags />
               <ArrangeOverlay geometry={geometry} />
               <SwapCard geometry={geometry} />
               <TourCover sid={sid} />

@@ -118,8 +118,11 @@ export async function lookAt(opts: {
 
   // First a rough turn from the angle maths, then correct against the live view (below), so the
   // result doesn't depend on Matterport's yaw sign convention.
+  // Never hand Showcase a NaN angle: it puts the camera nowhere and the screen goes black.
+  const yaw = yawToward({ x: px, z: pz }, { x: tx, z: tz });
+  if (![px, pz, tx, ty, tz, yaw].every(Number.isFinite)) return;
   try {
-    await sdk.Camera.setRotation({ x: -15, y: yawToward({ x: px, z: pz }, { x: tx, z: tz }) }, { speed: 120 });
+    await sdk.Camera.setRotation({ x: -15, y: yaw }, { speed: 120 });
   } catch {
     /* corrected below */
   }
@@ -148,6 +151,7 @@ async function aimAt(sdk: Sdk, p: THREE.Vector3, wantH: number, wantE: number, a
     if (!a) return;
     const dh = a.h - wantH;
     const de = a.e - wantE;
+    if (!Number.isFinite(dh) || !Number.isFinite(de)) return; // the bridged camera isn't ready
     if (Math.abs(dh) < 3 && Math.abs(de) < 4) return;
     try {
       await sdk.Camera.rotate(sh * dh, sv * Math.max(-60, Math.min(60, de)), { speed: 150 });

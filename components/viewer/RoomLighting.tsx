@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { create } from 'zustand';
 import { useLighting, warmthColor } from '@/lib/lighting';
 import { groundY, useViewerState } from '@/lib/sceneBridge';
+import { lightAt, useSite } from '@/lib/sun';
 import type { ModelGeometry } from '@/lib/types';
 
 // Lights the furniture with the room itself. Each time the camera settles on a pano we grab
@@ -59,6 +60,17 @@ export default function RoomLighting({ geometry }: { geometry: ModelGeometry | n
   const sun = useRef<THREE.DirectionalLight>(null);
   const brightness = useLighting((s) => s.brightness);
   const tint = warmthColor(useLighting((s) => s.warmth));
+  // With a time of day set and the sun up, shadows fall the way the sunlight comes in.
+  const sunTime = useLighting((s) => s.sun ?? null);
+  const site = useSite();
+  const sunDir = useMemo(() => {
+    if (sunTime === null) return null;
+    const l = lightAt(sunTime, site.lat, site.lon, site.north);
+    if (l.elevation < 4) return null;
+    const e = Math.max(l.elevation, 25) * (Math.PI / 180); // keep shadows from stretching across the room
+    const h = Math.hypot(l.dir.x, l.dir.y) || 1;
+    return new THREE.Vector3((l.dir.x / h) * Math.cos(e), Math.sin(e), (-l.dir.y / h) * Math.cos(e));
+  }, [sunTime, site.lat, site.lon, site.north]);
 
   // Soft shadow maps on the shared renderer; only our light casts, so Matterport is unaffected.
   useEffect(() => {
@@ -126,7 +138,7 @@ export default function RoomLighting({ geometry }: { geometry: ModelGeometry | n
   useFrame(() => {
     const s = sun.current;
     if (!s) return;
-    const dir = light ?? new THREE.Vector3(0.4, 0.8, 0.3).normalize();
+    const dir = sunDir ?? light ?? new THREE.Vector3(0.4, 0.8, 0.3).normalize();
     s.position.copy(center).addScaledVector(dir, 8);
     s.target.position.copy(center);
     s.target.updateMatrixWorld();
@@ -155,7 +167,7 @@ export default function RoomLighting({ geometry }: { geometry: ModelGeometry | n
       />
       {floor && (
         <mesh geometry={floor} position={[0, floorY + 0.006, 0]} receiveShadow renderOrder={1} raycast={() => null /* never block clicks that walk */}>
-          <shadowMaterial transparent opacity={0.2} depthWrite={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+          <shadowMaterial transparent opacity={0.3} depthWrite={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
         </mesh>
       )}
     </>

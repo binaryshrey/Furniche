@@ -95,9 +95,36 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   'bar-stool': 'Bar stools',
   mattress: 'Mattresses',
   decor: 'Showpieces',
+  tv: 'TVs',
   'patio-table': 'Patio tables',
   'patio-chair': 'Patio chairs',
   lounger: 'Loungers',
   umbrella: 'Umbrellas',
   planter: 'Planters',
 };
+
+// IKEA doesn't sell televisions, so staging uses generic stand-in TVs (not shop listings), in the
+// common sizes; the stager picks the biggest that suits the empty wall.
+for (const [inch, w, h] of [
+  [43, 97, 57],
+  [50, 112, 65],
+  [55, 123, 71],
+  [65, 145, 83],
+  [75, 168, 96],
+] as const) {
+  PRODUCTS.push({
+    id: `stand-in-tv-${inch}`,
+    source: 'curated',
+    retailer: 'other',
+    name: `${inch}" 4K TV (stand-in for staging, not sold here)`,
+    url: `https://www.google.com/search?q=${inch}+inch+4k+tv`,
+    priceUsd: 0,
+    priceCheckedAt: CATALOG_CHECKED_AT,
+    category: 'tv',
+    dimsCm: { w, d: 6, h },
+    color: '#141414',
+    styles: ['midcentury', 'japandi', 'scandinavian', 'industrial', 'coastal', 'modern-organic'],
+    placement: 'wall',
+    standIn: true,
+  });
+}
