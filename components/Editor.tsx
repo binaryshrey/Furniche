@@ -122,18 +122,14 @@ export default function Editor({ sid }: { sid: string }) {
           <div className="truncate text-xs text-muted">{facts.filter(Boolean).join(' · ') || 'Houston'}</div>
         </div>
         <div className="ml-auto flex items-center gap-2 text-sm">
-          <Link href="/explore" className="rounded-md px-2 py-1 hover:bg-card">
-            All homes
+          <Link href="/" className="rounded-md px-2 py-1 hover:bg-card">
+            Explore
           </Link>
           {listing?.kind === 'home' && (
             <Link href={`/outside/${listing.listingId}?sid=${sid}`} className="rounded-md px-2 py-1 hover:bg-card">
               Plan the yard
             </Link>
           )}
-          {/* Fly over this home in Vexcel's 3D Houston (empty query = every listing, this one first). */}
-          <Link href={`/sky?q=&focus=${sid}`} className="rounded-md px-2 py-1 hover:bg-card">
-            3D city
-          </Link>
           <Link href="/cart" className="rounded-md px-2 py-1 hover:bg-card">
             Cart{cartTotal > 0 ? ` · ${fmtUsd(cartTotal)}` : ''}
           </Link>

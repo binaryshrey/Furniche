@@ -139,6 +139,11 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
       s.Sweep.data.subscribe({
         onCollectionUpdated: (c: Record<string, any>) => {
           sweeps = c;
+          // Which panos can see each other: across a wall, only through a doorway (see lib/closets.ts).
+          const bare = (id: string) => id.split(':').pop() as string;
+          const links: [string, string][] = [];
+          for (const [id, sw] of Object.entries(c)) for (const n of (sw?.neighbors ?? []) as string[]) links.push([bare(id), bare(n)]);
+          if (links.length) setPartial({ sweepLinks: links });
           if (Object.keys(c).length) res();
         },
       }),

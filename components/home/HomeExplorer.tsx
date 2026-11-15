@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { cn } from '@/lib/utils';
 import { type BedFilter, inBeds, NO_BEDS } from '@/lib/beds';
 import { getEntry, preloadEntry } from '@/lib/entryCache';
+import { FEATURED, featuredOnTop } from '@/lib/featured';
 import { loadFavorites, saveFavorites } from '@/lib/favorites';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useOnMesh } from '@/lib/coverage';
@@ -35,6 +36,7 @@ const EXPAND_MS = 600; // the city panel grows to full screen
 const SETTLE_MS = 700; // let the first panorama paint before revealing it
 const FADE_MS = 1300; // crossfade, timed with the camera's dive into the house
 const TOUR_TIMEOUT_MS = 25000;
+const FLY_GIVE_UP_MS = 45000; // a typed /space link waits this long for the city before opening the tour directly
 
 // Quick filters, each a plain-language search. The first one is the default (all apartments);
 // it is labelled "Filters".
@@ -208,7 +210,8 @@ export default function HomeExplorer({ initial, fly }: { initial: Response & { q
   );
   const onMesh = useOnMesh();
   const inCity = useMemo(() => results.filter(onMesh).slice(0, MAX_PINS), [results, onMesh]);
-  const pins = useMemo(() => inCity.map((r) => ({ sid: r.sid, lat: r.lat, lon: r.lon, label: r.priceLabel })), [inCity]);
+  // The featured home is drawn last, so its pin sits on top, and starred.
+  const pins = useMemo(() => featuredOnTop(inCity.map((r) => ({ sid: r.sid, lat: r.lat, lon: r.lon, label: r.sid === FEATURED.sid ? `★ ${r.priceLabel}` : r.priceLabel }))), [inCity]);
   const lookAt = useMemo(
     () => (inCity.length ? { lat: median(inCity.map((r) => r.lat)), lon: median(inCity.map((r) => r.lon)) } : null),
     [inCity],
@@ -291,6 +294,14 @@ export default function HomeExplorer({ initial, fly }: { initial: Response & { q
   // Opened by address (/space/<id> redirects here with ?fly=<id>): fly into that home once the
   // city has drawn, as if its pin had been picked.
   const flown = useRef(false);
+  // If the city never gets going (slow tiles), open the tour directly rather than wait forever.
+  useEffect(() => {
+    if (!fly) return;
+    const t = setTimeout(() => {
+      if (!flown.current) router.replace(`/space/${fly}?direct=1`);
+    }, FLY_GIVE_UP_MS);
+    return () => clearTimeout(t);
+  }, [fly, router]);
   useEffect(() => {
     if (!fly || flown.current || !ready || entering) return;
     const r = results.find((x) => x.sid === fly);

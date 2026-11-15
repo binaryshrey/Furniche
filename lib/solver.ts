@@ -1,5 +1,6 @@
+import { hangLift } from './hang';
 import { checkFlow, type FlowContext } from './circulation';
-import { centroid, convexSeparation, distPointSegment, pointInPolygon, rectCorners } from './geometry';
+import { centroid, convexSeparation, distPointSegment, pointInPolygon, polygonArea, rectCorners } from './geometry';
 import { checkFit } from './fit';
 import type { Category, DoorMark, PlacedItem, Product, Room, ThemeId, Vec2, Wall as ApiWall } from './types';
 
@@ -13,7 +14,7 @@ export function roomTypeOf(label: string): RoomType {
 }
 
 // Roles a room is furnished with, in priority order. `alts` are categories that can fill the role.
-export type Role = { role: string; alts: Category[]; count?: number; weight: number; optional?: boolean };
+export type Role = { role: string; alts: Category[]; count?: number; weight: number; optional?: boolean; wall?: boolean; raised?: 'table' | 'counter' }; // wall: hangs on a wall; raised: stands on a table or counter
 
 export const TEMPLATES: Record<RoomType, Role[]> = {
   living: [
@@ -25,18 +26,27 @@ export const TEMPLATES: Record<RoomType, Role[]> = {
     { role: 'side table', alts: ['side-table'], weight: 0.03, optional: true },
     { role: 'plant', alts: ['plant'], weight: 0.04, optional: true },
     { role: 'shelf', alts: ['bookshelf'], weight: 0.05, optional: true },
+    { role: 'wall art', alts: ['wall-art'], weight: 0.05, optional: true, wall: true },
+    { role: 'counter flower pot', alts: ['decor', 'plant'], weight: 0.03, optional: true, raised: 'counter' },
   ],
+  // A complete bedroom, as IKEA stages it: bed, a bedside table each side, storage, rug, bench.
   bedroom: [
-    { role: 'bed', alts: ['bed'], weight: 0.45 },
-    { role: 'dresser', alts: ['dresser'], weight: 0.2, optional: true },
-    { role: 'rug', alts: ['rug'], weight: 0.1, optional: true },
+    { role: 'bed', alts: ['bed'], weight: 0.34 },
+    { role: 'nightstand', alts: ['nightstand'], count: 2, weight: 0.1 },
+    { role: 'dresser', alts: ['dresser'], weight: 0.14, optional: true },
+    { role: 'wardrobe', alts: ['wardrobe'], weight: 0.14, optional: true },
+    { role: 'rug', alts: ['rug'], weight: 0.08, optional: true },
+    { role: 'bench', alts: ['bench'], weight: 0.06, optional: true },
     { role: 'plant', alts: ['plant'], weight: 0.04, optional: true },
+    { role: 'mirror', alts: ['mirror'], weight: 0.06, optional: true, wall: true },
+    { role: 'wall art', alts: ['wall-art'], weight: 0.05, optional: true, wall: true },
   ],
   dining: [
     { role: 'dining table', alts: ['dining-table', 'round-table'], weight: 0.45 },
     { role: 'dining chair', alts: ['dining-chair'], count: 4, weight: 0.35 },
     { role: 'rug', alts: ['rug'], weight: 0.1, optional: true },
     { role: 'plant', alts: ['plant'], weight: 0.05, optional: true },
+    { role: 'table flower pot', alts: ['decor', 'plant'], weight: 0.03, optional: true, raised: 'table' },
   ],
   office: [
     { role: 'desk', alts: ['desk'], weight: 0.4 },
@@ -45,6 +55,57 @@ export const TEMPLATES: Record<RoomType, Role[]> = {
     { role: 'plant', alts: ['plant'], weight: 0.05, optional: true },
   ],
 };
+
+// A big dining room is usually an open-plan space: a dining set plus a lounge (sofa, TV, rug).
+export const OPEN_DINING_MIN_M2 = 20;
+export const isOpenDining = (room: Room) =>
+  roomTypeOf(room.label) === 'dining' && (room.areaM2 || polygonArea(room.polygon)) >= OPEN_DINING_MIN_M2;
+export const OPEN_DINING: Role[] = [
+  { role: 'dining table', alts: ['dining-table', 'round-table'], weight: 0.2 },
+  { role: 'dining chair', alts: ['dining-chair'], count: 4, weight: 0.12 },
+  { role: 'sofa', alts: ['sofa', 'sectional'], weight: 0.26 },
+  { role: 'coffee table', alts: ['coffee-table'], weight: 0.06 },
+  { role: 'tv console', alts: ['tv-console'], weight: 0.1 },
+  { role: 'rug', alts: ['rug'], weight: 0.08 },
+  { role: 'armchair', alts: ['armchair'], weight: 0.1, optional: true },
+  { role: 'plant', alts: ['plant'], weight: 0.04, optional: true },
+  { role: 'shelf', alts: ['bookshelf'], weight: 0.04, optional: true },
+  { role: 'wall art', alts: ['wall-art'], weight: 0.04, optional: true, wall: true },
+  { role: 'table flower pot', alts: ['decor', 'plant'], weight: 0.03, optional: true, raised: 'table' },
+  { role: 'counter flower pot', alts: ['decor', 'plant'], weight: 0.03, optional: true, raised: 'counter' },
+];
+
+// The roomiest spots in a room (furthest from walls and fixtures), best first and spaced apart.
+// An L-shaped or open-plan room's centroid can sit on its inner corner; these never do.
+function roomiestSpots(room: Room, scene?: SceneInfo): Vec2[] {
+  const poly = room.polygon;
+  const xs = poly.map((p) => p.x);
+  const ys = poly.map((p) => p.y);
+  const edges = (pts: Vec2[]) => pts.map((a, i) => [a, pts[(i + 1) % pts.length]] as const);
+  const wallEdges = edges(poly);
+  const spots: { p: Vec2; clear: number }[] = [];
+  for (let x = Math.min(...xs); x <= Math.max(...xs); x += 0.3) {
+    for (let y = Math.min(...ys); y <= Math.max(...ys); y += 0.3) {
+      const p = { x, y };
+      if (!pointInPolygon(p, poly)) continue;
+      let clear = Math.min(...wallEdges.map(([a, b]) => distPointSegment(p, a, b)));
+      for (const f of scene?.fixtures ?? []) {
+        if (f.length < 3) continue;
+        clear = pointInPolygon(p, f) ? 0 : Math.min(clear, ...edges(f).map(([a, b]) => distPointSegment(p, a, b)));
+      }
+      spots.push({ p, clear });
+    }
+  }
+  spots.sort((a, b) => b.clear - a.clear);
+  const best = spots[0]?.clear ?? 0;
+  const out: Vec2[] = [];
+  for (const s of spots) {
+    if (s.clear < best * 0.6) break;
+    if (out.every((q) => Math.hypot(q.x - s.p.x, q.y - s.p.y) > 1.2)) out.push(s.p);
+    if (out.length >= 3) break;
+  }
+  return out;
+}
 
 type Wall = { a: Vec2; b: Vec2; len: number; mid: Vec2; t: Vec2; n: Vec2; doorPenalty: number };
 
@@ -87,7 +148,14 @@ const m = (p: Product) => ({ w: p.dimsCm.w / 100, d: p.dimsCm.d / 100 });
 // flow: where people need to walk (see circulation.ts); pieces that cut it off are dropped.
 // scene: what the scan shows (see scanSense.ts): windows to keep tall pieces out of, and fixed
 // fixtures (counters, built-ins) nothing may stand on.
-export type SceneInfo = { windows: { a: Vec2; b: Vec2 }[]; fixtures: Vec2[][] };
+export type SceneInfo = {
+  windows: { a: Vec2; b: Vec2 }[];
+  fixtures: Vec2[][];
+  // Whether a flat piece fits on the wall's real surface there: centre c, wall normal n and
+  // tangent t, width w, bottom and top heights above the floor (a window or recess says no).
+  probe?: (c: Vec2, n: Vec2, t: Vec2, w: number, y0: number, y1: number) => boolean;
+  counters?: { p: Vec2; h: number }[]; // spots on a kitchen counter, with the counter top's height
+};
 export type SolveInput = {
   room: Room;
   doors: DoorMark[];
@@ -96,10 +164,13 @@ export type SolveInput = {
   walls?: Record<string, ApiWall[]>;
   flow?: FlowContext;
   scene?: SceneInfo;
+  // Whether a wall (by its end points) is interior; hung pieces go only on interior walls, since windows
+  // and glass doors are on exterior ones and the scan does not always show them. Omitted: any wall.
+  interior?: (a: Vec2, b: Vec2) => boolean;
 };
 export type Placement = Omit<PlacedItem, 'uid'> & { role: string };
 
-export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, flow, scene }: SolveInput): { placed: Placement[]; dropped: { role: string; product: Product; reason: string }[] } {
+export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, flow, scene, interior }: SolveInput): { placed: Placement[]; dropped: { role: string; product: Product; reason: string }[] } {
   const type = roomTypeOf(room.label);
   const walls = roomWalls(room, doors).sort((x, y) => y.len - x.len);
   const z = room.floorZ;
@@ -108,13 +179,87 @@ export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, f
   const get = (role: string) => picks.filter((p) => p.role === role).map((p) => p.product);
   const put = (role: string, product: Product, pos: Vec2, rot: number) =>
     placed.push({ role, productId: product.id, roomId: room.id, pos: { x: pos.x, y: pos.y, z }, rot });
+  // Hang a flat piece on a wall, centred `along` metres from the wall's start. It keeps off doors,
+  // closets and windows, and (when the scan can be probed) off anything that is not plain wall.
+  const alongOf = (p: Vec2, w: Wall) => (p.x - w.a.x) * w.t.x + (p.y - w.a.y) * w.t.y;
+  const blockedSpans = (w: Wall): [number, number][] => {
+    const spans: [number, number][] = [];
+    for (const d of doors) {
+      if (distToSeg(d.pos, w.a, w.b) < 0.45) {
+        const c = alongOf(d.pos, w);
+        spans.push([c - d.widthM / 2 - 0.25, c + d.widthM / 2 + 0.25]);
+      }
+    }
+    for (const win of scene?.windows ?? []) {
+      if (distToSeg(win.a, w.a, w.b) < 0.5 && distToSeg(win.b, w.a, w.b) < 0.5) {
+        const p = alongOf(win.a, w);
+        const q = alongOf(win.b, w);
+        spans.push([Math.min(p, q) - 0.25, Math.max(p, q) + 0.25]);
+      }
+    }
+    return spans;
+  };
+  const hang = (role: string, product: Product, w: Wall, along: number): boolean => {
+    if (interior && !interior(w.a, w.b)) return false;
+    const pr = m(product);
+    const half = pr.w / 2 + 0.08;
+    const spans = blockedSpans(w);
+    const lift = hangLift(product);
+    // A full-length mirror needs open floor in front of it: nothing already placed within a metre. (A
+    // small one hangs above furniture, which is fine.)
+    const frontClear = (c: number) => {
+      if (role !== 'mirror' || product.dimsCm.h < 150) return true;
+      const zone = rectCorners(add(add(w.a, w.t, c), w.n, 0.65), pr.w + 0.2, 1.0, faceRot(w.n));
+      return placed.every((pl) => {
+        const pp = picks.find((x) => x.product.id === pl.productId)?.product;
+        if (!pp || pp.placement === 'wall' || pp.category === 'rug' || pl.role.endsWith('flower pot')) return true;
+        return convexSeparation(zone, rectCorners({ x: pl.pos.x, y: pl.pos.y }, pp.dimsCm.w / 100, pp.dimsCm.d / 100, pl.rot)) > 0.02;
+      });
+    };
+    const ok = (c: number) => {
+      if (c - half < 0.05 || c + half > w.len - 0.05) return false;
+      if (spans.some(([lo, hi]) => c + half > lo && c - half < hi)) return false;
+      if (!frontClear(c)) return false;
+      const at = add(w.a, w.t, c);
+      const from = add(at, w.n, 0.12);
+      return !scene?.probe || scene.probe(from, w.n, w.t, pr.w, z + lift, z + lift + product.dimsCm.h / 100);
+    };
+    for (let k = 0; k <= Math.ceil(w.len / 0.15); k++) {
+      for (const sgn of k ? [-1, 1] : [1]) {
+        const c = along + sgn * k * 0.15;
+        if (!ok(c)) continue;
+        put(role, product, add(add(w.a, w.t, c), w.n, pr.d / 2 + WALL_GAP), faceRot(w.n));
+        return true;
+      }
+    }
+    return false;
+  };
+  // On the preferred wall near `along`; else on any other wall that has room, longest first.
+  const hangNear = (role: string, product: Product, prefer: Wall | undefined, along: number, exclude: Wall[] = []) => {
+    if (prefer && !exclude.includes(prefer) && hang(role, product, prefer, along)) return true;
+    return [...walls].filter((w) => w !== prefer && !exclude.includes(w) && w.len >= 1).some((w) => hang(role, product, w, w.len / 2));
+  };
+  // A piece standing on something: `lift` metres above the floor.
+  const putRaised = (role: string, product: Product, pos: Vec2, lift: number) =>
+    placed.push({ role, productId: product.id, roomId: room.id, pos: { x: pos.x, y: pos.y, z: z + lift }, rot: 0 });
+  // A wall a storage piece can stand against: no door beside it, and (when the scan can be probed)
+  // plain wall across the piece's width up to its height, not a louvered closet, recess or window.
+  const storageWall = (prefer: Wall | undefined, product: Product, exclude: Wall[] = []): Wall | undefined => {
+    const pr = m(product);
+    const plain = (w: Wall) =>
+      !exclude.includes(w) &&
+      w.len >= pr.w + 0.3 &&
+      w.doorPenalty === 0 &&
+      (!scene?.probe || scene.probe(add(add(w.a, w.t, w.len / 2), w.n, 0.12), w.n, w.t, Math.min(pr.w + 0.2, w.len - 0.2), z + 0.25, z + Math.min(product.dimsCm.h / 100, 1.6)));
+    return [prefer, ...walls].filter((w): w is Wall => !!w).find(plain) ?? undefined;
+  };
   const freeWall = (exclude: Wall[] = []) =>
     walls.filter((w) => !exclude.includes(w)).sort((x, y) => x.doorPenalty - y.doorPenalty || y.len - x.len)[0];
   // Candidate walls for the main piece, best first; `anchor` picks one of them.
   const anchors = walls.filter((w) => w.len >= 1.2).sort((x, y) => x.doorPenalty - y.doorPenalty || y.len - x.len);
   const anchorWall = () => (anchors.length ? anchors[anchor % anchors.length] : freeWall());
   const opposite = (w: Wall) =>
-    walls.filter((o) => o !== w && o.n.x * w.n.x + o.n.y * w.n.y < -0.7).sort((x, y) => y.len - x.len)[0];
+    walls.filter((o) => o !== w && o.n.x * w.n.x + o.n.y * w.n.y < -0.7).sort((x, y) => x.doorPenalty - y.doorPenalty || y.len - x.len)[0];
   const side = (w: Wall, exclude: Wall[]) =>
     walls.filter((o) => !exclude.includes(o) && Math.abs(o.n.x * w.n.x + o.n.y * w.n.y) < 0.3).sort((x, y) => x.doorPenalty - y.doorPenalty || y.len - x.len)[0];
   const corner = (awayFrom: Vec2) => {
@@ -124,14 +269,15 @@ export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, f
     return add(v, { x: dir.x / l, y: dir.y / l }, 0.45);
   };
 
-  if (type === 'living') {
-    const back = anchorWall();
+  const placeLiving = (back: Wall | undefined) => {
     const sofa = get('sofa')[0];
     if (back && sofa) {
       const s = m(sofa);
       const sp = add(back.mid, back.n, s.d / 2 + WALL_GAP);
       const rot = faceRot(back.n);
       put('sofa', sofa, sp, rot);
+      const art = get('wall art')[0];
+      if (art) hangNear('wall art', art, back, alongOf(sp, back)); // above the sofa, else a clear wall
       const ct = get('coffee table')[0];
       const ctPos = add(sp, back.n, s.d / 2 + 0.42 + (ct ? m(ct).d / 2 : 0.3));
       if (ct) put('coffee table', ct, ctPos, rot);
@@ -159,6 +305,9 @@ export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, f
       const sw = side(back, [back, tvWall].filter(Boolean) as Wall[]);
       if (shelf && sw) put('shelf', shelf, add(sw.mid, sw.n, m(shelf).d / 2 + WALL_GAP), faceRot(sw.n));
     }
+  };
+  if (type === 'living') {
+    placeLiving(anchorWall());
   } else if (type === 'bedroom') {
     const head = anchorWall();
     const bed = get('bed')[0];
@@ -167,46 +316,76 @@ export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, f
       const bp = add(head.mid, head.n, b.d / 2 + WALL_GAP);
       const rot = faceRot(head.n);
       put('bed', bed, bp, rot);
+      const art = get('wall art')[0];
+      if (art) hangNear('wall art', art, head, alongOf(bp, head)); // above the headboard, else a clear wall
       const rug = get('rug')[0];
       if (rug) put('rug', rug, add(bp, head.n, b.d * 0.2), rot + (m(rug).w > m(rug).d ? Math.PI / 2 : 0));
-      const opp = opposite(head);
+      // A bedside table each side of the headboard, against the wall.
+      get('nightstand').forEach((ns, i) => {
+        const sgn = i % 2 === 0 ? -1 : 1;
+        const along = add(head.mid, head.t, sgn * (b.w / 2 + m(ns).w / 2 + 0.04));
+        put('nightstand', ns, add(along, head.n, m(ns).d / 2 + WALL_GAP), faceRot(head.n));
+      });
       const dr = get('dresser')[0];
-      if (dr && opp) put('dresser', dr, add(opp.mid, opp.n, m(dr).d / 2 + WALL_GAP), faceRot(opp.n));
+      const opp = dr ? (storageWall(opposite(head), dr, [head]) ?? opposite(head)) : opposite(head);
+      if (dr && opp && storageWall(opp, dr, [head]) === opp) put('dresser', dr, add(opp.mid, opp.n, m(dr).d / 2 + WALL_GAP), faceRot(opp.n));
+      // A mirror: small ones hang above the dresser; a full-length one stands against the wall beside it.
+      const mir = get('mirror')[0];
+      if (mir) {
+        const mw = m(mir).w;
+        // Never on the headboard wall (the painting goes there).
+        if (dr && opp) hangNear('mirror', mir, opp, mir.dimsCm.h >= 150 ? opp.len / 2 + m(dr).w / 2 + mw / 2 + 0.15 : opp.len / 2, [head]);
+        else hangNear('mirror', mir, side(head, [head]) ?? opp, ((side(head, [head]) ?? opp)?.len ?? 2) / 2, [head]);
+      }
+      // Wardrobe on a side wall (or, failing that, beside the dresser's wall).
+      const wr = get('wardrobe')[0];
+      const wrWall = wr ? storageWall(side(head, [head, opp].filter(Boolean) as Wall[]) ?? opp, wr, [head]) : undefined;
+      if (wr && wrWall) put('wardrobe', wr, add(wrWall.mid, wrWall.n, m(wr).d / 2 + WALL_GAP), faceRot(wrWall.n));
+      // Bench at the foot of the bed.
+      const bn = get('bench')[0];
+      if (bn) put('bench', bn, add(bp, head.n, b.d / 2 + m(bn).d / 2 + 0.08), rot);
       const plant = get('plant')[0];
       if (plant) put('plant', plant, corner(bp), 0);
     }
   } else if (type === 'dining') {
+    const open = isOpenDining(room);
     const table = get('dining table')[0];
     const ref = walls.length ? walls[anchor % walls.length] : undefined;
+    // Set the table at the roomiest spot, not the centroid, which can sit on an L's inner corner.
+    const spots = roomiestSpots(room, scene);
+    const cc = spots.length ? spots[anchor % spots.length] : c;
+    const wallPick = Math.floor(anchor / Math.max(spots.length, 1));
     if (table && ref) {
       const t = m(table);
       const rot = faceRot(ref.n) + Math.PI / 2; // table's long side parallel to the longest wall
-      put('dining table', table, c, rot);
+      put('dining table', table, cc, rot);
       const rug = get('rug')[0];
-      if (rug) put('rug', rug, c, rot);
+      if (rug && !open) put('rug', rug, cc, rot); // an open-plan room's rug goes under the sofa instead
       const chairs = get('dining chair');
       const cos = Math.cos(rot);
       const sin = Math.sin(rot);
-      const local = (x: number, y: number): Vec2 => ({ x: c.x + x * cos - y * sin, y: c.y + x * sin + y * cos });
+      const local = (x: number, y: number): Vec2 => ({ x: cc.x + x * cos - y * sin, y: cc.y + x * sin + y * cos });
       const round = table.category === 'round-table';
       const seats: { p: Vec2; face: Vec2 }[] = [];
       const offs = round ? [] : t.w >= 1.4 ? [-t.w / 4, t.w / 4] : [0];
+      // Chairs face straight into the table (not at its centre, which tilts the corner seats so their
+      // corners cut into the table edge): a long-side chair looks along the table's width.
       for (const ox of offs) {
         for (const sgn of [-1, 1]) {
           const p = local(ox, sgn * (t.d / 2 + 0.28));
-          seats.push({ p, face: { x: c.x - p.x, y: c.y - p.y } });
+          seats.push({ p, face: { x: sgn * sin, y: -sgn * cos } });
         }
       }
       if (round) {
         for (let i = 0; i < 4; i++) {
           const a = (i * Math.PI) / 2 + rot;
-          const p = add(c, { x: Math.cos(a), y: Math.sin(a) }, t.w / 2 + 0.28);
-          seats.push({ p, face: { x: c.x - p.x, y: c.y - p.y } });
+          const p = add(cc, { x: Math.cos(a), y: Math.sin(a) }, t.w / 2 + 0.28);
+          seats.push({ p, face: { x: cc.x - p.x, y: cc.y - p.y } });
         }
       } else if (offs.length === 1) {
         for (const sgn of [-1, 1]) {
           const p = local(sgn * (t.w / 2 + 0.28), 0);
-          seats.push({ p, face: { x: c.x - p.x, y: c.y - p.y } });
+          seats.push({ p, face: { x: -sgn * cos, y: -sgn * sin } });
         }
       }
       chairs.forEach((ch, i) => {
@@ -215,8 +394,17 @@ export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, f
         const l = Math.hypot(s.face.x, s.face.y) || 1;
         put('dining chair', ch, s.p, faceRot({ x: s.face.x / l, y: s.face.y / l }));
       });
+      const pot = get('table flower pot')[0];
+      if (pot) putRaised('table flower pot', pot, cc, table.dimsCm.h / 100); // a flower pot in the middle of the table
+      if (open) {
+        // The lounge backs onto a long wall as far from the dining set as the room allows.
+        const far = anchors
+          .filter((w) => w.len >= 1.6)
+          .sort((x, y) => x.doorPenalty - y.doorPenalty || Math.hypot(y.mid.x - cc.x, y.mid.y - cc.y) - Math.hypot(x.mid.x - cc.x, x.mid.y - cc.y));
+        placeLiving(far.length ? far[wallPick % far.length] : undefined);
+      }
       const plant = get('plant')[0];
-      if (plant) put('plant', plant, corner(c), 0);
+      if (plant && !open) put('plant', plant, corner(cc), 0);
     }
   } else {
     const desks = [...walls].sort((x, y) => x.doorPenalty - y.doorPenalty || x.len - y.len).filter((w) => w.len >= 1.2);
@@ -235,10 +423,15 @@ export function solveLayout({ room, doors, picks, anchor = 0, walls: fitWalls, f
     }
   }
 
+  // A flower pot on the kitchen counter, where the scan shows one.
+  const counterPot = get('counter flower pot')[0];
+  const counter = scene?.counters?.[0];
+  if (counterPot && counter) putRaised('counter flower pot', counterPot, counter.p, counter.h);
+
   // Drop pieces that create errors, tight walkways, blocked doors or cut-off paths, lowest
   // priority first, until the layout is clean.
   const dropped: { role: string; product: Product; reason: string }[] = [];
-  const order = TEMPLATES[type].map((r) => r.role);
+  const order = (isOpenDining(room) ? OPEN_DINING : TEMPLATES[type]).map((r) => r.role);
   const byId = new Map(picks.map((p) => [p.product.id, p.product]));
   const lowestFirst = () => placed.map((_, i) => i).sort((a, b) => order.indexOf(placed[b].role) - order.indexOf(placed[a].role));
   for (let guard = 0; guard < 16; guard++) {
@@ -282,6 +475,7 @@ export function sceneIssues(placed: Placement[], byId: Map<string, Product>, sce
   const out: { uid: string; message: string }[] = [];
   placed.forEach((p, i) => {
     const pr = byId.get(p.productId)!;
+    if (pr.placement === 'wall' || p.role.endsWith('flower pot')) return; // hung, or standing on a table or counter
     const fp = rectCorners({ x: p.pos.x, y: p.pos.y }, pr.dimsCm.w / 100, pr.dimsCm.d / 100, p.rot);
     if (scene.fixtures.some((f) => convexSeparation(fp, f) < -0.02)) out.push({ uid: String(i), message: 'Sits on a counter or built-in' });
     else if (pr.dimsCm.h > 90 && scene.windows.some((w) => fp.some((c) => distPointSegment(c, w.a, w.b) < 0.4))) {
@@ -295,7 +489,7 @@ export function sceneIssues(placed: Placement[], byId: Map<string, Product>, sce
 export function flowClear(room: Room, placed: Placement[], byId: Map<string, Product>, flow: FlowContext): boolean {
   const solid = placed
     .map((p) => ({ p, pr: byId.get(p.productId)! }))
-    .filter(({ pr }) => pr.category !== 'rug')
+    .filter(({ p, pr }) => pr.category !== 'rug' && pr.placement !== 'wall' && !p.role.endsWith('flower pot')) // rugs, wall art and pots on a table leave the floor free
     .map(({ p, pr }) => rectCorners({ x: p.pos.x, y: p.pos.y }, pr.dimsCm.w / 100, pr.dimsCm.d / 100, p.rot));
   return checkFlow(room, solid, flow).ok;
 }

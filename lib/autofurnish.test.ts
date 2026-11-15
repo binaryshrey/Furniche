@@ -80,3 +80,51 @@ describe('circulation', () => {
     expect(checkFlow(room, [], ctx).ok).toBe(true);
   });
 });
+
+describe('open-plan dining room', () => {
+  // The Sharpstown Garden dining room (29 m²): an L whose centroid falls on the inner corner.
+  const poly = [[5.64, -0.46], [5.64, -1.89], [5.33, -1.88], [3.21, -1.88], [3.2, -4.46], [-1.15, -4.45], [-1.14, 0.96], [3.16, 0.96], [5.64, 0.95]];
+  const room: Room = {
+    id: 'dining',
+    label: 'Dining Room',
+    floorId: 'f',
+    polygon: poly.map(([x, y]) => ({ x, y })),
+    areaM2: 29.2,
+    widthM: 6.6,
+    depthM: 5.2,
+    heightM: 2.39,
+    floorZ: 0,
+  };
+
+  it('gets a dining set and a lounge, not a lone table', () => {
+    const r = autoFurnish(room, PRODUCTS)!;
+    const roles = r.placed.map((p) => p.role);
+    expect(roles).toContain('dining table');
+    expect(roles.filter((x) => x === 'dining chair').length).toBeGreaterThanOrEqual(4);
+    expect(roles).toContain('sofa');
+    expect(roles).toContain('tv console');
+    expect(roles).toContain('rug');
+  });
+});
+
+describe('occupied rooms: mirrors and art on the walls', () => {
+  it('hangs art over the sofa and a mirror and art in a bedroom', () => {
+    const living = autoFurnish(rect('Living Room', 5.5, 4.5), PRODUCTS)!;
+    expect(living.placed.map((p) => p.role)).toContain('wall art');
+    const bed = autoFurnish(rect('Bedroom', 4.2, 3.8), PRODUCTS)!;
+    const roles = bed.placed.map((p) => p.role);
+    expect(roles).toContain('wall art');
+    expect(roles).toContain('mirror');
+  });
+
+  it('keeps hung pieces on a wall and clear of the floor checks', () => {
+    const room = rect('Bedroom', 4.2, 3.8);
+    const r = autoFurnish(room, PRODUCTS)!;
+    const byId = new Map(PRODUCTS.map((p) => [p.id, p]));
+    for (const p of r.placed.filter((x) => byId.get(x.productId)!.placement === 'wall')) {
+      const nearest = Math.min(p.pos.x, room.widthM - p.pos.x, p.pos.y, room.depthM - p.pos.y);
+      expect(nearest).toBeLessThan(0.3); // a hand's width off a wall
+    }
+    expect(checkFit(r.placed.map((p, i) => ({ item: { ...p, uid: String(i) }, product: byId.get(p.productId)! })), [room]).filter((i) => i.level === 'error')).toEqual([]);
+  });
+});
