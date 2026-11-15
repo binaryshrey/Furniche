@@ -115,7 +115,7 @@ export default function DesignPanel({ geometry, embedded = false, onPick }: { ge
                             <span className="truncate font-medium">{product.name.split(',')[0]}</span>
                           </div>
                           <div className="flex justify-between text-xs text-muted">
-                            <span>{RETAILER_LABEL[product.retailer]}</span>
+                            <span>{product.source === 'photo' ? 'From your photo' : RETAILER_LABEL[product.retailer]}</span>
                             <span className="num">{fmtUsd(product.priceUsd)}</span>
                           </div>
                         </div>

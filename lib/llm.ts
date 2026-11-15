@@ -16,22 +16,31 @@ function getClient(): Anthropic {
   return client;
 }
 
+export type ImageInput = { mediaType: Anthropic.Base64ImageSource['media_type']; data: string }; // data: base64
+
 // One structured-output call. Returns null when no key is configured or the model declines,
-// so every caller has a non-AI fallback.
+// so every caller has a non-AI fallback. Images, if any, go before the text.
 export async function structured<T extends z.ZodType>(opts: {
   system: string;
   user: string;
+  images?: ImageInput[];
   schema: T;
   effort?: 'low' | 'medium' | 'high';
   maxTokens?: number;
 }): Promise<z.infer<T> | null> {
   if (!llmAvailable()) return null;
+  const content: string | Anthropic.ContentBlockParam[] = opts.images?.length
+    ? [
+        ...opts.images.map((img): Anthropic.ImageBlockParam => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } })),
+        { type: 'text', text: opts.user },
+      ]
+    : opts.user;
   try {
     const response = await getClient().messages.parse({
       model: MODEL,
       max_tokens: opts.maxTokens ?? 16000,
       system: opts.system,
-      messages: [{ role: 'user', content: opts.user }],
+      messages: [{ role: 'user', content }],
       output_config: { format: zodOutputFormat(opts.schema), effort: opts.effort ?? 'medium' },
     });
     if (response.stop_reason === 'refusal') return null;

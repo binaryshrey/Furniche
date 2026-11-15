@@ -293,7 +293,17 @@ export default function SkyView({
 
   useEffect(() => {
     const el = host.current!;
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+    } catch {
+      // The browser refused a WebGL context: too many 3D views open at once, or 3D switched off
+      // after a graphics problem. Keep the page usable without the city (homes still open
+      // directly) instead of failing it, and let a waiting loading screen go.
+      setStatus('3D is unavailable in this browser right now. Reload the page, or restart the browser if that doesn’t help.');
+      report({ done: 1, total: 1, sharp: true });
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(el.clientWidth, el.clientHeight);
     el.appendChild(renderer.domElement);
@@ -639,6 +649,7 @@ export default function SkyView({
       draco.dispose();
       ktx.dispose();
       renderer.dispose();
+      renderer.forceContextLoss(); // give the context back now, not when the canvas is collected
       renderer.domElement.remove();
       api.current = null;
     };
