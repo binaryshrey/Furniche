@@ -153,19 +153,12 @@ export default function Editor({ sid }: { sid: string }) {
                 </button>
               ))}
             </div>
-            <div className="flex overflow-hidden rounded-md border border-line bg-card">
-              <button onClick={() => setMode('navigate')} className={`px-3 py-1.5 ${mode === 'navigate' ? 'bg-ink text-paper' : ''}`} title="Click to walk through the home">
-                Walk
+            {/* No Walk/Arrange switch: clicking the floor walks, and a selected piece drags. */}
+            {view === 'plan' && (
+              <button onClick={() => setMode(mode === 'door' ? 'navigate' : 'door')} className={`rounded-md border border-line px-3 py-1.5 ${mode === 'door' ? 'bg-ink text-paper' : 'bg-card'}`}>
+                Mark doors
               </button>
-              <button onClick={() => setMode('arrange')} className={`px-3 py-1.5 ${mode === 'arrange' ? 'bg-ink text-paper' : ''}`} title="Click and drag furniture">
-                Arrange
-              </button>
-              {view === 'plan' && (
-                <button onClick={() => setMode(mode === 'door' ? 'navigate' : 'door')} className={`px-3 py-1.5 ${mode === 'door' ? 'bg-ink text-paper' : ''}`}>
-                  Mark doors
-                </button>
-              )}
-            </div>
+            )}
             {hasDefurnish && (
               <label className="flex items-center gap-1.5 rounded-md border border-line bg-card px-2.5 py-1.5">
                 <input id="toggle-furnished" type="checkbox" checked={showFurnished} onChange={(e) => setShowFurnished(e.target.checked)} className="accent-ink" />
@@ -188,7 +181,7 @@ export default function Editor({ sid }: { sid: string }) {
                 </option>
               ))}
             </select>
-            <span className="ml-auto text-muted">{ready ? (locked ? 'Furniture locked · click the floor to walk, drag to look around · click a piece to swap it' : mode === 'arrange' ? 'Walking is off. Drag pieces to move, drag ↻ to rotate.' : 'Click the floor to walk · click a piece to select it, then drag it to move · drag ↻ to rotate') : embedOnly ? 'Walk-through tour · switch to Floor plan to furnish' : 'Connecting to Matterport…'}</span>
+            <span className="ml-auto text-muted">{ready ? (locked ? 'Furniture locked · click the floor to walk, drag to look around · click a piece to swap it' : 'Click the floor to walk · click a piece to select it, then drag it to move · drag ↻ to rotate') : embedOnly ? 'Walk-through tour · switch to Floor plan to furnish' : 'Connecting to Matterport…'}</span>
           </div>
 
           <div className="relative min-h-0 flex-1 bg-paper">

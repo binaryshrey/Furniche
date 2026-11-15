@@ -144,7 +144,7 @@ export default function ImportLink() {
               <div className="rounded-md bg-panel p-2 text-[11px] leading-snug text-muted">
                 Drag{' '}
                 <a ref={marklet} onClick={(e) => e.preventDefault()} className="whitespace-nowrap rounded-full bg-ink px-2 py-0.5 font-semibold text-paper" title="Drag me to your bookmarks bar">
-                  + Add to Furniche
+                  + Add to Furniche AI
                 </a>{' '}
                 to your bookmarks bar once. Then open any product page (Amazon, Wayfair, Target…) and click it.
               </div>

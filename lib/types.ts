@@ -59,6 +59,8 @@ export type Category =
   | 'wall-art'
   | 'bench'
   | 'bar-stool'
+  | 'mattress' // sits on a bed frame
+  | 'decor' // floor-standing showpieces: vases, baskets, pouffes, plant stands, lanterns
   | 'patio-table'
   | 'patio-chair'
   | 'lounger'

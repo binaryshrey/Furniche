@@ -1,14 +1,15 @@
 'use client';
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CategoryCarousel, CategoryGrid, FURNITURE_GROUPS } from '@/components/assistant/FurnitureCarousel';
 import WallsFloorTab from '@/components/assistant/WallsFloorTab';
-import DesignPanel from '@/components/design/DesignPanel';
+import { surfaceLines } from '@/components/design/SurfacesBox';
+import MyDesignTab from '@/components/assistant/MyDesignTab';
 import { fmtUsd } from '@/components/shop/ShopPanel';
 import type { WorkDesign } from '@/lib/designOps';
 import { useLighting, type LightPrefs } from '@/lib/lighting';
 import { useViewerState } from '@/lib/sceneBridge';
 import { autoFurnishAll } from '@/lib/autoFurnishAll';
+import { roomScenes } from '@/lib/roomScenes';
 import { lookAt } from '@/lib/showcase';
 import { usePanel } from '@/lib/uiState';
 import { useDesign, useStore } from '@/lib/store';
@@ -44,7 +45,7 @@ const SPARK = 'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM19 15
 
 const mid = () => Math.random().toString(36).slice(2, 10);
 
-function snapshot(): { sid: string; roomId: string | null; design: WorkDesign; imported: ReturnType<typeof useStore.getState>['importedProducts']; lighting: LightPrefs } {
+function snapshot(geometry: ModelGeometry | null = null): { sid: string; roomId: string | null; design: WorkDesign; imported: ReturnType<typeof useStore.getState>['importedProducts']; lighting: LightPrefs; scenes: ReturnType<typeof roomScenes> } {
   const s = useStore.getState();
   const d = s.design();
   const { brightness, warmth } = useLighting.getState();
@@ -54,6 +55,7 @@ function snapshot(): { sid: string; roomId: string | null; design: WorkDesign; i
     design: { items: d.items, surfaces: d.surfaces, doors: d.doors, themeId: d.themeId },
     imported: s.importedProducts,
     lighting: { brightness, warmth },
+    scenes: roomScenes(geometry), // windows and built-ins, so the assistant places pieces clear of them
   };
 }
 
@@ -88,7 +90,11 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   const roomId = useViewerState((s) => s.currentRoomId);
   const room = geometry?.rooms.find((r) => r.id === roomId) ?? null;
   const productOf = useStore((s) => s.product);
-  const planned = useMemo(() => design.items.reduce((s, i) => s + (productOf(i.productId)?.priceUsd ?? 0), 0), [design.items, productOf]);
+  // Furniture plus paint and flooring, the same total the cart and My design show.
+  const planned = useMemo(
+    () => design.items.reduce((s, i) => s + (productOf(i.productId)?.priceUsd ?? 0), 0) + surfaceLines(geometry, design.surfaces, design.doors).reduce((s, f) => s + f.cost, 0),
+    [design.items, design.surfaces, design.doors, geometry, productOf],
+  );
   const budget = useBudget(planned, msgs.length);
 
   // Chat follows the newest message; every other tab opens at its top.
@@ -110,7 +116,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   // Opening chat options fit the room the shopper is standing in and what is already there.
   useEffect(() => {
     if (!open || msgs.length) return;
-    const snap = snapshot();
+    const snap = snapshot(geometry);
     if (!snap.sid) return;
     fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...snap, suggestOnly: true }) })
       .then((r) => r.json())
@@ -129,7 +135,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
     if (!photon) return;
     let alive = true;
     const tick = async () => {
-      const snap = snapshot();
+      const snap = snapshot(geometry);
       if (!snap.sid) return;
       try {
         const res = await fetch('/api/photon/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snap) });
@@ -156,14 +162,19 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   }, [photon]);
 
   // Bring a room (or one piece) into view from where a visitor would stand. No spinning.
-  async function frame(roomIdToShow: string, opts: { target?: { x: number; y: number }; back?: number } = {}) {
-    // Wait (up to 20 s) for the tour to be showing a room; moving the camera earlier is ignored.
-    for (let t = 0; t < 40 && !useViewerState.getState().showingRoom; t++) await new Promise((r) => setTimeout(r, 500));
+  async function frame(roomIdToShow: string, opts: { target?: { x: number; y: number }; back?: number; pitch?: number } = {}) {
+    // Wait (up to 20 s) for the tour to be ready; moving the camera earlier is ignored. `ready`
+    // counts too: on some homes `showingRoom` stays false after the boot has settled.
+    const live = () => {
+      const v = useViewerState.getState();
+      return !!v.sdk && (v.showingRoom || v.ready);
+    };
+    for (let t = 0; t < 40 && !live(); t++) await new Promise((r) => setTimeout(r, 500));
     const sdk = useViewerState.getState().sdk;
     if (!geometry || !sdk) return;
     const { moveToPano } = await import('@/components/viewer/MatterportHost');
     // The open panel covers the right of the view, so aim a little right to keep the pieces in the clear part.
-    await lookAt({ sdk, geometry, roomId: roomIdToShow, items: useStore.getState().design().items, moveToPano: (s, id) => moveToPano(s, id), yawOffset: usePanel.getState().open ? 22 : 0, ...opts });
+    await lookAt({ sdk, geometry, roomId: roomIdToShow, items: useStore.getState().design().items, moveToPano: (s, id) => moveToPano(s, id, false, 2), yawOffset: usePanel.getState().open ? 18 : 0, ...opts });
   }
 
   // Auto-furnish from the chat: furnish every room, report it like any reply (with Undo), then
@@ -201,7 +212,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...snapshot(), history, message }),
+        body: JSON.stringify({ ...snapshot(geometry), history, message }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'The assistant is unavailable.');
@@ -223,9 +234,19 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
 
   function added(p: Product, placed: boolean) {
     // Added pieces are always movable: unlock the furniture; the new piece is already selected.
-    useStore.getState().setLocked(false);
-    if (placed) setToast(`${p.name.split(',')[0]} added. Drag it to move, drag ↻ to rotate`);
-    else {
+    const st = useStore.getState();
+    st.setLocked(false);
+    const name = p.name.split(',')[0];
+    if (placed) {
+      setToast(`${name} added. Drag it to move, drag ↻ to rotate`);
+      // Log it in the chat too, with a one-tap Remove (and Undo, which restores the design without it).
+      const cur = st.design();
+      const before: Before = { design: { ...cur, items: cur.items.filter((i) => i.uid !== st.selectedUid) }, lighting: { ...useLighting.getState() } };
+      setMsgs((m) => [
+        ...m,
+        { id: mid(), role: 'assistant', text: `Added the ${name} (${fmtUsd(p.priceUsd)}) to the ${room?.label.toLowerCase() ?? 'room'}, clear of walkways and windows.`, channel: 'web', actions: [`Added ${name}`], suggestions: [`Remove the ${name}`, 'Make this room feel bigger', 'What can I afford?'], before },
+      ]);
+    } else {
       setToast(`Click the floor where the ${p.name.split(',')[0]} should go`);
       setOpen(false);
     }
@@ -234,7 +255,8 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   // Picking a piece in My design selects it and brings it into view.
   function focusPiece(uid: string) {
     const it = useStore.getState().design().items.find((i) => i.uid === uid);
-    if (it?.roomId) frame(it.roomId, { target: { x: it.pos.x, y: it.pos.y }, back: 1.8 });
+    // A little further back, with the piece a touch above centre so the swap card doesn't hide it.
+    if (it?.roomId) frame(it.roomId, { target: { x: it.pos.x, y: it.pos.y }, back: 2.3, pitch: 4 });
   }
 
   const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
@@ -262,12 +284,12 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
           data-fn-ui
           onClick={() => (setOpen(true), setUnread(0))}
           className="absolute right-4 top-4 z-40 flex items-center gap-2 rounded-full btn-brand px-4 py-2.5 text-sm font-semibold shadow-swatch"
-          aria-label="Open Ask Furniche"
+          aria-label="Open Ask Furniche AI"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z" />
           </svg>
-          Ask Furniche
+          Ask Furniche AI
           {design.items.length > 0 && <span className="num rounded-full bg-black/25 px-2 py-0.5 text-[11px]">{fmtUsd(planned)}</span>}
           {unread > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] text-brand">{unread}</span>}
         </button>
@@ -276,18 +298,18 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
       {toast && <div data-fn-ui className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper shadow-swatch">{toast}</div>}
 
       {open && (
-        <section data-fn-ui className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-paper/55 shadow-swatch backdrop-blur-[2px] [text-shadow:0_1px_2px_rgba(0,0,0,.45)]" aria-label="Ask Furniche">
+        <section data-fn-ui className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-paper/55 shadow-swatch backdrop-blur-[2px] [text-shadow:0_1px_2px_rgba(0,0,0,.45)]" aria-label="Ask Furniche AI">
           <header className="flex items-center gap-2 border-b border-line px-4 py-3">
-            <h2 className="font-display text-base font-semibold">Ask Furniche</h2>
+            <h2 className="font-display text-base font-semibold">Ask Furniche AI</h2>
             {photon && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10px] text-ok">iMessage on</span>}
             <span className="ml-auto text-[11px] text-muted">{room ? `${room.label} · ${room.widthM.toFixed(1)} × ${room.depthM.toFixed(1)} m` : 'Walk into a room'}</span>
-            <button onClick={() => setOpen(false)} className="rounded px-1.5 text-muted hover:text-ink" aria-label="Close Ask Furniche">
+            <button onClick={() => setOpen(false)} className="rounded px-1.5 text-muted hover:text-ink" aria-label="Close Ask Furniche AI">
               ✕
             </button>
           </header>
           <BudgetStrip budget={budget} planned={planned} />
 
-          <nav className="grid grid-cols-5 border-b border-line" role="tablist" aria-label="Ask Furniche sections">
+          <nav className="grid grid-cols-4 border-b border-line" role="tablist" aria-label="Ask Furniche AI sections">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -362,14 +384,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
 
             {tab === 'finishes' && <WallsFloorTab geometry={geometry} room={room} />}
 
-            {tab === 'design' && (
-              <div className="space-y-3">
-                <DesignPanel geometry={geometry} embedded onPick={focusPiece} />
-                <Link href="/cart" className="block w-full rounded-lg btn-brand px-4 py-2.5 text-center text-sm font-medium">
-                  Review cart · {fmtUsd(planned)}
-                </Link>
-              </div>
-            )}
+            {tab === 'design' && <MyDesignTab geometry={geometry} budget={budget} onFocus={focusPiece} onAutoFurnish={() => runAutoFurnish(AUTO)} onBrowse={() => setTab('furniture')} />}
           </div>
 
           {tab === 'chat' && (

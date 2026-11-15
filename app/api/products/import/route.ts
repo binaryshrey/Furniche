@@ -197,7 +197,7 @@ export async function POST(req: Request) {
       const slug = url.pathname.match(/\/([A-Za-z0-9][A-Za-z0-9-]{8,})\/(?:dp|p|pdp)\b/)?.[1];
       return NextResponse.json(
         {
-          error: `${retailerOf(url.hostname) === 'other' ? 'This store' : url.hostname.replace(/^www\./, '')} blocks automatic reading. Use the Add to Furniche button on the product page, or paste the page text below.`,
+          error: `${retailerOf(url.hostname) === 'other' ? 'This store' : url.hostname.replace(/^www\./, '')} blocks automatic reading. Use the Add to Furniche AI button on the product page, or paste the page text below.`,
           blocked: true,
           nameHint: slug ? slug.replace(/-/g, ' ') : null,
         },

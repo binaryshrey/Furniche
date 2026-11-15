@@ -5,7 +5,7 @@ import './globals.css';
 const sans = Roboto({ subsets: ['latin'], weight: ['300', '400', '500', '700'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-  title: 'Furniche',
+  title: 'Furniche AI',
   description: 'Furnish real Houston homes with real furniture, at true size, before you move in.',
 };
 

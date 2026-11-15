@@ -199,6 +199,10 @@ export default function SurfaceLayer({ geometry }: { geometry: ModelGeometry | n
   // One overlay mesh per (surface, chunk), sharing the chunk's geometry, plus one depth-only
   // occluder per chunk: drawn first, it writes the scan's walls into the depth buffer so
   // furniture behind a wall, doorframe or counter is hidden, as it would be in the room.
+  // These copies sit on the scan's own layers, so Matterport's pointer (which picks where a click
+  // walks to) could land on them instead of the real floor and refuse to move. They draw, but
+  // never take part in raycasts.
+  const noRaycast = () => {};
   const overlays = useMemo(() => {
     const list: { mesh: THREE.Mesh; chunk: Chunk }[] = [];
     for (const chunk of chunks) {
@@ -207,6 +211,7 @@ export default function SurfaceLayer({ geometry }: { geometry: ModelGeometry | n
       mesh.layers.mask = chunk.layers.mask | 1;
       mesh.renderOrder = -10;
       mesh.frustumCulled = false;
+      mesh.raycast = noRaycast;
       list.push({ mesh, chunk });
     }
     for (const mat of materials) {
@@ -216,6 +221,7 @@ export default function SurfaceLayer({ geometry }: { geometry: ModelGeometry | n
         mesh.layers.mask = chunk.layers.mask | 1;
         mesh.renderOrder = 2;
         mesh.frustumCulled = false;
+        mesh.raycast = noRaycast;
         list.push({ mesh, chunk });
       }
     }
