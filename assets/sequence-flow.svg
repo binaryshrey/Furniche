@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2205" height="2160" viewBox="0 0 2205 2160"><rect width="100%" height="100%" fill="white"/>
+<defs><marker id="m" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,4 L0,8 z" fill="context-stroke"/></marker></defs>
+<rect x="40" y="220" width="2125.0" height="344" rx="14" fill="#e7f5ff" fill-opacity="0.7" stroke="#1971c2" stroke-width="1"/>
+<rect x="40" y="580" width="2125.0" height="460" rx="14" fill="#ebfbee" fill-opacity="0.7" stroke="#2f9e44" stroke-width="1"/>
+<rect x="40" y="1056" width="2125.0" height="460" rx="14" fill="#fff9db" fill-opacity="0.7" stroke="#f08c00" stroke-width="1"/>
+<rect x="40" y="1532" width="2125.0" height="576" rx="14" fill="#fff5f5" fill-opacity="0.7" stroke="#e03131" stroke-width="1"/>
+<rect x="55.0" y="120" width="190" height="70" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="290.0" y="120" width="190" height="70" rx="14" fill="#a5d8ff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="525.0" y="120" width="190" height="70" rx="14" fill="#b2f2bb" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="760.0" y="120" width="190" height="70" rx="14" fill="#a5d8ff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="995.0" y="120" width="190" height="70" rx="14" fill="#a5d8ff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="1230.0" y="120" width="190" height="70" rx="14" fill="#d3f9d8" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="1465.0" y="120" width="190" height="70" rx="14" fill="#ffd8a8" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1700.0" y="120" width="190" height="70" rx="14" fill="#a5d8ff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="1935.0" y="120" width="190" height="70" rx="14" fill="#ffc9c9" fill-opacity="1.0" stroke="#e03131" stroke-width="2"/>
+<text x="40" y="50.3" font-family="Helvetica,Arial" font-size="34" fill="#1e1e1e" text-anchor="start">FurNiche AI: request flow</text>
+<text x="40" y="83.1" font-family="Helvetica,Arial" font-size="18" fill="#495057" text-anchor="start">From a typed search to a paid cart. Dashed arrows are replies.</text>
+<text x="54" y="250.9" font-family="Helvetica,Arial" font-size="22" fill="#1971c2" text-anchor="start">1  Find</text>
+<text x="54" y="610.9" font-family="Helvetica,Arial" font-size="22" fill="#2f9e44" text-anchor="start">2  Fly in</text>
+<text x="54" y="1086.9" font-family="Helvetica,Arial" font-size="22" fill="#f08c00" text-anchor="start">3  Furnish</text>
+<text x="54" y="1562.9" font-family="Helvetica,Arial" font-size="22" fill="#e03131" text-anchor="start">4  Pay</text>
+<line x1="150" y1="190" x2="150" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="385" y1="190" x2="385" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="620" y1="190" x2="620" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="855" y1="190" x2="855" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="1090" y1="190" x2="1090" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="1325" y1="190" x2="1325" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="1560" y1="190" x2="1560" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="1795" y1="190" x2="1795" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<line x1="2030" y1="190" x2="2030" y2="2116" stroke="#868e96" stroke-width="1" stroke-dasharray="6 5"/>
+<text x="150.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Mover</text>
+<text x="150.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">browser or phone</text>
+<text x="385.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Home  /</text>
+<text x="385.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">search + Vexcel map</text>
+<text x="620.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Vexcel</text>
+<text x="620.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">map, parcel, 3D Tiles</text>
+<text x="855.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Editor</text>
+<text x="855.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/space/[sid]</text>
+<text x="1090.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Matterport</text>
+<text x="1090.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">scan + Model API</text>
+<text x="1325.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Solver</text>
+<text x="1325.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">fit check, auto-furnish</text>
+<text x="1560.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Claude</text>
+<text x="1560.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">stylist + chat</text>
+<text x="1795.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Cart / Bank</text>
+<text x="1795.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/cart  /bank</text>
+<text x="2030.0" y="150.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Capital One</text>
+<text x="2030.0" y="170.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Nessie sandbox</text>
+<line x1="154" y1="293.0" x2="381" y2="293.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="267.5" y="282.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">1. search: 3 bed under $2,000</text>
+<line x1="389" y1="351.0" x2="1556" y2="351.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="972.5" y="340.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">2. parse the query (rules + Claude)</text>
+<line x1="1556" y1="409.0" x2="389" y2="409.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="972.5" y="398.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">3. filters</text>
+<line x1="389" y1="467.0" x2="616" y2="467.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="502.5" y="456.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">4. aerial map tiles + 3D coverage</text>
+<line x1="616" y1="525.0" x2="389" y2="525.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="502.5" y="514.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">5. price tags on the map</text>
+<line x1="154" y1="653.0" x2="381" y2="653.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="267.5" y="642.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">6. click a home</text>
+<line x1="389" y1="711.0" x2="616" y2="711.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="502.5" y="700.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">7. 3D Tiles for the city</text>
+<line x1="385" y1="763.0" x2="455" y2="763.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<line x1="455" y1="777.0" x2="385" y2="777.0" stroke="#1e1e1e" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="465" y="770.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="start">8. glide camera, dive to the building</text>
+<line x1="389" y1="827.0" x2="851" y2="827.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="620.0" y="816.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">9. mount editor under the sky</text>
+<line x1="859" y1="885.0" x2="1086" y2="885.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="972.5" y="874.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">10. load scan + floor plan for the sid</text>
+<line x1="1086" y1="943.0" x2="859" y2="943.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="972.5" y="932.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">11. room is showing</text>
+<line x1="851" y1="1001.0" x2="389" y2="1001.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="620.0" y="990.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">12. cross-fade, URL becomes /space/[sid]</text>
+<line x1="154" y1="1129.0" x2="851" y2="1129.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="502.5" y="1118.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">13. Auto-furnish (or drag a product)</text>
+<line x1="859" y1="1187.0" x2="1321" y2="1187.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="1090.0" y="1176.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">14. sense scan: doors, windows, counters</text>
+<line x1="1321" y1="1245.0" x2="859" y2="1245.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="1090.0" y="1234.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">15. layout that passes the fit check</text>
+<line x1="154" y1="1303.0" x2="851" y2="1303.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="502.5" y="1292.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">16. ask: warm japandi under $3,000</text>
+<line x1="859" y1="1361.0" x2="1556" y2="1361.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="1207.5" y="1350.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">17. pick products (stylist)</text>
+<line x1="1556" y1="1419.0" x2="859" y2="1419.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="1207.5" y="1408.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">18. product ids only, never positions</text>
+<line x1="859" y1="1477.0" x2="1321" y2="1477.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="1090.0" y="1466.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">19. place + check the picks</text>
+<line x1="154" y1="1605.0" x2="1791" y2="1605.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="972.5" y="1594.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">20. open the cart</text>
+<line x1="1799" y1="1663.0" x2="2026" y2="1663.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="1912.5" y="1652.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">21. accounts, bills, balance</text>
+<line x1="2026" y1="1721.0" x2="1799" y2="1721.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="1912.5" y="1710.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">22. safe to spend after rent</text>
+<line x1="154" y1="1779.0" x2="1791" y2="1779.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="972.5" y="1768.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">23. swipe to pay</text>
+<line x1="1799" y1="1837.0" x2="2026" y2="1837.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="1912.5" y="1826.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">24. one purchase per store</text>
+<line x1="2026" y1="1895.0" x2="1799" y2="1895.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="1912.5" y="1884.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">25. posted</text>
+<line x1="154" y1="1953.0" x2="1791" y2="1953.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="972.5" y="1942.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">26. open /bank (new tab)</text>
+<line x1="1799" y1="2011.0" x2="2026" y2="2011.0" stroke="#1e1e1e" stroke-width="2" marker-end="url(#m)"/>
+<text x="1912.5" y="2000.3" font-family="Helvetica,Arial" font-size="14" fill="#1e1e1e" text-anchor="middle">27. transactions</text>
+<line x1="2026" y1="2069.0" x2="1799" y2="2069.0" stroke="#868e96" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#m)"/>
+<text x="1912.5" y="2058.3" font-family="Helvetica,Arial" font-size="14" fill="#868e96" text-anchor="middle">28. spending, cards, health score</text>
+</svg>
