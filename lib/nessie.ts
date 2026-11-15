@@ -5,6 +5,7 @@ import path from "node:path";
 import { cacheDir } from "./cacheDir";
 import {
   demoBudget,
+  isHousingBill,
   moveInBudget,
   type BankAccount,
   type BankBill,
@@ -23,7 +24,7 @@ export function nessieAvailable(): boolean {
 }
 
 async function api<T = any>(
-  method: "GET" | "POST",
+  method: "GET" | "POST" | "PATCH",
   p: string,
   body?: unknown,
 ): Promise<T> {
@@ -231,6 +232,7 @@ async function readSnapshot(): Promise<Snapshot> {
     .map((b) => ({
       id: b.id,
       payee: b.payee,
+      nickname: b.nickname ?? undefined,
       amount: Number(b.payment_amount) || 0,
       due: b.upcoming_payment_date ?? b.payment_date ?? null,
     }));
@@ -379,23 +381,29 @@ export async function applyHomeLoan(o: { amount: number; monthly: number; status
   );
 }
 
-// A new home's rent as a monthly bill on checking, first due next month. Setting up the same rent
-// again returns the bill already there.
-export async function addRentBill(o: { payee: string; amount: number }): Promise<{ id: string; due: string }> {
+// A new home's rent as a monthly bill on checking, first due next month. It replaces the rent or
+// mortgage paid today: those bills are cancelled, so monthly bills count one home. Setting up the
+// same rent again keeps the bill already there.
+export async function addRentBill(o: { payee: string; amount: number }): Promise<{ id: string; due: string; replaced: string[] }> {
   const ids = await demoIds();
   const payee = o.payee.slice(0, 60);
   const amount = Math.round(o.amount * 100) / 100;
-  const same = (await snapshot()).bills.find((b) => b.payee === payee && Math.abs(b.amount - amount) < 0.01);
-  if (same) return { id: same.id, due: same.due ?? "" };
-  const due = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
-  const b = await api("POST", `/accounts/${ids.checking}/bills`, {
-    status: "recurring",
-    payee,
-    nickname: `Rent · ${payee}`.slice(0, 60),
-    payment_amount: amount,
-    payment_date: due,
-    recurring_date: Number(due.slice(8, 10)),
-  });
-  invalidate(); // the new bill changes monthly bills and cash free
-  return { id: String(b.id), due };
+  const housing = (await snapshot()).bills.filter(isHousingBill);
+  let bill = housing.find((b) => b.payee === payee && Math.abs(b.amount - amount) < 0.01);
+  if (!bill) {
+    const due = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+    const b = await api("POST", `/accounts/${ids.checking}/bills`, {
+      status: "recurring",
+      payee,
+      nickname: `Rent · ${payee}`.slice(0, 60),
+      payment_amount: amount,
+      payment_date: due,
+      recurring_date: Number(due.slice(8, 10)),
+    });
+    bill = { id: String(b.id), payee, amount, due };
+  }
+  const old = housing.filter((b) => b.id !== bill.id);
+  await Promise.all(old.map((b) => api("PATCH", `/bills/${b.id}`, { status: "cancelled" })));
+  invalidate(); // monthly bills, rent and cash free all change
+  return { id: bill.id, due: bill.due ?? "", replaced: old.map((b) => b.payee) };
 }

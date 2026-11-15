@@ -34,7 +34,7 @@ type Home = Extract<Listing, { kind: 'home' }>;
 type Apartment = Extract<Listing, { kind: 'apartment' }>;
 type Tab = 'buy' | 'rent' | 'compare' | 'movein' | 'equity';
 // What app/api/finance answers to an application or a new rent bill.
-type ActResult = { loan: { id: string; status: string; amount: number }; reasons: string[]; bill: { due: string } };
+type ActResult = { loan: { id: string; status: string; amount: number }; reasons: string[]; bill: { due: string; replaced: string[] } };
 
 const VERDICT_CLASS: Record<Verdict, string> = {
   comfortable: 'bg-ok/15 text-ok',
@@ -410,7 +410,7 @@ export default function Finance({ params }: { params: { sid: string } }) {
               <button
                 id="fin-rent-bill"
                 disabled={busy}
-                onClick={() => act({ action: 'rent', payee: apt.community ?? apt.address, amount: rentNow }, (j) => `Rent of ${usd(rentNow)} set up as a monthly bill on your checking, first due ${j.bill.due}.`)}
+                onClick={() => act({ action: 'rent', payee: apt.community ?? apt.address, amount: rentNow }, (j) => `Rent of ${usd(rentNow)} set up as a monthly bill on your checking, first due ${j.bill.due}.${j.bill.replaced.length ? ` It replaces ${j.bill.replaced.join(' and ')}, now cancelled.` : ''}`)}
                 className="mt-4 w-full rounded-lg btn-brand px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
               >
                 {busy ? 'Setting up…' : 'Set up rent with Capital One'}

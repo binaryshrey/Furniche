@@ -10,7 +10,11 @@ export type BankAccount = {
   creditLimit: number | null;
   rewards: number;
 };
-export type BankBill = { id: string; payee: string; amount: number; due: string | null };
+export type BankBill = { id: string; payee: string; nickname?: string; amount: number; due: string | null };
+
+// The home's rent or mortgage, by payee or nickname ("Rent · The Alexan"), as whole words so
+// "Renters insurance" isn't one.
+export const isHousingBill = (b: BankBill) => /\b(rent|mortgage)\b/i.test(`${b.payee} ${b.nickname ?? ''}`);
 export type BankTxn = { id: string; kind: string; amount: number; description: string; status: string; at: string };
 
 export type MoveInBudget = {
@@ -51,7 +55,7 @@ export function moveInBudget(opts: { accounts: BankAccount[]; bills: BankBill[];
   const recent = deposits.filter((t) => Date.parse(t.at) >= monthAgo);
   const monthlyIncome = round((recent.length ? recent : deposits).reduce((s, t) => s + t.amount, 0));
   const monthlyBills = round(bills.reduce((s, b) => s + b.amount, 0));
-  const rentBill = bills.find((b) => /rent|mortgage/i.test(b.payee));
+  const rentBill = bills.find(isHousingBill);
   const rent = rentBill?.amount ?? null;
 
   const cash = checking.reduce((s, a) => s + a.available, 0);
