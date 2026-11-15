@@ -106,6 +106,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
 // IKEA doesn't sell televisions, so staging uses generic stand-in TVs (not shop listings), in the
 // common sizes; the stager picks the biggest that suits the empty wall.
 for (const [inch, w, h] of [
+  [32, 73, 43],
   [43, 97, 57],
   [50, 112, 65],
   [55, 123, 71],

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import { panoForRoom } from '@/lib/fit';
+import { interiorPano } from '@/lib/remoteActions';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useStore } from '@/lib/store';
 import type { Design, Listing, ModelGeometry } from '@/lib/types';
@@ -80,7 +81,9 @@ export default function Editor({ sid }: { sid: string }) {
   async function goToRoom(roomId: string) {
     const room = geometry?.rooms.find((r) => r.id === roomId);
     if (!room || !geometry || !sdk) return;
-    const pano = panoForRoom(room, geometry.panos);
+    // A viewpoint really inside the room that the tour can show; the nearest-to-centre guess only
+    // if the room has none.
+    const pano = interiorPano(geometry, roomId) ?? panoForRoom(room, geometry.panos);
     if (pano) {
       const { moveToPano } = await import('./viewer/MatterportHost');
       moveToPano(sdk, pano.id);
