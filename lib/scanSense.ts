@@ -14,7 +14,13 @@ import type { Room, Vec2 } from './types';
 // All in Model API coordinates (x, y on the floor; three.js is (x, z, -y)).
 
 export type Opening = { a: Vec2; b: Vec2; mid: Vec2; widthM: number };
-export type RoomSense = { doors: Opening[]; windows: Opening[]; fixtures: Vec2[][] };
+export type RoomSense = {
+  doors: Opening[];
+  windows: Opening[];
+  fixtures: Vec2[][];
+  probe: typeof wallProbe;
+  counters: { p: Vec2; h: number }[];
+};
 
 const STEP = 0.1;
 const INSET = 0.35; // rays start this far inside the outline (which runs mid-wall)
@@ -49,6 +55,59 @@ function runs(flags: boolean[], a: Vec2, b: Vec2, minW: number): Opening[] {
         out.push({ a: pa, b: pb, mid: { x: (pa.x + pb.x) / 2, y: (pa.y + pb.y) / 2 }, widthM: w });
       }
       start = -1;
+    }
+  }
+  return out;
+}
+
+// Whether a flat piece would sit on plain wall: from 1.1 m in front of the wall (c is 12 cm in from
+// the room outline, n the inward normal, t along the wall) nine rays go to the wall across the
+// piece's width and height (y0..y1 above the floor). Each must hit the scan about a metre away.
+// A window (glass scans as a hole), a recess or a cabinet in the way answers differently.
+export function wallProbe(c: Vec2, n: Vec2, t: Vec2, w: number, y0: number, y1: number): boolean {
+  if (!bridge.scan.length) return true;
+  const out = new THREE.Vector3(-n.x, 0, n.y);
+  for (const f of [-0.4, 0, 0.4]) {
+    for (const r of [0.1, 0.5, 0.9]) {
+      const px = c.x + n.x * 1.1 + t.x * f * w;
+      const py = c.y + n.y * 1.1 + t.y * f * w;
+      ray.set(new THREE.Vector3(px, y0 + (y1 - y0) * r, -py), out);
+      ray.far = 2.2;
+      const d = ray.intersectObjects(bridge.scan, false)[0]?.distance;
+      if (d == null || d < 0.9 || d > 1.5) return false;
+    }
+  }
+  return true;
+}
+
+// Flat counter tops along a kitchen's walls (a surface 80 cm to 1.05 m up, level over a hand's
+// width), where a pot of flowers can stand. The height is the counter's own.
+function counterSpots(room: Room): { p: Vec2; h: number }[] {
+  if (!/kitchen/i.test(room.label)) return [];
+  const DOWN = new THREE.Vector3(0, -1, 0);
+  const out: { p: Vec2; h: number }[] = [];
+  const topAt = (p: Vec2): number | null => {
+    const y0 = groundY(p.x, -p.y, room.floorZ);
+    ray.set(new THREE.Vector3(p.x, y0 + 1.4, -p.y), DOWN);
+    ray.far = 1.4;
+    const hit = ray.intersectObjects(bridge.scan, false)[0];
+    return hit ? hit.point.y - y0 : null;
+  };
+  for (const [a, b] of segmentsOfPolygon(room.polygon)) {
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len < 1) continue;
+    const t = { x: (b.x - a.x) / len, y: (b.y - a.y) / len };
+    let n = { x: -t.y, y: t.x };
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    if (!pointInPolygon({ x: mid.x + n.x * 0.15, y: mid.y + n.y * 0.15 }, room.polygon)) n = { x: t.y, y: -t.x };
+    for (let s = 0.4; s < len - 0.4 && out.length < 8; s += 0.3) {
+      const p = { x: a.x + t.x * s + n.x * 0.4, y: a.y + t.y * s + n.y * 0.4 };
+      if (!pointInPolygon(p, room.polygon)) continue;
+      const heights = [p, { x: p.x + t.x * 0.12, y: p.y + t.y * 0.12 }, { x: p.x - t.x * 0.12, y: p.y - t.y * 0.12 }, { x: p.x + n.x * 0.12, y: p.y + n.y * 0.12 }, { x: p.x - n.x * 0.12, y: p.y - n.y * 0.12 }].map(topAt);
+      if (heights.some((h) => h == null || h < 0.8 || h > 1.05)) continue;
+      const hs = heights as number[];
+      if (Math.max(...hs) - Math.min(...hs) > 0.04) continue;
+      if (out.every((o) => Math.hypot(o.p.x - p.x, o.p.y - p.y) > 1)) out.push({ p, h: hs.reduce((q, v) => q + v, 0) / hs.length });
     }
   }
   return out;
@@ -109,7 +168,7 @@ export function senseRoom(room: Room, opts: { fixtures?: boolean } = {}): RoomSe
       }
     }
   }
-  return { doors, windows, fixtures };
+  return { doors, windows, fixtures, probe: wallProbe, counters: counterSpots(room) };
 }
 
 // Built-ins that stand proud of a wall: a fireplace surround, a column, a bump-out, shelving.

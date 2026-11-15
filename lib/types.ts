@@ -89,6 +89,7 @@ export type Product = {
   name: string;
   url: string;
   imageUrl?: string;
+  cutoutUrl?: string; // the product alone on white (art, mirrors: drawn on the 3D panel)
   priceUsd: number;
   priceCheckedAt: string;
   category: Category;

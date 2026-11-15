@@ -50,7 +50,8 @@ function inspectBed(root: THREE.Object3D, h: number) {
 }
 
 export function hasRealModel(p: Product): boolean {
-  return !!p.photoModel || (p.retailer === 'ikea' && /^https:\/\/www\.ikea\.com\//.test(p.url));
+  // Art and mirrors are drawn as upright panels: IKEA's models for them are authored lying flat.
+  return !!p.photoModel || (p.placement !== 'wall' && p.retailer === 'ikea' && /^https:\/\/www\.ikea\.com\//.test(p.url));
 }
 
 export const photoModelUrl = (m: Pick<PhotoModel, 'id' | 'engine'>) => `/api/photo3d/${m.id}/${m.engine}`;
@@ -246,7 +247,7 @@ export default function RealModel({ product, w, d, h, opacity = 1, warnTint }: {
     return o;
   }, [template, opacity, warnTint]);
 
-  if (!object) return <Furniture3D category={product.category} w={w} d={d} h={h} color={product.color} opacity={opacity} />;
+  if (!object) return <Furniture3D category={product.category} w={w} d={d} h={h} color={product.color} opacity={opacity} name={product.name} />;
   const bed = product.category === 'bed' ? bedInfo.get(product.id) : undefined;
   if (!bed || bed.hasMattress) return <primitive object={object} />;
   return (

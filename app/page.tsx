@@ -6,11 +6,11 @@ import HomeExplorer from '@/components/home/HomeExplorer';
 import { TopNav } from '@/components/ui/Brand';
 import Footer from '@/components/ui/Footer';
 import { flyQuery } from '@/lib/flyIn';
-import { describe, parseQuery, search } from '@/lib/search';
+import { FEATURED, withFeatured } from '@/lib/featured';
+import { describe, parseQuery, search, toResult } from '@/lib/search';
 import type { Listing } from '@/lib/types';
 
-// The banner shows this listing's empty-room scan and opens the same home.
-const FEATURED = { sid: '6dgWVBzerB7', label: '1623 Fawnhope Drive, Houston' };
+// The banner shows the featured listing's empty-room scan and opens the same home (see lib/featured.ts).
 const thumb = (sid: string, w = 960) => `https://my.matterport.com/api/v1/player/models/${sid}/thumb?width=${w}`;
 const FIRST_QUERY = 'apartments';
 
@@ -21,7 +21,9 @@ async function load(fly?: string) {
     // Arriving to fly into one home: start on the search that lists it.
     const q = (fly && (await flyQuery(fly))) || FIRST_QUERY;
     const filters = parseQuery(q);
-    const results = search([...d.homes, ...d.apartments], filters);
+    // The featured home takes the 6th place in the list, wherever the search would put it.
+    const featured = d.homes.find((h) => h.sid === FEATURED.sid);
+    const results = withFeatured(search([...d.homes, ...d.apartments], filters), featured ? toResult(featured) : null);
     return { initial: { q, summary: describe(filters), total: results.length, results } };
   } catch {
     return { initial: { q: FIRST_QUERY, summary: '', total: 0, results: [] } };

@@ -25,8 +25,9 @@ export const useViewerState = create<{
   // only means our boot code finished; a slow model can still be on its dark dollhouse view.
   showingRoom: boolean;
   scanVersion: number; // bumps when the scan's mesh chunks change, so floor snapping reruns
+  sweepLinks: [string, string][]; // pairs of panos with a line of sight (through a doorway, when in different rooms)
   embedOnly: boolean; // the SDK couldn't connect (key not enabled for this domain): plain embedded tour
-  setPartial: (p: Partial<{ sdk: any; ready: boolean; hasDefurnish: boolean; currentRoomId: string | null; cameraFloorZ: number; showingRoom: boolean; scanVersion: number; embedOnly: boolean }>) => void;
+  setPartial: (p: Partial<{ sdk: any; ready: boolean; hasDefurnish: boolean; currentRoomId: string | null; cameraFloorZ: number; showingRoom: boolean; scanVersion: number; embedOnly: boolean; sweepLinks: [string, string][] }>) => void;
 }>((set) => ({
   sdk: null,
   ready: false,
@@ -35,6 +36,7 @@ export const useViewerState = create<{
   cameraFloorZ: 0,
   showingRoom: false,
   scanVersion: 0,
+  sweepLinks: [],
   embedOnly: false,
   setPartial: (p) => set(p),
 }));

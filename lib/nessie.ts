@@ -9,6 +9,7 @@ import {
   type BankTxn,
   type MoveInBudget,
 } from "./budget";
+import { categoryOf, splitMerchant, type BankTxnView } from "./bankSummary";
 import type { Retailer } from "./types";
 
 // Capital One Nessie v2 (the hackathon banking sandbox). Money is integer cents.
@@ -256,6 +257,34 @@ export async function checkout(
       amountUsd: l.amountUsd,
       status: t.status ?? "pending",
     });
+  }
+  return out;
+}
+
+// Every transaction on the mover's accounts, for the banking dashboard. Deposits are money in;
+// purchases, withdrawals and bill payments are money out.
+export async function getBankTransactions(accounts: BankAccount[]): Promise<BankTxnView[]> {
+  const out: BankTxnView[] = [];
+  for (const a of accounts) {
+    const items = await api<{ items: any[] }>("GET", `/accounts/${a.id}/transactions?limit=100`)
+      .then((r) => r.items)
+      .catch(() => [] as any[]);
+    for (const t of items) {
+      const text = String(t.description || t.merchant_name || t.kind || "Transaction");
+      const { merchant, note } = splitMerchant(text);
+      out.push({
+        id: String(t.id),
+        accountId: a.id,
+        account: a.nickname,
+        direction: t.kind === "deposit" ? "in" : "out",
+        amount: Math.abs((t.amount_cents ?? 0) / 100),
+        merchant: merchant.slice(0, 80),
+        note: note?.slice(0, 160),
+        category: categoryOf(text),
+        at: t.created_at ?? new Date().toISOString(),
+        status: t.status ?? "completed",
+      });
+    }
   }
   return out;
 }

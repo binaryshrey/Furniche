@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { toThree } from '@/lib/coords';
 import { checkFit, levelFor, roomAt } from '@/lib/fit';
+import { hangLift, pictureUrl } from '@/lib/hang';
 import { bridge, groundY, pickOnly, useGhost, useViewerState } from '@/lib/sceneBridge';
 import { useDesign, useStore } from '@/lib/store';
 import type { FitLevel, ModelGeometry, PlacedItem, Product, Room } from '@/lib/types';
@@ -11,7 +12,6 @@ import Furniture3D from './Furniture3D';
 import RealModel, { hasRealModel } from './RealModel';
 import RoomLighting, { useRoomEnv } from './RoomLighting';
 import Sunbeams from './Sunbeams';
-import WallPiece from './WallPiece';
 import SurfaceLayer from './SurfaceLayer';
 
 // Shadows and outlines are decoration: clicks go through them to the floor (and walk there).
@@ -103,7 +103,12 @@ function onABed(m: PlacedItem, all: { item: PlacedItem; product: Product }[]): b
   return all.some(({ item, product }) => product.category === 'bed' && Math.hypot(item.pos.x - m.pos.x, item.pos.y - m.pos.y) < 0.3);
 }
 
-function Item({ item, product, level, selected }: { item: PlacedItem; product: Product; level: FitLevel; selected: boolean }) {
+// New pieces settle into place: they rise from just above their spot while growing to full size,
+// each a beat after the last when several arrive together (auto-furnish), so the room fills in
+// instead of popping into existence. Pieces already in the design when the view opens do not animate.
+const SETTLE_S = 0.6;
+
+function Item({ item, product, level, selected, delay, floorZ }: { item: PlacedItem; product: Product; level: FitLevel; selected: boolean; delay: number | null; floorZ: number | null }) {
   const [x, approxY, z] = toThree(item.pos);
   // Rest on the scan's real floor, not the estimated floor height.
   const scanVersion = useViewerState((s) => s.scanVersion);
@@ -113,19 +118,45 @@ function Item({ item, product, level, selected }: { item: PlacedItem; product: P
   const w = product.dimsCm.w / 100;
   const d = product.dimsCm.d / 100;
   const h = product.dimsCm.h / 100;
+  // Pieces placed at floor height hang at the standard height; pieces hung on a wall (wall
+  // snapping, staging) already carry their height in pos.z.
+  const lift = floorZ !== null && item.pos.z - floorZ > 0.25 ? 0 : hangLift(product);
+  const hung = product.placement === 'wall';
+  const root = useRef<THREE.Group>(null);
+  const t0 = useRef<number | null>(null);
+  const settled = useRef(delay === null);
+
+  useFrame(({ clock }) => {
+    const g = root.current;
+    if (!g || settled.current || delay === null) return;
+    if (t0.current === null) {
+      t0.current = clock.elapsedTime;
+      g.visible = false;
+    }
+    const k = Math.min(1, Math.max(0, (clock.elapsedTime - t0.current - delay) / SETTLE_S));
+    const e = 1 - Math.pow(1 - k, 3); // ease-out
+    g.visible = k > 0;
+    g.scale.setScalar(0.92 + 0.08 * e);
+    g.position.y = y + lift + (1 - e) * 0.14;
+    if (k >= 1) {
+      settled.current = true;
+      g.visible = true;
+      g.scale.setScalar(1);
+      g.position.y = y + lift;
+    }
+  });
+
   return (
-    <group position={[x, y, z]} rotation={[0, item.rot, 0]} userData={{ uid: item.uid }}>
-      {onWall ? (
-        <WallPiece product={product} w={w} h={h} d={d} />
-      ) : hasRealModel(product) ? (
+    <group ref={root} position={[x, y + lift, z]} rotation={[0, item.rot, 0]} userData={{ uid: item.uid }}>
+      {hasRealModel(product) ? (
         <RealModel product={product} w={w} d={d} h={h} warnTint={level === 'error' ? LEVEL_COLOR.error : undefined} />
       ) : (
-        <Furniture3D category={product.category} w={w} d={d} h={h} color={level === 'error' ? tint(product.color, LEVEL_COLOR.error, 0.55) : product.color} />
+        <Furniture3D category={product.category} w={w} d={d} h={h} color={level === 'error' ? tint(product.color, LEVEL_COLOR.error, 0.55) : product.color} image={pictureUrl(product)} name={product.name} />
       )}
-      {product.category !== 'rug' && !onWall && <ContactShadow w={w} d={d} />}
-      {!onWall && level !== 'ok' && <Shade w={w} d={d} color={LEVEL_COLOR[level]} opacity={level === 'error' ? 0.38 : 0.26} />}
-      {!onWall && (selected || level !== 'ok') && <Footprint w={w} d={d} color={selected && level === 'ok' ? '#ffffff' : LEVEL_COLOR[level]} />}
-      {onWall && selected && <WallOutline w={w} h={h} />}
+      {product.category !== 'rug' && !hung && <ContactShadow w={w} d={d} />}
+      {!hung && level !== 'ok' && <Shade w={w} d={d} color={LEVEL_COLOR[level]} opacity={level === 'error' ? 0.38 : 0.26} />}
+      {!hung && (selected || level !== 'ok') && <Footprint w={w} d={d} color={selected && level === 'ok' ? '#ffffff' : LEVEL_COLOR[level]} />}
+      {hung && selected && <WallOutline w={w} h={h} />}
     </group>
   );
 }
@@ -146,18 +177,18 @@ function RoomOutline({ room, color }: { room: Room; color: string }) {
 function Ghost({ level }: { level: FitLevel }) {
   const ghost = useGhost((s) => s.ghost);
   const product = useStore((s) => (ghost ? s.product(ghost.productId) : undefined));
+  const floorAt = useViewerState((s) => s.cameraFloorZ);
   if (!ghost || !product) return null;
   const [x, y, z] = toThree(ghost.pos);
   const w = product.dimsCm.w / 100;
   const d = product.dimsCm.d / 100;
+  const ghostLift = ghost.pos.z - floorAt > 0.25 ? 0 : hangLift(product); // already at hanging height
   return (
-    <group position={[x, y, z]} rotation={[0, ghost.rot, 0]} userData={{ uid: 'ghost', ghost: true }}>
-      {product.placement === 'wall' ? (
-        <WallPiece product={product} w={w} h={product.dimsCm.h / 100} d={d} opacity={0.55} />
-      ) : hasRealModel(product) ? (
+    <group position={[x, y + ghostLift, z]} rotation={[0, ghost.rot, 0]} userData={{ uid: 'ghost', ghost: true }}>
+      {hasRealModel(product) ? (
         <RealModel product={product} w={w} d={d} h={product.dimsCm.h / 100} opacity={0.55} />
       ) : (
-        <Furniture3D category={product.category} w={w} d={d} h={product.dimsCm.h / 100} color={product.color} opacity={0.55} />
+        <Furniture3D category={product.category} w={w} d={d} h={product.dimsCm.h / 100} color={product.color} opacity={0.55} image={pictureUrl(product)} name={product.name} />
       )}
       {product.placement !== 'wall' && <Shade w={w} d={d} color={LEVEL_COLOR[level]} opacity={0.3} />}
       {product.placement !== 'wall' && <Footprint w={w} d={d} color={LEVEL_COLOR[level]} dashed />}
@@ -221,6 +252,13 @@ export default function FurnitureLayer({ geometry }: { geometry: ModelGeometry |
     .filter((x): x is { item: PlacedItem; product: Product } => !!x.product);
   const issues = useMemo(() => checkFit(resolved, geometry?.rooms ?? [], design.doors, geometry?.walls), [resolved, geometry, design.doors]);
 
+  // Pieces in the design when the view first shows are not animated; later ones settle in, staggered.
+  const initial = useRef<Set<string> | null>(null);
+  if (initial.current === null) initial.current = new Set(resolved.map((r) => r.item.uid));
+  const fresh = resolved.filter((r) => !initial.current!.has(r.item.uid)).map((r) => r.item.uid);
+  const floorOf = (roomId: string | null) => geometry?.rooms.find((r) => r.id === roomId)?.floorZ ?? null;
+  const delayOf = (uid: string) => (initial.current!.has(uid) ? null : Math.min(fresh.indexOf(uid) * 0.09, 0.9));
+
   // Live fit for the piece being dropped.
   const ghost = useGhost((s) => s.ghost);
   const ghostProduct = ghost ? productOf(ghost.productId) : undefined;
@@ -244,8 +282,10 @@ export default function FurnitureLayer({ geometry }: { geometry: ModelGeometry |
       <Sunbeams geometry={geometry} />
       <SurfaceLayer geometry={geometry} />
       <group ref={group}>
-        {resolved.filter(({ item, product }) => !(product.category === 'mattress' && onABed(item, resolved))).map(({ item, product }) => (
-          <Item key={item.uid} item={item} product={product} level={levelFor(item.uid, issues)} selected={item.uid === selected} />
+        {resolved
+          .filter(({ item, product }) => !(product.category === 'mattress' && onABed(item, resolved)))
+          .map(({ item, product }) => (
+            <Item key={item.uid} item={item} product={product} level={levelFor(item.uid, issues)} selected={item.uid === selected} delay={delayOf(item.uid)} floorZ={floorOf(item.roomId)} />
         ))}
         <Ghost level={ghostLevel} />
       </group>

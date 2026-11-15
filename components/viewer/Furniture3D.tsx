@@ -1,5 +1,5 @@
 'use client';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { finishMaterial, woodOrPaint, type Finish } from '@/lib/materials';
@@ -9,7 +9,7 @@ import type { Category } from '@/lib/types';
 // Local frame (three.js): origin at the bottom centre, width along X, depth along Z,
 // the front faces +Z, height along +Y.
 
-type Props = { category: Category; w: number; d: number; h: number; color: string; opacity?: number };
+type Props = { category: Category; w: number; d: number; h: number; color: string; opacity?: number; image?: string; name?: string };
 
 const LEG = '#3b332d';
 const METAL = '#2f3235';
@@ -193,6 +193,36 @@ export function BedDressing({ w, d, base, opacity = 1 }: { w: number; d: number;
   );
 }
 
+// A vase with flowers: a tapered vase in the product's colour and a spray of stems and blooms.
+function Vase({ w, h, color, opacity }: Props) {
+  const vaseH = h * 0.55;
+  const r = Math.max(0.03, w / 2);
+  const blooms = ['#f4c2d0', '#f7e7a3', '#ffffff', '#f19a8b', '#c9b8f0', '#f4c2d0', '#f7e7a3'];
+  return (
+    <group>
+      <Cyl p={[0, vaseH / 2, 0]} r={r * 0.75} rTop={r * 0.5} h={vaseH} c={color} f="ceramic" opacity={opacity} seg={28} />
+      {blooms.map((c, i) => {
+        const a = (i / blooms.length) * Math.PI * 2;
+        const lean = 0.35 + (i % 3) * 0.12;
+        const len = (h - vaseH) * (0.78 + (i % 3) * 0.1);
+        const x = Math.cos(a) * len * lean * 0.5;
+        const z = Math.sin(a) * len * lean * 0.5;
+        return (
+          <group key={i}>
+            <mesh position={[x / 2, vaseH + len / 2, z / 2]} rotation={[Math.atan2(z, len) * -1, 0, Math.atan2(x, len)]}>
+              <cylinderGeometry args={[0.004, 0.004, len, 6]} />
+              <meshStandardMaterial color="#4c6b45" transparent={(opacity ?? 1) < 1} opacity={opacity} />
+            </mesh>
+            <mesh position={[x, vaseH + len, z]} material={finishMaterial('leaf', c, [0.06, 0.06], opacity ?? 1)} castShadow>
+              <icosahedronGeometry args={[0.032 + (i % 2) * 0.008, 1]} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function Lamp({ w, h, color, opacity }: Props) {
   return (
     <group>
@@ -221,11 +251,60 @@ function Plant({ w, h, opacity, pot = '#cdbfa8', foliage = '#4c6b45' }: Props & 
   );
 }
 
-function Panel({ w, h, d, color, opacity, frame = true }: Props & { frame?: boolean }) {
+// A flat piece's own picture (the artwork, the mirror) as a texture, cropped to fill its face.
+function usePicture(url: string | undefined, aspect: number): THREE.Texture | null {
+  const [tex, setTex] = useState<THREE.Texture | null>(null);
+  useEffect(() => {
+    if (!url) return setTex(null);
+    let live = true;
+    new THREE.TextureLoader().load(
+      url,
+      (t) => {
+        if (!live) return;
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 8;
+        const img = t.image as { width: number; height: number };
+        const a = img.width / img.height;
+        if (a > aspect) {
+          t.repeat.set(aspect / a, 1);
+          t.offset.set((1 - aspect / a) / 2, 0);
+        } else {
+          t.repeat.set(1, a / aspect);
+          t.offset.set(0, (1 - a / aspect) / 2);
+        }
+        setTex(t);
+      },
+      undefined,
+      () => live && setTex(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [url, aspect]);
+  return tex;
+}
+
+function Panel({ w, h, d, color, opacity, frame = true, image, mirror = false }: Props & { frame?: boolean; mirror?: boolean }) {
+  const t = Math.max(d, 0.02);
+  const inset = frame ? 0.06 : 0.02;
+  const pic = usePicture(image, (w - inset) / (h - inset));
   return (
     <group>
-      {frame && <Box p={[0, h / 2, 0]} s={[w, h, Math.max(d, 0.02)]} c={color} f={woodOrPaint(color)} opacity={opacity} />}
-      <Box p={[0, h / 2, Math.max(d, 0.02) / 2 + 0.002]} s={[w - 0.06, h - 0.06, 0.004]} c={frame ? '#e6edf0' : color} f={frame ? 'metal' : 'lacquer'} r={0.001} opacity={opacity} />
+      {(frame || pic || mirror) && <Box p={[0, h / 2, 0]} s={[w, h, t]} c={color} f={woodOrPaint(color)} opacity={opacity} />}
+      {mirror ? (
+        // Polished glass: it reflects the room's panorama, which is applied as the environment map.
+        <mesh position={[0, h / 2, t / 2 + 0.003]} renderOrder={1}>
+          <planeGeometry args={[w - 0.06, h - 0.06]} />
+          <meshStandardMaterial color="#f3f6f8" metalness={1} roughness={0.03} transparent={(opacity ?? 1) < 1} opacity={opacity} />
+        </mesh>
+      ) : pic ? (
+        <mesh position={[0, h / 2, t / 2 + 0.003]} renderOrder={1}>
+          <planeGeometry args={[w - inset, h - inset]} />
+          <meshStandardMaterial map={pic} roughness={frame ? 0.18 : 0.75} metalness={frame ? 0.25 : 0} transparent={(opacity ?? 1) < 1} opacity={opacity} />
+        </mesh>
+      ) : (
+        <Box p={[0, h / 2, t / 2 + 0.002]} s={[w - 0.06, h - 0.06, 0.004]} c={frame ? '#e6edf0' : color} f={frame ? 'metal' : 'lacquer'} r={0.001} opacity={opacity} />
+      )}
     </group>
   );
 }
@@ -279,7 +358,7 @@ export default function Furniture3D(props: Props) {
       case 'planter':
         return <Plant {...p} pot={color} />;
       case 'mirror':
-        return <Panel {...p} />;
+        return <Panel {...p} image={undefined} mirror />;
       case 'wall-art':
         return <Panel {...p} frame={false} />;
       case 'tv':
@@ -311,9 +390,11 @@ export default function Furniture3D(props: Props) {
             <Cyl p={[0, 0.03, 0]} r={0.25} h={0.06} c={METAL} opacity={opacity} />
           </group>
         );
+      case 'decor':
+        return /vase|\bpot\b/i.test(props.name ?? '') ? <Vase {...p} /> : <Box p={[0, h / 2, 0]} s={[w, h, d]} c={color} opacity={opacity} />;
       default:
         return <Box p={[0, h / 2, 0]} s={[w, h, d]} c={color} opacity={opacity} />;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, w, d, h, color, opacity]);
+  }, [category, w, d, h, color, opacity, props.image, props.name]);
 }

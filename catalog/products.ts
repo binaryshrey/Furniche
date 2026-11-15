@@ -39,6 +39,7 @@ type IkeaRow = {
   placement: Placement;
   url: string | null;
   image: string | null;
+  cutout?: string | null;
 };
 
 export const PRODUCTS: Product[] = (ikea.products as unknown as IkeaRow[]).map((r) => ({
@@ -48,6 +49,7 @@ export const PRODUCTS: Product[] = (ikea.products as unknown as IkeaRow[]).map((
   name: r.name,
   url: r.url ?? searchUrl('ikea', r.name.split(',')[0]),
   imageUrl: r.image ?? undefined,
+  cutoutUrl: r.cutout ?? undefined,
   priceUsd: r.price,
   priceCheckedAt: ikea.checkedAt ?? CATALOG_CHECKED_AT,
   category: r.category,

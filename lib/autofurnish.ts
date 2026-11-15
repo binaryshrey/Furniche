@@ -1,7 +1,8 @@
 import { checkFit } from './fit';
 import { polygonArea } from './geometry';
 import { flowContext, reachableTargets, type FlowContext } from './circulation';
-import { flowClear, sceneIssues, solveLayout, TEMPLATES, type Placement, type Role, type RoomType, type SceneInfo } from './solver';
+import { closetOpenings, isInteriorWall } from './closets';
+import { flowClear, isOpenDining, OPEN_DINING, sceneIssues, solveLayout, TEMPLATES, type Placement, type Role, type RoomType, type SceneInfo } from './solver';
 import type { DoorMark, Pano, Product, Room, ThemeId, Vec2, Wall } from './types';
 
 // One-click starting layouts: pick products for a room from its type and size (a small
@@ -29,10 +30,11 @@ function budgetFor(type: RoomType, area: number): number {
 }
 
 // Size-aware template: small rooms keep the essentials, big living rooms lean to a sectional.
-function rolesFor(type: RoomType, area: number): Role[] {
-  let roles = TEMPLATES[type];
+function rolesFor(type: RoomType, area: number, open = false): Role[] {
+  let roles = open ? OPEN_DINING : TEMPLATES[type];
+  // Hung pieces take no floor, so a small room keeps them; a tiny one stays to the essentials.
   if (area < 9) roles = roles.filter((r) => !r.optional);
-  else if (area < 13) roles = roles.filter((r) => !r.optional || r.role === 'plant');
+  else if (area < 13) roles = roles.filter((r) => !r.optional || r.role === 'plant' || r.wall);
   if (type === 'living' && area >= 24) roles = roles.map((r) => (r.role === 'sofa' ? { ...r, alts: ['sectional', 'sofa'] } : r));
   return roles;
 }
@@ -48,12 +50,14 @@ export function recommend(room: Room, type: RoomType, products: Product[], theme
   const picks: Pick[] = [];
   let spent = 0;
   let anchorStyles: ThemeId[] = [];
-  for (const [i, role] of rolesFor(type, room.areaM2).entries()) {
+  for (const [i, role] of rolesFor(type, room.areaM2, isOpenDining(room)).entries()) {
     const count = role.count ?? 1;
     const share = budget * role.weight;
     const anchorRole = i === 0;
     const scored = products
-      .filter((p) => role.alts.includes(p.category) && p.placement === 'floor')
+      .filter((p) => role.alts.includes(p.category) && p.placement === (role.wall ? 'wall' : 'floor'))
+      // A flower pot for a table or counter is a small vase or potted plant; a floor plant is a real one.
+      .filter((p) => (role.raised ? p.dimsCm.h <= 45 && p.dimsCm.w <= 35 && (p.category === 'plant' || /vase|\bpot\b|planter/i.test(p.name)) : p.category !== 'plant' || p.dimsCm.h >= 60))
       // Leave a walkway; the main piece (bed, sofa, desk) may make do with a tighter one.
       .filter((p) => p.dimsCm.w / 100 <= longest - 0.5 && p.dimsCm.d / 100 <= shortest - (anchorRole ? 0.45 : 0.6))
       .filter((p) => !room.heightM || p.dimsCm.h / 100 < room.heightM - 0.1)
@@ -66,6 +70,9 @@ export function recommend(room: Room, type: RoomType, products: Product[], theme
         s += cost <= share ? 1 : -Math.min(3, (cost - share) / Math.max(share, 1));
         if (anchorRole) s -= (2 * Math.abs(p.dimsCm.w / 100 - longest * 0.55)) / (longest * 0.55); // sofa/bed sized to the main wall
         s += role.alts.indexOf(p.category) === 0 ? 0.3 : 0;
+        // Paintings read best about a metre wide; a bedroom mirror should be a full-length dressing mirror.
+        if (role.role === 'wall art') s -= 1.5 * Math.abs(p.dimsCm.w / 100 - 1);
+        if (role.role === 'mirror') s += p.dimsCm.h >= 150 ? 1.5 : 0;
         return { p, s };
       })
       .sort((a, b) => b.s - a.s);
@@ -141,15 +148,17 @@ export function autoFurnish(
     theme?: ThemeId | null;
     rooms?: Room[];
     panos?: Pano[];
-    sense?: { doors: { mid: Vec2; widthM: number }[]; windows: { a: Vec2; b: Vec2 }[]; fixtures: Vec2[][] } | null;
+    sense?: { doors: { mid: Vec2; widthM: number }[]; windows: { a: Vec2; b: Vec2 }[]; fixtures: Vec2[][]; probe?: SceneInfo['probe']; counters?: SceneInfo['counters'] } | null;
   } = {},
 ): AutoResult | null {
   const type = furnishableType(room);
   if (!type) return null;
   const sense = opts.sense ?? null;
   const seen: DoorMark[] = (sense?.doors ?? []).map((d, i) => ({ uid: `scan-${i}`, roomId: room.id, pos: d.mid, widthM: d.widthM }));
-  const doors = [...(opts.doors ?? []), ...seen];
-  const budget = budgetFor(type, room.areaM2);
+  // Closets, pantries and laundry rooms off this room count as doors: nothing may block their way in.
+  const doors = [...(opts.doors ?? []), ...seen, ...closetOpenings(room, opts.rooms ?? [])];
+  // An open-plan dining room gets a dining set and a lounge, so it starts from a living-room budget.
+  const budget = isOpenDining(room) ? budgetFor('living', room.areaM2) + 600 : budgetFor(type, room.areaM2);
   const picks = recommend(room, type, products, opts.theme ?? null, budget);
   if (!picks.length) return null;
   const byId = new Map(picks.map((p) => [p.product.id, p.product]));
@@ -161,13 +170,13 @@ export function autoFurnish(
     : opts.panos
       ? reachableTargets(room, flowContext(room, opts.rooms ?? [room], opts.panos, myDoors))
       : undefined;
-  const scene: SceneInfo | undefined = sense ? { windows: sense.windows, fixtures: sense.fixtures } : undefined;
+  const scene: SceneInfo | undefined = sense ? { windows: sense.windows, fixtures: sense.fixtures, probe: sense.probe, counters: sense.counters } : undefined;
 
   // Try the main piece against each of the best few walls and keep the cheapest layout.
   let best: { placed: Placement[]; dropped: AutoResult['dropped']; cost: number } | null = null;
-  const tries = 4;
+  const tries = isOpenDining(room) ? 9 : 4; // an open-plan room also tries each lounge wall
   for (let anchor = 0; anchor < tries; anchor++) {
-    const r = solveLayout({ room, doors, picks, anchor, walls: opts.walls, flow, scene });
+    const r = solveLayout({ room, doors, picks, anchor, walls: opts.walls, flow, scene, interior: opts.rooms ? (a, b) => isInteriorWall(a, b, room, opts.rooms!) : undefined });
     const cost = layoutCost(r.placed, r.dropped.length, room, byId, doors, opts.walls, flow, scene);
     if (!best || cost < best.cost) best = { ...r, cost };
   }
