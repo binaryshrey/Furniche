@@ -148,12 +148,12 @@ export default function Cart() {
                 ...[...groups.entries()].map(([retailer, rows]) => ({
                   retailer,
                   amountUsd: rows.reduce((s, r) => s + r.qty * r.product.priceUsd, 0),
-                  description: `Furniche: ${rows.map((r) => `${r.qty}x ${r.product.name.split(',')[0]}`).join(', ')}`,
+                  description: `Furniche AI: ${rows.map((r) => `${r.qty}x ${r.product.name.split(',')[0]}`).join(', ')}`,
                 })),
-                ...(finishTotal > 0 ? [{ retailer: 'other' as Retailer, amountUsd: finishTotal, description: 'Furniche: paint and flooring' }] : []),
+                ...(finishTotal > 0 ? [{ retailer: 'other' as Retailer, amountUsd: finishTotal, description: 'Furniche AI: paint and flooring' }] : []),
               ]}
             />
-            <p className="mt-3 text-xs text-muted">Furniche doesn&apos;t sell anything. Buy links open each store; prices are a sample and may have changed.</p>
+            <p className="mt-3 text-xs text-muted">Furniche AI doesn&apos;t sell anything. Buy links open each store; prices are a sample and may have changed.</p>
           </>
         )}
       </main>

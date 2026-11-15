@@ -4,6 +4,7 @@ import { RETAILER_LABEL } from '@/catalog/products';
 import ProductSwatch from '@/components/shop/ProductSwatch';
 import { fmtUsd } from '@/components/shop/ShopPanel';
 import { placeFree } from '@/lib/designOps';
+import { roomScenes } from '@/lib/roomScenes';
 import { productFitsRoom } from '@/lib/fit';
 import { useProducts, useStore } from '@/lib/store';
 import type { Category, ModelGeometry, Product, Room } from '@/lib/types';
@@ -12,9 +13,12 @@ export const FURNITURE_GROUPS: { id: string; label: string; blurb: string; icon:
   { id: 'seating', label: 'Seating', blurb: 'Sofas, sectionals, armchairs and benches, at true size.', icon: 'M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3M3 12h18v4H3zM5 16v2M19 16v2', cats: ['sofa', 'sectional', 'armchair', 'bench'] },
   { id: 'tables', label: 'Tables', blurb: 'Coffee, side, dining tables and desks.', icon: 'M3 8h18M5 8v10M19 8v10M8 8v4h8V8', cats: ['coffee-table', 'side-table', 'dining-table', 'round-table', 'desk'] },
   { id: 'chairs', label: 'Chairs', blurb: 'Dining chairs, desk chairs and stools.', icon: 'M7 3v9h10V3M6 12h12v3H6zM7 15v6M17 15v6', cats: ['dining-chair', 'office-chair', 'bar-stool'] },
-  { id: 'bedroom', label: 'Bedroom', blurb: 'Beds, nightstands, dressers and wardrobes.', icon: 'M3 18V8M3 13h18v5M21 18v-5a3 3 0 0 0-3-3h-7v3', cats: ['bed', 'nightstand', 'dresser', 'wardrobe'] },
+  { id: 'bedroom', label: 'Bedroom', blurb: 'Beds, mattresses, nightstands, dressers and wardrobes.', icon: 'M3 18V8M3 13h18v5M21 18v-5a3 3 0 0 0-3-3h-7v3', cats: ['bed', 'mattress', 'nightstand', 'dresser', 'wardrobe'] },
   { id: 'storage', label: 'Storage', blurb: 'Shelves and TV consoles.', icon: 'M5 3h14v18H5zM5 9h14M5 15h14', cats: ['bookshelf', 'tv-console'] },
-  { id: 'decor', label: 'Decor', blurb: 'Rugs, lamps, plants, mirrors and art.', icon: 'M12 3v4M8 7h8l-2 6h-4zM12 13v8M9 21h6', cats: ['rug', 'floor-lamp', 'plant', 'mirror', 'wall-art'] },
+  { id: 'lighting', label: 'Lighting', blurb: 'Floor lamps and uplighters to light every corner.', icon: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z', cats: ['floor-lamp'] },
+  { id: 'showpieces', label: 'Showpieces', blurb: 'Vases, baskets, pouffes, plant stands and lanterns.', icon: 'M8 21h8M9 21c-2-3-2-6 0-9h6c2 3 2 6 0 9M10 12V8h4v4M11 8V5h2v3', cats: ['decor', 'plant'] },
+  { id: 'walls', label: 'Art & mirrors', blurb: 'Framed art, posters and mirrors. Click a wall to hang them.', icon: 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4', cats: ['wall-art', 'mirror'] },
+  { id: 'decor', label: 'Rugs', blurb: 'Flatwoven and low-pile rugs to anchor a room.', icon: 'M3 7h18v10H3zM6 7v10M18 7v10', cats: ['rug'] },
 ];
 
 // One category as a card: a carousel with the current piece large in the middle, its neighbours
@@ -62,7 +66,7 @@ export function CategoryCarousel({
     // Wall pieces (mirrors, art) are hung by hand: click the wall where they go.
     if (room && geometry && p.placement !== 'wall') {
       const d = st.design();
-      const spot = placeFree(p, room, { items: d.items, surfaces: d.surfaces, doors: d.doors, themeId: d.themeId }, { geometry, products: st.products() });
+      const spot = placeFree(p, room, { items: d.items, surfaces: d.surfaces, doors: d.doors, themeId: d.themeId }, { geometry, products: st.products(), scenes: roomScenes(geometry, [room.id]) });
       if (spot) {
         st.addItem(p.id, spot.pos, spot.roomId, spot.rot);
         return onAdded(p, true);
@@ -173,7 +177,7 @@ export function CategoryGrid({ group, room, geometry, onBack, onAdded }: { group
     // Wall pieces (mirrors, art) are hung by hand: click the wall where they go.
     if (room && geometry && p.placement !== 'wall') {
       const d = st.design();
-      const spot = placeFree(p, room, { items: d.items, surfaces: d.surfaces, doors: d.doors, themeId: d.themeId }, { geometry, products: st.products() });
+      const spot = placeFree(p, room, { items: d.items, surfaces: d.surfaces, doors: d.doors, themeId: d.themeId }, { geometry, products: st.products(), scenes: roomScenes(geometry, [room.id]) });
       if (spot) {
         st.addItem(p.id, spot.pos, spot.roomId, spot.rot);
         return onAdded(p, true);

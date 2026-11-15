@@ -1,16 +1,19 @@
 import { flowContext, reachableTargets } from './circulation';
 import { checkFit, footprint } from './fit';
-import { centroid, minDistToBoundary, pointInPolygon, polygonArea } from './geometry';
+import { centroid, convexSeparation, distPointSegment, minDistToBoundary, pointInPolygon, polygonArea } from './geometry';
 import { solveLayout, TEMPLATES, pickProducts, roomTypeOf, type RoomType } from './solver';
 import { furnishableType } from './autofurnish';
 import { alternatives } from './alternatives';
-import type { DoorMark, ModelGeometry, PlacedItem, Product, Room, SurfaceChoice, ThemeId } from './types';
+import type { DoorMark, ModelGeometry, PlacedItem, Product, Room, SurfaceChoice, ThemeId, Vec2 } from './types';
 
 // Design edits the chat agent can make. Pure functions over a working copy of the design, so they
 // run on the server and are unit-tested; the browser applies the resulting design.
 
 export type WorkDesign = { items: PlacedItem[]; surfaces: SurfaceChoice[]; doors: DoorMark[]; themeId: ThemeId | null };
-export type Ctx = { geometry: ModelGeometry; products: Product[] };
+// What the scan shows in a room (lib/scanSense.ts): windows to keep tall pieces away from, and
+// built-ins or counters nothing may stand on. Sent by the browser, which has the scan mesh.
+export type RoomScene = { windows: { a: Vec2; b: Vec2 }[]; fixtures: Vec2[][] };
+export type Ctx = { geometry: ModelGeometry; products: Product[]; scenes?: Record<string, RoomScene> };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const byIdOf = (products: Product[]) => new Map(products.map((p) => [p.id, p]));
@@ -30,7 +33,7 @@ export function floorStats(room: Room, items: PlacedItem[], products: Product[])
   const used = items
     .filter((i) => i.roomId === room.id)
     .map((i) => byId.get(i.productId))
-    .filter((p): p is Product => !!p && p.placement === 'floor' && p.category !== 'rug')
+    .filter((p): p is Product => !!p && p.placement === 'floor' && p.category !== 'rug' && p.category !== 'mattress')
     .reduce((s, p) => s + (p.dimsCm.w / 100) * (p.dimsCm.d / 100), 0);
   return { areaM2: area, usedM2: used, freeM2: Math.max(0, area - used), freeShare: area ? Math.max(0, 1 - used / area) : 0 };
 }
@@ -45,6 +48,16 @@ export function issuesFor(design: WorkDesign, ctx: Ctx) {
 // big pieces backed onto a wall, rugs near the middle. null when nothing fits.
 export function placeFree(product: Product, room: Room, design: WorkDesign, ctx: Ctx): PlacedItem | null {
   const byId = byIdOf(ctx.products);
+  // A mattress goes onto a bed frame in the room that doesn't have one yet.
+  if (product.category === 'mattress') {
+    const inRoom = design.items.filter((i) => i.roomId === room.id);
+    const bed = inRoom.find(
+      (b) => byId.get(b.productId)?.category === 'bed' && !inRoom.some((m) => byId.get(m.productId)?.category === 'mattress' && Math.hypot(m.pos.x - b.pos.x, m.pos.y - b.pos.y) < 0.3),
+    );
+    return bed ? { uid: uid(), productId: product.id, roomId: room.id, pos: { ...bed.pos }, rot: bed.rot } : null;
+  }
+  const scene = ctx.scenes?.[room.id];
+  const tall = product.dimsCm.h > 90;
   const others = design.items.filter((i) => i.roomId === room.id).map((item) => ({ item, product: byId.get(item.productId)! })).filter((x) => x.product);
   const xs = room.polygon.map((p) => p.x);
   const ys = room.polygon.map((p) => p.y);
@@ -60,6 +73,9 @@ export function placeFree(product: Product, room: Room, design: WorkDesign, ctx:
         const item: PlacedItem = { uid: 'candidate', productId: product.id, roomId: room.id, pos: { x, y, z: room.floorZ }, rot };
         const corners = footprint(item, product);
         if (corners.some((c) => !pointInPolygon(c, room.polygon))) continue;
+        // Not on a counter or built-in, and nothing tall in front of a window.
+        if (scene?.fixtures.some((f) => convexSeparation(corners, f) < -0.02)) continue;
+        if (tall && scene?.windows.some((w) => corners.some((c) => distPointSegment(c, w.a, w.b) < 0.45))) continue;
         const issues = checkFit([...others, { item, product }], [room], design.doors, ctx.geometry.walls).filter((i) => i.uid === 'candidate');
         const errors = issues.filter((i) => i.level === 'error').length;
         if (errors) continue;
@@ -95,7 +111,7 @@ export function optimizeRoom(room: Room, productIds: string[], design: WorkDesig
 
   let best: { items: PlacedItem[]; dropped: { name: string; reason: string }[]; cost: number } | null = null;
   for (let anchor = 0; anchor < 4; anchor++) {
-    const r = picks.length ? solveLayout({ room, doors: design.doors, picks, anchor, walls: ctx.geometry.walls, flow }) : { placed: [], dropped: [] };
+    const r = picks.length ? solveLayout({ room, doors: design.doors, picks, anchor, walls: ctx.geometry.walls, flow, scene: ctx.scenes?.[room.id] }) : { placed: [], dropped: [] };
     const items: PlacedItem[] = r.placed.map((p) => ({ uid: uid(), productId: p.productId, roomId: room.id, pos: p.pos, rot: p.rot }));
     // solveLayout places one of each role; anything it skipped, or the templates don't cover, goes in a free spot.
     const placedCount = new Map<string, number>();

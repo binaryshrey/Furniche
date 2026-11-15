@@ -17,7 +17,7 @@ export default function ImportFromPage() {
       /* not a bookmarklet link */
     }
     if (!payload?.url) {
-      setMessage('No product came through. Open a product page and click Add to Furniche again.');
+      setMessage('No product came through. Open a product page and click Add to Furniche AI again.');
       return;
     }
     try {

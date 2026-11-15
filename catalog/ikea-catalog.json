@@ -1,0 +1,2100 @@
+{
+ "checkedAt": "2026-11-14",
+ "products": [
+  {
+   "id": "ikea-kivik-3",
+   "name": "KIVIK sofa, Tibbleby beige/gray",
+   "price": 799.0,
+   "category": "sofa",
+   "dims": [
+    228,
+    95,
+    83
+   ],
+   "color": "#cfc3ad",
+   "styles": [
+    "scandinavian",
+    "modern-organic",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/kivik-sofa-tibbleby-beige-gray-s39440593/",
+   "image": "https://www.ikea.com/us/en/images/products/kivik-sofa-tibbleby-beige-gray__1564646_pe1026741_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/kivik-sofa-tibbleby-beige-gray__1577303_pe1033081_s5.jpg",
+   "itemNo": "49440597"
+  },
+  {
+   "id": "ikea-vimle-3",
+   "name": "VIMLE sofa, Knäbäck light beige",
+   "price": 1049.0,
+   "category": "sofa",
+   "dims": [
+    241,
+    98,
+    83
+   ],
+   "color": "#8d8f8c",
+   "styles": [
+    "scandinavian",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/vimle-sofa-knaebaeck-light-beige-s89635116/",
+   "image": "https://www.ikea.com/us/en/images/products/vimle-sofa-knaebaeck-light-beige__1547440_pe1020496_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/vimle-sofa-knaebaeck-light-beige__1544744_pe1019287_s5.jpg",
+   "itemNo": "99631434"
+  },
+  {
+   "id": "ikea-glostad",
+   "name": "GLOSTAD loveseat, Knisa dark gray",
+   "price": 169.0,
+   "category": "sofa",
+   "dims": [
+    177,
+    89,
+    70
+   ],
+   "color": "#5b5d60",
+   "styles": [
+    "scandinavian",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/glostad-loveseat-knisa-dark-gray-70489011/",
+   "image": "https://www.ikea.com/us/en/images/products/glostad-loveseat-knisa-dark-gray__0987398_pe817518_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/glostad-loveseat-knisa-dark-gray__1577178_pe1033002_s5.jpg",
+   "itemNo": "50489012"
+  },
+  {
+   "id": "ikea-uppland-3",
+   "name": "UPPLAND sofa, Blekinge white",
+   "price": 699.0,
+   "category": "sofa",
+   "dims": [
+    231,
+    89,
+    85
+   ],
+   "color": "#e2dccf",
+   "styles": [
+    "coastal",
+    "modern-organic",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/uppland-sofa-blekinge-white-s19384116/",
+   "image": "https://www.ikea.com/us/en/images/products/uppland-sofa-blekinge-white__0818564_pe774486_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/uppland-sofa-blekinge-white__1578502_pe1034145_s5.jpg",
+   "itemNo": "19384116"
+  },
+  {
+   "id": "ikea-kivik-sectional",
+   "name": "KIVIK sectional, 4-seat corner, Tibbleby beige/gray",
+   "price": 1599.0,
+   "category": "sectional",
+   "dims": [
+    318,
+    196,
+    83
+   ],
+   "color": "#cfc3ad",
+   "styles": [
+    "scandinavian",
+    "modern-organic",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/kivik-sectional-4-seat-corner-tibbleby-beige-gray-s69440474/",
+   "image": "https://www.ikea.com/us/en/images/products/kivik-sectional-4-seat-corner-tibbleby-beige-gray__1056087_pe848224_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/kivik-sectional-4-seat-corner-tibbleby-beige-gray__1577298_pe1033073_s5.jpg",
+   "itemNo": "29440471"
+  },
+  {
+   "id": "ikea-poang",
+   "name": "POÄNG armchair, birch veneer/Knisa light beige",
+   "price": 149.0,
+   "category": "armchair",
+   "dims": [
+    68,
+    82,
+    100
+   ],
+   "color": "#d8c7a6",
+   "styles": [
+    "scandinavian",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/poaeng-armchair-birch-veneer-knisa-light-beige-s59305928/",
+   "image": "https://www.ikea.com/us/en/images/products/poaeng-armchair-birch-veneer-knisa-light-beige__0837298_pe666936_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/poaeng-armchair-birch-veneer-knisa-light-beige__0571500_pe666933_s5.jpg",
+   "itemNo": "39240787"
+  },
+  {
+   "id": "ikea-strandmon",
+   "name": "STRANDMON wing chair, Nordvalla dark gray",
+   "price": 299.0,
+   "category": "armchair",
+   "dims": [
+    82,
+    96,
+    101
+   ],
+   "color": "#55585c",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/strandmon-wing-chair-nordvalla-dark-gray-90359829/",
+   "image": "https://www.ikea.com/us/en/images/products/strandmon-wing-chair-nordvalla-dark-gray__1542537_pe1018477_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/strandmon-wing-chair-nordvalla-dark-gray__0325432_pe517964_s5.jpg",
+   "itemNo": "20343224"
+  },
+  {
+   "id": "ikea-ekero",
+   "name": "EKERÖ armchair, Bomstad black",
+   "price": 299.0,
+   "category": "armchair",
+   "dims": [
+    70,
+    73,
+    76
+   ],
+   "color": "#c9b27c",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/ekeroe-armchair-bomstad-black-30494590/",
+   "image": "https://www.ikea.com/us/en/images/products/ekeroe-armchair-bomstad-black__0951656_pe801304_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/ekeroe-armchair-bomstad-black__0951654_pe801302_s5.jpg",
+   "itemNo": "70494588"
+  },
+  {
+   "id": "ikea-alhult-bench",
+   "name": "ÅLHULT bench, 40 1/2x14 1/8 \", beige/brown",
+   "price": 99.99,
+   "category": "bench",
+   "dims": [
+    103,
+    36,
+    45
+   ],
+   "color": "#d9c09a",
+   "styles": [
+    "scandinavian",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/alhult-bench-beige-brown-60603093/",
+   "image": "https://www.ikea.com/us/en/images/products/alhult-bench-beige-brown__1447069_pe988939_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/alhult-bench-beige-brown__1403282_pe969289_s5.jpg",
+   "itemNo": "60603093"
+  },
+  {
+   "id": "ikea-valtorp-bench",
+   "name": "VALTORP bench, 40 1/2 \", with storage/Samsala dark yellow-green",
+   "price": 199.99,
+   "category": "bench",
+   "dims": [
+    103,
+    35,
+    45
+   ],
+   "color": "#8b6844",
+   "styles": [
+    "modern-organic",
+    "midcentury"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/valtorp-bench-with-storage-samsala-dark-yellow-green-10572782/",
+   "image": "https://www.ikea.com/us/en/images/products/valtorp-bench-with-storage-samsala-dark-yellow-green__1320858_pe941403_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/valtorp-bench-with-storage-samsala-dark-yellow-green__1320862_pe941404_s5.jpg",
+   "itemNo": "40570239"
+  },
+  {
+   "id": "ikea-hemnes-bench",
+   "name": "HEMNES bench, 32 5/8 \", gray",
+   "price": 99.99,
+   "category": "bench",
+   "dims": [
+    83,
+    37,
+    47
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/hemnes-bench-gray-70349011/",
+   "image": "https://www.ikea.com/us/en/images/products/hemnes-bench-gray__0490386_pe624426_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hemnes-bench-gray__0486799_pe622225_s5.jpg",
+   "itemNo": "70349011"
+  },
+  {
+   "id": "ikea-franklin-bar",
+   "name": "FRANKLIN bar stool with backrest, foldable, 24 3/4 \", counter height black/black",
+   "price": 45.0,
+   "category": "bar-stool",
+   "dims": [
+    44,
+    44,
+    99
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/franklin-bar-stool-with-backrest-foldable-counter-height-black-black-50406465/",
+   "image": "https://www.ikea.com/us/en/images/products/franklin-bar-stool-with-backrest-foldable-counter-height-black-black__0874580_pe680502_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/franklin-bar-stool-with-backrest-foldable-counter-height-black-black__0727485_pe735710_s5.jpg",
+   "itemNo": "50406465"
+  },
+  {
+   "id": "ikea-lack-coffee",
+   "name": "LACK coffee table, 35 3/8x21 5/8 \", black-brown",
+   "price": 29.99,
+   "category": "coffee-table",
+   "dims": [
+    90,
+    55,
+    45
+   ],
+   "color": "#3a2f2a",
+   "styles": [
+    "scandinavian",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lack-coffee-table-black-brown-40104294/",
+   "image": "https://www.ikea.com/us/en/images/products/lack-coffee-table-black-brown__0835835_pe601383_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lack-coffee-table-black-brown__57540_pe163122_s5.jpg",
+   "itemNo": "40104294"
+  },
+  {
+   "id": "ikea-listerby-coffee",
+   "name": "LISTERBY coffee table, 55 1/8x23 5/8 \", dark-brown beech veneer",
+   "price": 399.99,
+   "category": "coffee-table",
+   "dims": [
+    140,
+    60,
+    50
+   ],
+   "color": "#b8936a",
+   "styles": [
+    "japandi",
+    "scandinavian",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/listerby-coffee-table-dark-brown-beech-veneer-90562246/",
+   "image": "https://www.ikea.com/us/en/images/products/listerby-coffee-table-dark-brown-beech-veneer__1170193_pe892710_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/listerby-coffee-table-dark-brown-beech-veneer__1170191_pe892708_s5.jpg",
+   "itemNo": "90562246"
+  },
+  {
+   "id": "ikea-vittsjo-coffee",
+   "name": "VITTSJÖ coffee table, 29 1/2 \", light beige/glass",
+   "price": 89.99,
+   "category": "coffee-table",
+   "dims": [
+    90,
+    50,
+    40
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial",
+    "midcentury"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/vittsjoe-coffee-table-light-beige-glass-30604348/",
+   "image": "https://www.ikea.com/us/en/images/products/vittsjoe-coffee-table-light-beige-glass__1438176_pe984631_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/vittsjoe-coffee-table-light-beige-glass__1406776_pe971098_s5.jpg",
+   "itemNo": "30604348"
+  },
+  {
+   "id": "ikea-stockholm-coffee",
+   "name": "STOCKHOLM coffee table, 70 7/8x23 1/4 \", walnut veneer",
+   "price": 449.99,
+   "category": "coffee-table",
+   "dims": [
+    180,
+    59,
+    40
+   ],
+   "color": "#6e4a33",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/stockholm-coffee-table-walnut-veneer-70239710/",
+   "image": "https://www.ikea.com/us/en/images/products/stockholm-coffee-table-walnut-veneer__0212281_pe339545_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/stockholm-coffee-table-walnut-veneer__0181245_pe332924_s5.jpg",
+   "itemNo": "70239710"
+  },
+  {
+   "id": "ikea-lack-side",
+   "name": "LACK side table, 21 5/8x21 5/8 \", white",
+   "price": 16.99,
+   "category": "side-table",
+   "dims": [
+    55,
+    55,
+    45
+   ],
+   "color": "#f2f2ef",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lack-side-table-white-30449908/",
+   "image": "https://www.ikea.com/us/en/images/products/lack-side-table-white__1057263_pe848812_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lack-side-table-white__0702210_pe724345_s5.jpg",
+   "itemNo": "30449908"
+  },
+  {
+   "id": "ikea-gladom",
+   "name": "GLADOM tray table, 17 1/2x20 5/8 \", black",
+   "price": 19.99,
+   "category": "side-table",
+   "dims": [
+    44,
+    52,
+    53
+   ],
+   "color": "#5a6b5a",
+   "styles": [
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/gladom-tray-table-black-50411990/",
+   "image": "https://www.ikea.com/us/en/images/products/gladom-tray-table-black__0837072_pe664992_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/gladom-tray-table-black__0567223_pe664991_s5.jpg",
+   "itemNo": "50411990"
+  },
+  {
+   "id": "ikea-nasinge-table",
+   "name": "NÄSINGE extendable table, 51 1/8/74 3/4x31 1/2 \", white",
+   "price": 179.99,
+   "category": "dining-table",
+   "dims": [
+    132,
+    80,
+    75
+   ],
+   "color": "#b8936a",
+   "styles": [
+    "scandinavian",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/naesinge-extendable-table-white-00587492/",
+   "image": "https://www.ikea.com/us/en/images/products/naesinge-extendable-table-white__1445369_pe988172_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/naesinge-extendable-table-white__1393644_pe966301_s5.jpg",
+   "itemNo": "00587492"
+  },
+  {
+   "id": "ikea-tonstad-table",
+   "name": "TONSTAD extendable table, 55 1/8/77 1/8x33 1/2 \", oak veneer",
+   "price": 299.99,
+   "category": "dining-table",
+   "dims": [
+    142,
+    85,
+    75
+   ],
+   "color": "#8b6844",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/tonstad-extendable-table-oak-veneer-40593882/",
+   "image": "https://www.ikea.com/us/en/images/products/tonstad-extendable-table-oak-veneer__1444665_pe987603_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/tonstad-extendable-table-oak-veneer__1467536_pe995761_s5.jpg",
+   "itemNo": "40593882"
+  },
+  {
+   "id": "ikea-morbylanga",
+   "name": "MÖRBYLÅNGA table, 86 5/8x39 3/8 \", oak veneer brown stained",
+   "price": 699.0,
+   "category": "dining-table",
+   "dims": [
+    220,
+    100,
+    75
+   ],
+   "color": "#8b6844",
+   "styles": [
+    "modern-organic",
+    "midcentury"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/moerbylanga-table-oak-veneer-brown-stained-20293766/",
+   "image": "https://www.ikea.com/us/en/images/products/moerbylanga-table-oak-veneer-brown-stained__1360001_pe954330_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/moerbylanga-table-oak-veneer-brown-stained__0737110_pe740888_s5.jpg",
+   "itemNo": "20293766"
+  },
+  {
+   "id": "ikea-lisabo-table",
+   "name": "LISABO table, 55 1/8x30 3/4 \", ash veneer",
+   "price": 239.99,
+   "category": "dining-table",
+   "dims": [
+    140,
+    78,
+    74
+   ],
+   "color": "#cfb38b",
+   "styles": [
+    "japandi",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lisabo-table-ash-veneer-70294339/",
+   "image": "https://www.ikea.com/us/en/images/products/lisabo-table-ash-veneer__1470751_pe996928_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lisabo-table-ash-veneer__0737105_pe740883_s5.jpg",
+   "itemNo": "70294339"
+  },
+  {
+   "id": "ikea-docksta",
+   "name": "DOCKSTA table, 40 1/2 \", white/white",
+   "price": 279.99,
+   "category": "round-table",
+   "dims": [
+    103,
+    103,
+    75
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "midcentury",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/docksta-table-white-white-s19324995/",
+   "image": "https://www.ikea.com/us/en/images/products/docksta-table-white-white__1431647_pe982526_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/docksta-table-white-white__0803262_pe768820_s5.jpg",
+   "itemNo": "19324995"
+  },
+  {
+   "id": "ikea-alhult-table",
+   "name": "ÅLHULT extendable table, 47 1/4/66 7/8x31 1/2 \", black/brown",
+   "price": 159.99,
+   "category": "dining-table",
+   "dims": [
+    122,
+    80,
+    75
+   ],
+   "color": "#d9c09a",
+   "styles": [
+    "scandinavian",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/alhult-extendable-table-black-brown-20600789/",
+   "image": "https://www.ikea.com/us/en/images/products/alhult-extendable-table-black-brown__1447078_pe988944_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/alhult-extendable-table-black-brown__1403275_pe969282_s5.jpg",
+   "itemNo": "20600789"
+  },
+  {
+   "id": "ikea-lisabo-chair",
+   "name": "LISABO chair, ash",
+   "price": 80.0,
+   "category": "dining-chair",
+   "dims": [
+    46,
+    52,
+    80
+   ],
+   "color": "#cfb38b",
+   "styles": [
+    "japandi",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lisabo-chair-ash-00457235/",
+   "image": "https://www.ikea.com/us/en/images/products/lisabo-chair-ash__1053174_pe846767_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lisabo-chair-ash__0786549_pe763015_s5.jpg",
+   "itemNo": "00457235"
+  },
+  {
+   "id": "ikea-odger-chair",
+   "name": "ODGER chair, white/beige",
+   "price": 125.0,
+   "category": "dining-chair",
+   "dims": [
+    45,
+    51,
+    81
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/odger-chair-white-beige-60359996/",
+   "image": "https://www.ikea.com/us/en/images/products/odger-chair-white-beige__1070848_pe854751_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/odger-chair-white-beige__0727334_pe735606_s5.jpg",
+   "itemNo": "60359996"
+  },
+  {
+   "id": "ikea-teodores",
+   "name": "TEODORES chair, white",
+   "price": 55.0,
+   "category": "dining-chair",
+   "dims": [
+    47,
+    51,
+    80
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/teodores-chair-white-30486156/",
+   "image": "https://www.ikea.com/us/en/images/products/teodores-chair-white__0870808_pe716735_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/teodores-chair-white__0727344_pe735616_s5.jpg",
+   "itemNo": "90350937"
+  },
+  {
+   "id": "ikea-krylbo",
+   "name": "KRYLBO chair, Tonerud dark beige",
+   "price": 105.0,
+   "category": "dining-chair",
+   "dims": [
+    49,
+    53,
+    80
+   ],
+   "color": "#8b6844",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/krylbo-chair-tonerud-dark-beige-20566752/",
+   "image": "https://www.ikea.com/us/en/images/products/krylbo-chair-tonerud-dark-beige__1339180_pe948414_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/krylbo-chair-tonerud-dark-beige__1208495_pe908606_s5.jpg",
+   "itemNo": "60566745"
+  },
+  {
+   "id": "ikea-nasinge-chair",
+   "name": "NÄSINGE chair, dark-brown stained/Kilanda light beige",
+   "price": 65.0,
+   "category": "dining-chair",
+   "dims": [
+    43,
+    52,
+    91
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/naesinge-chair-dark-brown-stained-kilanda-light-beige-00587581/",
+   "image": "https://www.ikea.com/us/en/images/products/naesinge-chair-dark-brown-stained-kilanda-light-beige__1445402_pe988160_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/naesinge-chair-dark-brown-stained-kilanda-light-beige__1444950_pe987836_s5.jpg",
+   "itemNo": "40587503"
+  },
+  {
+   "id": "ikea-kallax-2x4",
+   "name": "KALLAX shelf unit, 30 1/8x57 5/8 \", white",
+   "price": 79.99,
+   "category": "bookshelf",
+   "dims": [
+    77,
+    39,
+    146
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/kallax-shelf-unit-white-20631663/",
+   "image": "https://www.ikea.com/us/en/images/products/kallax-shelf-unit-white__1051325_pe845148_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/kallax-shelf-unit-white__0644757_pe702939_s5.jpg",
+   "itemNo": "80275887"
+  },
+  {
+   "id": "ikea-billy",
+   "name": "BILLY bookcase, 31 1/2x11x79 1/2 \", white",
+   "price": 79.0,
+   "category": "bookshelf",
+   "dims": [
+    80,
+    28,
+    202
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/billy-bookcase-white-20522046/",
+   "image": "https://www.ikea.com/us/en/images/products/billy-bookcase-white__1424760_pe979354_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/billy-bookcase-white__1590272_pe1038911_s5.jpg",
+   "itemNo": "20522046"
+  },
+  {
+   "id": "ikea-hemnes-bookcase",
+   "name": "HEMNES bookcase, 35 3/8x77 1/2 \", gray-green/light brown stained",
+   "price": 349.0,
+   "category": "bookshelf",
+   "dims": [
+    90,
+    37,
+    197
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/hemnes-bookcase-gray-green-light-brown-stained-40596159/",
+   "image": "https://www.ikea.com/us/en/images/products/hemnes-bookcase-gray-green-light-brown-stained__1429309_pe981829_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hemnes-bookcase-gray-green-light-brown-stained__1590305_pe1038944_s5.jpg",
+   "itemNo": "40596159"
+  },
+  {
+   "id": "ikea-vittsjo-shelf",
+   "name": "VITTSJÖ shelf unit, 39 3/8x68 7/8 \", black-brown/glass",
+   "price": 129.0,
+   "category": "bookshelf",
+   "dims": [
+    100,
+    36,
+    175
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/vittsjoe-shelf-unit-black-brown-glass-20213312/",
+   "image": "https://www.ikea.com/us/en/images/products/vittsjoe-shelf-unit-black-brown-glass__1094239_pe863355_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/vittsjoe-shelf-unit-black-brown-glass__0644373_pe702638_s5.jpg",
+   "itemNo": "20213312"
+  },
+  {
+   "id": "ikea-hemnes-tv",
+   "name": "HEMNES tv unit, 58 1/4x18 1/2x22 1/2 \", white stain/light brown",
+   "price": 379.99,
+   "category": "tv-console",
+   "dims": [
+    148,
+    47,
+    57
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/hemnes-tv-unit-white-stain-light-brown-10413528/",
+   "image": "https://www.ikea.com/us/en/images/products/hemnes-tv-unit-white-stain-light-brown__1460842_pe994015_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hemnes-tv-unit-white-stain-light-brown__0583377_pe671187_s5.jpg",
+   "itemNo": "50413526"
+  },
+  {
+   "id": "ikea-besta-tv",
+   "name": "BESTÅ tv bench with doors, 70 7/8x16 1/2x15 \", black-brown Lappviken/brown walnut effect",
+   "price": 225.0,
+   "category": "tv-console",
+   "dims": [
+    180,
+    42,
+    38
+   ],
+   "color": "#3a2f2a",
+   "styles": [
+    "industrial",
+    "midcentury"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/besta-tv-bench-with-doors-black-brown-lappviken-brown-walnut-effect-s49612174/",
+   "image": "https://www.ikea.com/us/en/images/products/besta-tv-bench-with-doors-black-brown-lappviken-brown-walnut-effect__1459251_pe993438_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/besta-tv-bench-with-doors-black-brown-lappviken-brown-walnut-effect__1449600_pe989962_s5.jpg",
+   "itemNo": "09612171"
+  },
+  {
+   "id": "ikea-brimnes-tv",
+   "name": "BRIMNES tv unit, 70 7/8x16 1/8x20 7/8 \", black",
+   "price": 199.99,
+   "category": "tv-console",
+   "dims": [
+    180,
+    41,
+    53
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/brimnes-tv-unit-black-40569486/",
+   "image": "https://www.ikea.com/us/en/images/products/brimnes-tv-unit-black__1452004_pe990826_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/brimnes-tv-unit-black__0704610_pe725291_s5.jpg",
+   "itemNo": "70409873"
+  },
+  {
+   "id": "ikea-lack-tv",
+   "name": "LACK tv unit, 63x13 3/4x14 1/8 \", black-brown",
+   "price": 64.99,
+   "category": "tv-console",
+   "dims": [
+    160,
+    35,
+    36
+   ],
+   "color": "#3a2f2a",
+   "styles": [
+    "scandinavian",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lack-tv-unit-black-brown-60566062/",
+   "image": "https://www.ikea.com/us/en/images/products/lack-tv-unit-black-brown__1464287_pe994660_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lack-tv-unit-black-brown__0955264_pe803706_s5.jpg",
+   "itemNo": "20498904"
+  },
+  {
+   "id": "ikea-malm-queen",
+   "name": "MALM bed frame, Queen, white/Luröy",
+   "price": 299.0,
+   "category": "bed",
+   "dims": [
+    165,
+    214,
+    100
+   ],
+   "color": "#e3d7c3",
+   "styles": [
+    "scandinavian",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/malm-bed-frame-white-luroey-s29009482/",
+   "image": "https://www.ikea.com/us/en/images/products/malm-bed-frame-white-luroey__1101527_pe866706_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/malm-bed-frame-white-luroey__0749130_pe745499_s5.jpg",
+   "itemNo": "29002433"
+  },
+  {
+   "id": "ikea-songesand-queen",
+   "name": "SONGESAND bed frame, Queen, brown/Luröy",
+   "price": 249.0,
+   "category": "bed",
+   "dims": [
+    173,
+    213,
+    95
+   ],
+   "color": "#4a3b33",
+   "styles": [
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/songesand-bed-frame-brown-luroey-s59241069/",
+   "image": "https://www.ikea.com/us/en/images/products/songesand-bed-frame-brown-luroey__1101505_pe866684_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/songesand-bed-frame-brown-luroey__0638582_pe699001_s5.jpg",
+   "itemNo": "29241061"
+  },
+  {
+   "id": "ikea-tarva-queen",
+   "name": "TARVA bed frame, Queen, pine/Luröy",
+   "price": 159.0,
+   "category": "bed",
+   "dims": [
+    166,
+    209,
+    92
+   ],
+   "color": "#d9b98f",
+   "styles": [
+    "japandi",
+    "scandinavian",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/tarva-bed-frame-pine-luroey-s29007794/",
+   "image": "https://www.ikea.com/us/en/images/products/tarva-bed-frame-pine-luroey__1102036_pe866857_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/tarva-bed-frame-pine-luroey__0637611_pe698421_s5.jpg",
+   "itemNo": "69002426"
+  },
+  {
+   "id": "ikea-neiden-full",
+   "name": "NEIDEN bed frame, Full, pine",
+   "price": 69.0,
+   "category": "bed",
+   "dims": [
+    147,
+    197,
+    85
+   ],
+   "color": "#d9b98f",
+   "styles": [
+    "japandi",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/neiden-bed-frame-pine-80395248/",
+   "image": "https://www.ikea.com/us/en/images/products/neiden-bed-frame-pine__1102024_pe866848_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/neiden-bed-frame-pine__0749131_pe745500_s5.jpg",
+   "itemNo": "90395243"
+  },
+  {
+   "id": "ikea-kleppstad-queen",
+   "name": "KLEPPSTAD bed frame, Queen, white/Vissle beige",
+   "price": 199.0,
+   "category": "bed",
+   "dims": [
+    160,
+    206,
+    85
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/kleppstad-bed-frame-white-vissle-beige-00492682/",
+   "image": "https://www.ikea.com/us/en/images/products/kleppstad-bed-frame-white-vissle-beige__1035341_pe840528_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/kleppstad-bed-frame-white-vissle-beige__1035340_pe840527_s5.jpg",
+   "itemNo": "10492672"
+  },
+  {
+   "id": "ikea-vesteroy-queen",
+   "name": "VESTERÖY pocket spring mattress, Full, firm/white",
+   "price": 279.0,
+   "category": "mattress",
+   "dims": [
+    152,
+    203,
+    27
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "japandi",
+    "coastal",
+    "modern-organic",
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/vesteroey-pocket-spring-mattress-firm-white-50645003/",
+   "image": "https://www.ikea.com/us/en/images/products/vesteroey-pocket-spring-mattress-firm-white__1142933_pe881412_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/vesteroey-pocket-spring-mattress-firm-white__1142846_pe881368_s5.jpg",
+   "itemNo": "50645003"
+  },
+  {
+   "id": "ikea-foam-mattress",
+   "name": "ÅSBYGDA foam mattress, Queen, firm/white",
+   "price": 249.0,
+   "category": "mattress",
+   "dims": [
+    152,
+    203,
+    18
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "japandi",
+    "coastal",
+    "modern-organic",
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/asbygda-foam-mattress-firm-white-10481503/",
+   "image": "https://www.ikea.com/us/en/images/products/asbygda-foam-mattress-firm-white__1286146_pe933444_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/asbygda-foam-mattress-firm-white__1578560_pe1034196_s5.jpg",
+   "itemNo": "10481503"
+  },
+  {
+   "id": "ikea-hybrid-mattress",
+   "name": "ÅNNELAND hybrid mattress, Queen, firm/white",
+   "price": 649.0,
+   "category": "mattress",
+   "dims": [
+    152,
+    203,
+    30
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "japandi",
+    "coastal",
+    "modern-organic",
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/anneland-hybrid-mattress-firm-white-60511913/",
+   "image": "https://www.ikea.com/us/en/images/products/anneland-hybrid-mattress-firm-white__1044440_pe842158_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/anneland-hybrid-mattress-firm-white__1578075_pe1033764_s5.jpg",
+   "itemNo": "20481710"
+  },
+  {
+   "id": "ikea-valevag-queen",
+   "name": "VALEVÅG pocket spring mattress, Queen, medium firm/white",
+   "price": 399.0,
+   "category": "mattress",
+   "dims": [
+    152,
+    203,
+    26
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "japandi",
+    "coastal",
+    "modern-organic",
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/valevag-pocket-spring-mattress-medium-firm-white-50511857/",
+   "image": "https://www.ikea.com/us/en/images/products/valevag-pocket-spring-mattress-medium-firm-white__1142936_pe881413_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/valevag-pocket-spring-mattress-medium-firm-white__1578562_pe1034197_s5.jpg",
+   "itemNo": "50511857"
+  },
+  {
+   "id": "ikea-hemnes-nightstand",
+   "name": "HEMNES nightstand, 18 1/8x13 3/4 \", white stain",
+   "price": 129.99,
+   "category": "nightstand",
+   "dims": [
+    46,
+    35,
+    70
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/hemnes-nightstand-white-stain-20200456/",
+   "image": "https://www.ikea.com/us/en/images/products/hemnes-nightstand-white-stain__0380136_pe555081_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hemnes-nightstand-white-stain__0624424_pe691831_s5.jpg",
+   "itemNo": "20200456"
+  },
+  {
+   "id": "ikea-tarva-nightstand",
+   "name": "TARVA nightstand, 18 7/8x15 3/8x24 3/8 \", pine",
+   "price": 79.99,
+   "category": "nightstand",
+   "dims": [
+    48,
+    39,
+    62
+   ],
+   "color": "#d9b98f",
+   "styles": [
+    "japandi",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/tarva-nightstand-pine-50219609/",
+   "image": "https://www.ikea.com/us/en/images/products/tarva-nightstand-pine__0380436_pe555357_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/tarva-nightstand-pine__0624428_pe691835_s5.jpg",
+   "itemNo": "50219609"
+  },
+  {
+   "id": "ikea-storklinta-2",
+   "name": "STORKLINTA 2-drawer chest, 19 5/8x18 7/8x20 7/8 \", white/with 2 drawers",
+   "price": 79.99,
+   "category": "nightstand",
+   "dims": [
+    50,
+    48,
+    53
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/storklinta-2-drawer-chest-white-with-2-drawers-90559296/",
+   "image": "https://www.ikea.com/us/en/images/products/storklinta-2-drawer-chest-white-with-2-drawers__1344021_pe949688_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/storklinta-2-drawer-chest-white-with-2-drawers__1283590_pe932547_s5.jpg",
+   "itemNo": "90559296"
+  },
+  {
+   "id": "ikea-nordli-2",
+   "name": "NORDLI 2-drawer chest, 15 3/4x21 1/4 \", white",
+   "price": 99.99,
+   "category": "nightstand",
+   "dims": [
+    40,
+    54,
+    54
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/nordli-2-drawer-chest-white-30589079/",
+   "image": "https://www.ikea.com/us/en/images/products/nordli-2-drawer-chest-white__0858019_pe660384_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/nordli-2-drawer-chest-white__1590131_pe1038772_s5.jpg",
+   "itemNo": "30589079"
+  },
+  {
+   "id": "ikea-storklinta-6",
+   "name": "STORKLINTA 6-drawer dresser, 55 1/8x18 7/8x29 1/2 \", white/anchor/unlock function",
+   "price": 249.99,
+   "category": "dresser",
+   "dims": [
+    140,
+    48,
+    75
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/storklinta-6-drawer-dresser-white-anchor-unlock-function-60561248/",
+   "image": "https://www.ikea.com/us/en/images/products/storklinta-6-drawer-dresser-white-anchor-unlock-function__1344049_pe949711_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/storklinta-6-drawer-dresser-white-anchor-unlock-function__1283583_pe932540_s5.jpg",
+   "itemNo": "70627550"
+  },
+  {
+   "id": "ikea-hemnes-8",
+   "name": "HEMNES 8-drawer dresser, 63x37 3/4 \", white stain",
+   "price": 449.99,
+   "category": "dresser",
+   "dims": [
+    160,
+    50,
+    96
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/hemnes-8-drawer-dresser-white-stain-10576191/",
+   "image": "https://www.ikea.com/us/en/images/products/hemnes-8-drawer-dresser-white-stain__1151400_pe886164_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hemnes-8-drawer-dresser-white-stain__1602270_pe1043360_s5.jpg",
+   "itemNo": "10239280"
+  },
+  {
+   "id": "ikea-vihals-6",
+   "name": "VIHALS 6-drawer dresser, 27 1/2x18 1/2x47 1/4 \", white/anchor/unlock function",
+   "price": 249.99,
+   "category": "dresser",
+   "dims": [
+    70,
+    47,
+    120
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/vihals-6-drawer-dresser-white-anchor-unlock-function-90483249/",
+   "image": "https://www.ikea.com/us/en/images/products/vihals-6-drawer-dresser-white-anchor-unlock-function__1146897_pe883168_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/vihals-6-drawer-dresser-white-anchor-unlock-function__1590215_pe1038854_s5.jpg",
+   "itemNo": "30483247"
+  },
+  {
+   "id": "ikea-pax-100",
+   "name": "PAX wardrobe combination, 98 3/8x22 7/8x93 1/8 \", white",
+   "price": 1345.0,
+   "category": "wardrobe",
+   "dims": [
+    250,
+    58,
+    237
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/pax-wardrobe-combination-white-s79560734/",
+   "image": "https://www.ikea.com/us/en/images/products/pax-wardrobe-combination-white__1103735_pe867369_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/pax-wardrobe-combination-white__1382132_pe962060_s5.jpg",
+   "itemNo": "09503134"
+  },
+  {
+   "id": "ikea-brimnes-wardrobe",
+   "name": "BRIMNES wardrobe with 3 doors, 46x19 3/4x74 3/4 \", white",
+   "price": 249.99,
+   "category": "wardrobe",
+   "dims": [
+    117,
+    50,
+    190
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/brimnes-wardrobe-with-3-doors-white-90574800/",
+   "image": "https://www.ikea.com/us/en/images/products/brimnes-wardrobe-with-3-doors-white__1268954_pe928893_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/brimnes-wardrobe-with-3-doors-white__1268958_pe928897_s5.jpg",
+   "itemNo": "40407922"
+  },
+  {
+   "id": "ikea-lisabo-desk",
+   "name": "LISABO desk, 50 3/8x25 5/8 \", ash veneer",
+   "price": 279.99,
+   "category": "desk",
+   "dims": [
+    128,
+    65,
+    74
+   ],
+   "color": "#cfb38b",
+   "styles": [
+    "japandi",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lisabo-desk-ash-veneer-10606273/",
+   "image": "https://www.ikea.com/us/en/images/products/lisabo-desk-ash-veneer__1487199_pe1002714_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lisabo-desk-ash-veneer__1487203_pe1002710_s5.jpg",
+   "itemNo": "10606273"
+  },
+  {
+   "id": "ikea-micke-desk",
+   "name": "MICKE desk, 41 3/8x19 5/8 \", white",
+   "price": 109.99,
+   "category": "desk",
+   "dims": [
+    105,
+    50,
+    75
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/micke-desk-white-80213074/",
+   "image": "https://www.ikea.com/us/en/images/products/micke-desk-white__1515833_pe1011632_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/micke-desk-white__0736018_pe740345_s5.jpg",
+   "itemNo": "80213074"
+  },
+  {
+   "id": "ikea-desk-55",
+   "name": "LAGKAPTEN / ADILS desk, 55 1/8x23 5/8 \", white",
+   "price": 79.99,
+   "category": "desk",
+   "dims": [
+    140,
+    60,
+    73
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lagkapten-adils-desk-white-s59417153/",
+   "image": "https://www.ikea.com/us/en/images/products/lagkapten-adils-desk-white__1028383_pe835319_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lagkapten-adils-desk-white__0976080_pe812978_s5.jpg",
+   "itemNo": "59417153"
+  },
+  {
+   "id": "ikea-markus",
+   "name": "MARKUS office chair, Medium, Vissle dark gray",
+   "price": 299.99,
+   "category": "office-chair",
+   "dims": [
+    62,
+    60,
+    140
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/markus-office-chair-vissle-dark-gray-90289172/",
+   "image": "https://www.ikea.com/us/en/images/products/markus-office-chair-vissle-dark-gray__1436953_pe984359_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/markus-office-chair-vissle-dark-gray__0724714_pe734597_s5.jpg",
+   "itemNo": "70261150"
+  },
+  {
+   "id": "ikea-millberget",
+   "name": "MILLBERGET swivel chair, Murum black",
+   "price": 129.99,
+   "category": "office-chair",
+   "dims": [
+    66,
+    66,
+    117
+   ],
+   "color": "#5a3f2e",
+   "styles": [
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/millberget-swivel-chair-murum-black-00489397/",
+   "image": "https://www.ikea.com/us/en/images/products/millberget-swivel-chair-murum-black__1026952_pe834638_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/millberget-swivel-chair-murum-black__1020142_pe831799_s5.jpg",
+   "itemNo": "70489394"
+  },
+  {
+   "id": "ikea-hektar-floor",
+   "name": "HEKTAR floor lamp, dark gray",
+   "price": 89.99,
+   "category": "floor-lamp",
+   "dims": [
+    40,
+    40,
+    181
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/hektar-floor-lamp-dark-gray-70216544/",
+   "image": "https://www.ikea.com/us/en/images/products/hektar-floor-lamp-dark-gray__1257894_pe926086_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hektar-floor-lamp-dark-gray__0149974_pe308131_s5.jpg",
+   "itemNo": "00215307"
+  },
+  {
+   "id": "ikea-nymane-floor",
+   "name": "NYMÅNE floor lamp with 3-spotlights, white",
+   "price": 99.99,
+   "category": "floor-lamp",
+   "dims": [
+    34,
+    34,
+    157
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/nymane-floor-lamp-with-3-spotlights-white-50477052/",
+   "image": "https://www.ikea.com/us/en/images/products/nymane-floor-lamp-with-3-spotlights-white__0810834_pe771432_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/nymane-floor-lamp-with-3-spotlights-white__0810835_pe771431_s5.jpg",
+   "itemNo": "80455483"
+  },
+  {
+   "id": "ikea-paper-floor",
+   "name": "STRANDAD floor lamp, white/black",
+   "price": 19.99,
+   "category": "floor-lamp",
+   "dims": [
+    30,
+    30,
+    120
+   ],
+   "color": "#f1ece0",
+   "styles": [
+    "japandi",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/strandad-floor-lamp-white-black-70594842/",
+   "image": "https://www.ikea.com/us/en/images/products/strandad-floor-lamp-white-black__1414422_pe974796_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/strandad-floor-lamp-white-black__1403319_pe969302_s5.jpg",
+   "itemNo": "30566737"
+  },
+  {
+   "id": "ikea-arc-floor",
+   "name": "SKOTTORP / SKAFTET floor lamp, arched, light gray",
+   "price": 144.98,
+   "category": "floor-lamp",
+   "dims": [
+    40,
+    120,
+    190
+   ],
+   "color": "#b89a5a",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/skottorp-skaftet-floor-lamp-arched-light-gray-s59387542/",
+   "image": "https://www.ikea.com/us/en/images/products/skottorp-skaftet-floor-lamp-arched-light-gray__0789053_pe763797_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/skottorp-skaftet-floor-lamp-arched-light-gray__0856912_pe780859_s5.jpg",
+   "itemNo": "49385987"
+  },
+  {
+   "id": "ikea-tagarp-floor",
+   "name": "TÅGARP floor uplighter, black/white",
+   "price": 14.99,
+   "category": "floor-lamp",
+   "dims": [
+    34,
+    34,
+    178
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/tagarp-floor-uplighter-black-white-60464049/",
+   "image": "https://www.ikea.com/us/en/images/products/tagarp-floor-uplighter-black-white__0810839_pe771437_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/tagarp-floor-uplighter-black-white__0810840_pe771436_s5.jpg",
+   "itemNo": "20404095"
+  },
+  {
+   "id": "ikea-vidja-floor",
+   "name": "VIDJA floor lamp, 54 \", white",
+   "price": 69.99,
+   "category": "floor-lamp",
+   "dims": [
+    22,
+    22,
+    138
+   ],
+   "color": "#f1ece0",
+   "styles": [
+    "japandi",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/vidja-floor-lamp-white-10309206/",
+   "image": "https://www.ikea.com/us/en/images/products/vidja-floor-lamp-white__0953648_pe802865_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/vidja-floor-lamp-white__0606512_pe682388_s5.jpg",
+   "itemNo": "00309198"
+  },
+  {
+   "id": "ikea-stockholm-rug",
+   "name": "STOCKHOLM rug, flatwoven, 5 ' 7 \"x7 ' 10 \", handmade/stripe black/off-white",
+   "price": 399.99,
+   "category": "rug",
+   "dims": [
+    170,
+    239,
+    1
+   ],
+   "color": "#d8d2c6",
+   "styles": [
+    "scandinavian",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/stockholm-rug-flatwoven-handmade-stripe-black-off-white-80104862/",
+   "image": "https://www.ikea.com/us/en/images/products/stockholm-rug-flatwoven-handmade-stripe-black-off-white__0245498_pe384232_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/stockholm-rug-flatwoven-handmade-stripe-black-off-white__56123_pe161531_s5.jpg",
+   "itemNo": "80104862"
+  },
+  {
+   "id": "ikea-lohals-rug",
+   "name": "LOHALS rug, flatwoven, 5 ' 3 \"x7 ' 7 \", natural",
+   "price": 99.99,
+   "category": "rug",
+   "dims": [
+    160,
+    231,
+    1
+   ],
+   "color": "#cdb48d",
+   "styles": [
+    "coastal",
+    "japandi",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lohals-rug-flatwoven-natural-50277393/",
+   "image": "https://www.ikea.com/us/en/images/products/lohals-rug-flatwoven-natural__0737684_pe560550_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lohals-rug-flatwoven-natural__0280221_pe419173_s5.jpg",
+   "itemNo": "50277393"
+  },
+  {
+   "id": "ikea-tiphede-rug",
+   "name": "TIPHEDE rug, flatwoven, 7 ' 3 \"x9 ' 2 \", natural/black",
+   "price": 39.99,
+   "category": "rug",
+   "dims": [
+    221,
+    279,
+    1
+   ],
+   "color": "#e8e2d6",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/tiphede-rug-flatwoven-natural-black-40559166/",
+   "image": "https://www.ikea.com/us/en/images/products/tiphede-rug-flatwoven-natural-black__1355592_pe953187_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/tiphede-rug-flatwoven-natural-black__0772066_pe755879_s5.jpg",
+   "itemNo": "40559166"
+  },
+  {
+   "id": "ikea-round-rug",
+   "name": "GREJSIMOJS rug, high pile, 5 ' 0 \"x7 ' 1 \", green",
+   "price": 126.99,
+   "category": "rug",
+   "dims": [
+    152,
+    216,
+    1
+   ],
+   "color": "#d9d1c3",
+   "styles": [
+    "japandi",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/grejsimojs-rug-high-pile-green-00602001/",
+   "image": "https://www.ikea.com/us/en/images/products/grejsimojs-rug-high-pile-green__1474938_pe998305_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/grejsimojs-rug-high-pile-green__1450783_pe990412_s5.jpg",
+   "itemNo": "00602001"
+  },
+  {
+   "id": "ikea-stoense-rug",
+   "name": "STOENSE rug, low pile, 5 ' 7 \"x7 ' 10 \", off-white",
+   "price": 119.99,
+   "category": "rug",
+   "dims": [
+    170,
+    239,
+    1
+   ],
+   "color": "#cfc8bb",
+   "styles": [
+    "scandinavian",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/stoense-rug-low-pile-off-white-50425529/",
+   "image": "https://www.ikea.com/us/en/images/products/stoense-rug-low-pile-off-white__0624385_pe691800_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/stoense-rug-low-pile-off-white__0624386_pe691799_s5.jpg",
+   "itemNo": "50425529"
+  },
+  {
+   "id": "ikea-fejka-fiddle",
+   "name": "FEJKA artificial potted plant, 7 ½ \", indoor/outdoor fiddle-leaf fig",
+   "price": 99.99,
+   "category": "plant",
+   "dims": [
+    40,
+    40,
+    160
+   ],
+   "color": "#4c6b45",
+   "styles": [
+    "modern-organic",
+    "coastal",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/fejka-artificial-potted-plant-indoor-outdoor-fiddle-leaf-fig-80568890/",
+   "image": "https://www.ikea.com/us/en/images/products/fejka-artificial-potted-plant-indoor-outdoor-fiddle-leaf-fig__1275777_pe930663_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/fejka-artificial-potted-plant-indoor-outdoor-fiddle-leaf-fig__1217779_pe913018_s5.jpg",
+   "itemNo": "80568890"
+  },
+  {
+   "id": "ikea-fejka-monstera",
+   "name": "FEJKA artificial potted plant, 7 ½ \", indoor/outdoor monstera",
+   "price": 49.99,
+   "category": "plant",
+   "dims": [
+    45,
+    45,
+    90
+   ],
+   "color": "#4c6b45",
+   "styles": [
+    "modern-organic",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/fejka-artificial-potted-plant-indoor-outdoor-monstera-10615244/",
+   "image": "https://www.ikea.com/us/en/images/products/fejka-artificial-potted-plant-indoor-outdoor-monstera__1517767_pe1012673_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/fejka-artificial-potted-plant-indoor-outdoor-monstera__0614197_pe686822_s5.jpg",
+   "itemNo": "10615244"
+  },
+  {
+   "id": "ikea-fejka-olive",
+   "name": "FEJKA artificial potted plant, 7 ½ \", indoor/outdoor/Olive tree green",
+   "price": 49.99,
+   "category": "plant",
+   "dims": [
+    35,
+    35,
+    120
+   ],
+   "color": "#7d8a5a",
+   "styles": [
+    "modern-organic",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/fejka-artificial-potted-plant-indoor-outdoor-olive-tree-green-40617699/",
+   "image": "https://www.ikea.com/us/en/images/products/fejka-artificial-potted-plant-indoor-outdoor-olive-tree-green__1485470_pe1001981_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/fejka-artificial-potted-plant-indoor-outdoor-olive-tree-green__1485471_pe1001980_s5.jpg",
+   "itemNo": "40617699"
+  },
+  {
+   "id": "ikea-olivblad-stand",
+   "name": "OLIVBLAD plant stand, 22 \", indoor/outdoor black",
+   "price": 29.99,
+   "category": "decor",
+   "dims": [
+    37,
+    37,
+    58
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/olivblad-plant-stand-indoor-outdoor-black-10486647/",
+   "image": "https://www.ikea.com/us/en/images/products/olivblad-plant-stand-indoor-outdoor-black__1079586_pe857617_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/olivblad-plant-stand-indoor-outdoor-black__1010784_pe828333_s5.jpg",
+   "itemNo": "10486647"
+  },
+  {
+   "id": "ikea-branas-basket",
+   "name": "BRANÄS basket, 12 ½x13 ½x12 ½ \", rattan",
+   "price": 24.99,
+   "category": "decor",
+   "dims": [
+    32,
+    34,
+    32
+   ],
+   "color": "#c49a6c",
+   "styles": [
+    "coastal",
+    "modern-organic",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/branaes-basket-rattan-00138432/",
+   "image": "https://www.ikea.com/us/en/images/products/branaes-basket-rattan__1051537_pe845589_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/branaes-basket-rattan__0710999_pe727908_s5.jpg",
+   "itemNo": "00138432"
+  },
+  {
+   "id": "ikea-pouf",
+   "name": "LILLESÄTER pouf, Axvall off-white",
+   "price": 119.0,
+   "category": "decor",
+   "dims": [
+    45,
+    45,
+    45
+   ],
+   "color": "#d9d3c7",
+   "styles": [
+    "japandi",
+    "modern-organic",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/lillesaeter-pouf-axvall-off-white-60619070/",
+   "image": "https://www.ikea.com/us/en/images/products/lillesaeter-pouf-axvall-off-white__1515466_pe1011454_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lillesaeter-pouf-axvall-off-white__1480252_pe1000156_s5.jpg",
+   "itemNo": "40619066"
+  },
+  {
+   "id": "ikea-alseda-stool",
+   "name": "ALSEDA stool, banana fiber",
+   "price": 64.99,
+   "category": "decor",
+   "dims": [
+    40,
+    40,
+    45
+   ],
+   "color": "#c49a6c",
+   "styles": [
+    "coastal",
+    "modern-organic",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/alseda-stool-banana-fiber-20033919/",
+   "image": "https://www.ikea.com/us/en/images/products/alseda-stool-banana-fiber__1097696_ph173556_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/alseda-stool-banana-fiber__24302_pe089431_s5.jpg",
+   "itemNo": "20033919"
+  },
+  {
+   "id": "ikea-strandmon-ottoman",
+   "name": "STRANDMON ottoman with storage, Nordvalla dark gray",
+   "price": 100.0,
+   "category": "decor",
+   "dims": [
+    60,
+    40,
+    44
+   ],
+   "color": "#55585c",
+   "styles": [
+    "coastal",
+    "scandinavian"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/strandmon-ottoman-with-storage-nordvalla-dark-gray-30621357/",
+   "image": "https://www.ikea.com/us/en/images/products/strandmon-ottoman-with-storage-nordvalla-dark-gray__1542537_pe1018477_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/strandmon-ottoman-with-storage-nordvalla-dark-gray__1483779_pe1001340_s5.jpg",
+   "itemNo": "00621354"
+  },
+  {
+   "id": "ikea-floor-vase",
+   "name": "STOCKHOLM 2025 vase, 10 ¾ \", black",
+   "price": 39.99,
+   "category": "decor",
+   "dims": [
+    25,
+    25,
+    45
+   ],
+   "color": "#c9b79c",
+   "styles": [
+    "modern-organic",
+    "japandi"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/stockholm-2025-vase-black-20590498/",
+   "image": "https://www.ikea.com/us/en/images/products/stockholm-2025-vase-black__1425074_ph203229_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/stockholm-2025-vase-black__1359448_pe954183_s5.jpg",
+   "itemNo": "20590498"
+  },
+  {
+   "id": "ikea-sculpture",
+   "name": "KONSTRUNDA decoration, 12 ½x7 ½x14 ¼ \", orange",
+   "price": 69.99,
+   "category": "decor",
+   "dims": [
+    32,
+    19,
+    36
+   ],
+   "color": "#e9e4da",
+   "styles": [
+    "modern-organic",
+    "japandi",
+    "midcentury"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/konstrunda-decoration-orange-00614565/",
+   "image": "https://www.ikea.com/us/en/images/products/konstrunda-decoration-orange__1459557_pe993575_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/konstrunda-decoration-orange__1459557_pe993575_s5.jpg",
+   "itemNo": "00614565"
+  },
+  {
+   "id": "ikea-candle-holder",
+   "name": "BLOMSTER candlestick, set of 2, brown",
+   "price": 24.99,
+   "category": "decor",
+   "dims": [
+    20,
+    20,
+    40
+   ],
+   "color": "#b89a5a",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/blomster-candlestick-set-of-2-brown-50630558/",
+   "image": "https://www.ikea.com/us/en/images/products/blomster-candlestick-set-of-2-brown__1529970_pe1018393_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/blomster-candlestick-set-of-2-brown__1515287_pe1011345_s5.jpg",
+   "itemNo": "50630558"
+  },
+  {
+   "id": "ikea-berbyn-vase",
+   "name": "BERÄKNA vase, 11 ¾ \", clear glass",
+   "price": 14.99,
+   "category": "decor",
+   "dims": [
+    25,
+    25,
+    34
+   ],
+   "color": "#e9e4da",
+   "styles": [
+    "japandi",
+    "scandinavian",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/beraekna-vase-clear-glass-20406297/",
+   "image": "https://www.ikea.com/us/en/images/products/beraekna-vase-clear-glass__1478134_pe999428_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/beraekna-vase-clear-glass__0490878_pe624750_s5.jpg",
+   "itemNo": "20406297"
+  },
+  {
+   "id": "ikea-viljestark-vase",
+   "name": "VILJESTARK vase, 6 ¾ \", clear glass",
+   "price": 1.99,
+   "category": "decor",
+   "dims": [
+    15,
+    15,
+    31
+   ],
+   "color": "#cfd8d4",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/viljestark-vase-clear-glass-00338577/",
+   "image": "https://www.ikea.com/us/en/images/products/viljestark-vase-clear-glass__0903223_pe629545_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/viljestark-vase-clear-glass__0640433_pe699813_s5.jpg",
+   "itemNo": "00338577"
+  },
+  {
+   "id": "ikea-pomp-lantern",
+   "name": "BORRBY lantern for tealight, 7 ¾ \", indoor/outdoor black",
+   "price": 9.99,
+   "category": "decor",
+   "dims": [
+    21,
+    21,
+    44
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "industrial",
+    "coastal"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/borrby-lantern-for-tealight-indoor-outdoor-black-60608854/",
+   "image": "https://www.ikea.com/us/en/images/products/borrby-lantern-for-tealight-indoor-outdoor-black__1466298_pe995378_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/borrby-lantern-for-tealight-indoor-outdoor-black__1435956_pe983997_s5.jpg",
+   "itemNo": "60608854"
+  },
+  {
+   "id": "ikea-hovet-mirror",
+   "name": "HOVET mirror, 30 3/4x77 1/8 \", aluminum",
+   "price": 169.99,
+   "category": "mirror",
+   "dims": [
+    78,
+    4,
+    196
+   ],
+   "color": "#c9cbc8",
+   "styles": [
+    "industrial",
+    "scandinavian"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/hovet-mirror-aluminum-40507196/",
+   "image": "https://www.ikea.com/us/en/images/products/hovet-mirror-aluminum__1282057_ph172267_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/hovet-mirror-aluminum__0633569_pe695903_s5.jpg",
+   "itemNo": "50038213"
+  },
+  {
+   "id": "ikea-lindbyn-mirror",
+   "name": "LINDBYN mirror, 23 5/8x66 7/8 \", black",
+   "price": 109.99,
+   "category": "mirror",
+   "dims": [
+    60,
+    3,
+    170
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "midcentury",
+    "industrial"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/lindbyn-mirror-black-40597234/",
+   "image": "https://www.ikea.com/us/en/images/p/e61c72df741eeab/lindbyn-mirror-black/CF-UC10-FP-FY26-ai37_PE962763.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/lindbyn-mirror-black__1374978_pe960159_s5.jpg",
+   "itemNo": "80597232"
+  },
+  {
+   "id": "ikea-nissedal-mirror",
+   "name": "NISSEDAL mirror, 25 5/8x59 \", black",
+   "price": 99.99,
+   "category": "mirror",
+   "dims": [
+    65,
+    3,
+    150
+   ],
+   "color": "#f4f4f1",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/nissedal-mirror-black-50503777/",
+   "image": "https://www.ikea.com/us/en/images/products/nissedal-mirror-black__1343064_pe949298_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/nissedal-mirror-black__0637805_pe698601_s5.jpg",
+   "itemNo": "70320319"
+  },
+  {
+   "id": "ikea-stockholm-mirror",
+   "name": "STOCKHOLM mirror, 31 1/2 \", walnut veneer",
+   "price": 179.99,
+   "category": "mirror",
+   "dims": [
+    60,
+    3,
+    80
+   ],
+   "color": "#b89a5a",
+   "styles": [
+    "midcentury",
+    "modern-organic"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/stockholm-mirror-walnut-veneer-20503793/",
+   "image": "https://www.ikea.com/us/en/images/products/stockholm-mirror-walnut-veneer__0906306_pe658294_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/stockholm-mirror-walnut-veneer__0633570_pe695904_s5.jpg",
+   "itemNo": "60249960"
+  },
+  {
+   "id": "ikea-ikornnes-mirror",
+   "name": "IKORNNES floor mirror, 20 1/2x65 3/4 \", ash",
+   "price": 199.99,
+   "category": "mirror",
+   "dims": [
+    52,
+    4,
+    167
+   ],
+   "color": "#8b6844",
+   "styles": [
+    "modern-organic",
+    "japandi"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/ikornnes-floor-mirror-ash-90524042/",
+   "image": "https://www.ikea.com/us/en/images/products/ikornnes-floor-mirror-ash__0858773_pe658292_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/ikornnes-floor-mirror-ash__0633524_pe695900_s5.jpg",
+   "itemNo": "30298396"
+  },
+  {
+   "id": "ikea-rodalm-frame",
+   "name": "RÖDALM frame, 12x16 \", black",
+   "price": 11.99,
+   "category": "wall-art",
+   "dims": [
+    30,
+    3,
+    41
+   ],
+   "color": "#3d4042",
+   "styles": [
+    "scandinavian",
+    "midcentury"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/roedalm-frame-black-00548896/",
+   "image": "https://www.ikea.com/us/en/images/products/roedalm-frame-black__1298259_pe936159_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/roedalm-frame-black__1251233_pe924195_s5.jpg",
+   "itemNo": "20548918"
+  },
+  {
+   "id": "ikea-picture-canvas",
+   "name": "BLODFLÄDER picture, 46 ½x30 ¾ \", The Seine at Giverny",
+   "price": 99.99,
+   "category": "wall-art",
+   "dims": [
+    118,
+    3,
+    78
+   ],
+   "color": "#b7a58c",
+   "styles": [
+    "scandinavian",
+    "modern-organic",
+    "japandi"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/blodflaeder-picture-the-seine-at-giverny-20601915/",
+   "image": "https://www.ikea.com/us/en/images/products/blodflaeder-picture-the-seine-at-giverny__1416100_pe975444_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/blodflaeder-picture-the-seine-at-giverny__1392143_pe966004_s5.jpg",
+   "itemNo": "20601915"
+  },
+  {
+   "id": "ikea-pjatteryd-art",
+   "name": "PJÄTTERYD picture, set of 9, 70 ½x44 \", Mist in the forest",
+   "price": 119.99,
+   "category": "wall-art",
+   "dims": [
+    179,
+    3,
+    112
+   ],
+   "color": "#a6927a",
+   "styles": [
+    "modern-organic",
+    "japandi",
+    "midcentury"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/pjaetteryd-picture-set-of-9-mist-in-the-forest-90567970/",
+   "image": "https://www.ikea.com/us/en/images/products/pjaetteryd-picture-set-of-9-mist-in-the-forest__1212964_pe910859_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/pjaetteryd-picture-set-of-9-mist-in-the-forest__1193819_pe901646_s5.jpg",
+   "itemNo": "90567970"
+  },
+  {
+   "id": "ikea-bild-poster",
+   "name": "BILD poster, 12x16 \", sleeping by lights of the night",
+   "price": 7.99,
+   "category": "wall-art",
+   "dims": [
+    30,
+    1,
+    41
+   ],
+   "color": "#c9bfae",
+   "styles": [
+    "scandinavian",
+    "midcentury"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/bild-poster-sleeping-by-lights-of-the-night-90601974/",
+   "image": "https://www.ikea.com/us/en/images/products/bild-poster-sleeping-by-lights-of-the-night__1449851_pe990063_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/bild-poster-sleeping-by-lights-of-the-night__1385591_pe963367_s5.jpg",
+   "itemNo": "30601972"
+  },
+  {
+   "id": "ikea-knoppang-frame",
+   "name": "KNOPPÄNG frame with poster, 16x20 \", garden",
+   "price": 39.99,
+   "category": "wall-art",
+   "dims": [
+    41,
+    2,
+    51
+   ],
+   "color": "#ece8df",
+   "styles": [
+    "scandinavian",
+    "coastal"
+   ],
+   "placement": "wall",
+   "url": "https://www.ikea.com/us/en/p/knoppaeng-frame-with-poster-garden-00465773/",
+   "image": "https://www.ikea.com/us/en/images/products/knoppaeng-frame-with-poster-garden__0919782_ph168020_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/knoppaeng-frame-with-poster-garden__0771328_pe755690_s5.jpg",
+   "itemNo": "40465771"
+  },
+  {
+   "id": "ikea-nammaro-table",
+   "name": "NÄMMARÖ table, outdoor, 55 1/8x29 1/2 \", light brown stained",
+   "price": 199.99,
+   "category": "patio-table",
+   "dims": [
+    140,
+    75,
+    73
+   ],
+   "color": "#7a5a3c",
+   "styles": [
+    "coastal",
+    "modern-organic"
+   ],
+   "placement": "outdoor",
+   "url": "https://www.ikea.com/us/en/p/naemmaroe-table-outdoor-light-brown-stained-20510307/",
+   "image": "https://www.ikea.com/us/en/images/products/naemmaroe-table-outdoor-light-brown-stained__1191010_pe900388_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/naemmaroe-table-outdoor-light-brown-stained__1138751_pe880051_s5.jpg",
+   "itemNo": "20510307"
+  },
+  {
+   "id": "ikea-nammaro-chair",
+   "name": "NÄMMARÖ armchair, outdoor, light brown stained/Frösön/Duvholmen beige",
+   "price": 110.0,
+   "category": "patio-chair",
+   "dims": [
+    63,
+    69,
+    82
+   ],
+   "color": "#7a5a3c",
+   "styles": [
+    "coastal",
+    "modern-organic"
+   ],
+   "placement": "outdoor",
+   "url": "https://www.ikea.com/us/en/p/naemmaroe-armchair-outdoor-light-brown-stained-froesoen-duvholmen-beige-s29610265/",
+   "image": "https://www.ikea.com/us/en/images/products/naemmaroe-armchair-outdoor-light-brown-stained-froesoen-duvholmen-beige__1437399_pe984433_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/naemmaroe-armchair-outdoor-light-brown-stained-froesoen-duvholmen-beige__1437399_pe984433_s5.jpg",
+   "itemNo": "99607702"
+  },
+  {
+   "id": "ikea-nammaro-lounger",
+   "name": "NÄMMARÖ reclining chair, outdoor, light brown stained/Kuddarna light gray-beige",
+   "price": 125.0,
+   "category": "lounger",
+   "dims": [
+    66,
+    140,
+    90
+   ],
+   "color": "#7a5a3c",
+   "styles": [
+    "coastal"
+   ],
+   "placement": "outdoor",
+   "url": "https://www.ikea.com/us/en/p/naemmaroe-reclining-chair-outdoor-light-brown-stained-kuddarna-light-gray-beige-s89610253/",
+   "image": "https://www.ikea.com/us/en/images/products/naemmaroe-reclining-chair-outdoor-light-brown-stained-kuddarna-light-gray-beige__1437400_pe984434_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/naemmaroe-reclining-chair-outdoor-light-brown-stained-kuddarna-light-gray-beige__1437400_pe984434_s5.jpg",
+   "itemNo": "09607711"
+  },
+  {
+   "id": "ikea-brunsholmen-planter",
+   "name": "PERSILLADE plant pot, 9 ½ \", dark gray",
+   "price": 29.99,
+   "category": "planter",
+   "dims": [
+    40,
+    40,
+    38
+   ],
+   "color": "#cdbfa8",
+   "styles": [
+    "modern-organic",
+    "coastal"
+   ],
+   "placement": "outdoor",
+   "url": "https://www.ikea.com/us/en/p/persillade-plant-pot-dark-gray-10346765/",
+   "image": "https://www.ikea.com/us/en/images/products/persillade-plant-pot-dark-gray__0899426_pe725858_s5.jpg",
+   "cutout": "https://www.ikea.com/us/en/images/products/persillade-plant-pot-dark-gray__0439713_pe592235_s5.jpg",
+   "itemNo": "10346765"
+  }
+ ]
+}

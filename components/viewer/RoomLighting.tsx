@@ -154,7 +154,7 @@ export default function RoomLighting({ geometry }: { geometry: ModelGeometry | n
         shadow-camera-bottom={-span}
       />
       {floor && (
-        <mesh geometry={floor} position={[0, floorY + 0.006, 0]} receiveShadow renderOrder={1}>
+        <mesh geometry={floor} position={[0, floorY + 0.006, 0]} receiveShadow renderOrder={1} raycast={() => null /* never block clicks that walk */}>
           <shadowMaterial transparent opacity={0.2} depthWrite={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
         </mesh>
       )}

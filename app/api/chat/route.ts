@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     design: body.design ?? { items: [], surfaces: [], doors: [], themeId: null },
     imported: body.imported ?? [],
     lighting: body.lighting ?? { brightness: 1, warmth: 0 },
+    scenes: body.scenes,
   };
   if (body.suggestOnly) {
     try {

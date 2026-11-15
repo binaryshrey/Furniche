@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export function Logo({ className = '', name = 'Furniche' }: { className?: string; name?: string }) {
+export function Logo({ className = '', name = 'Furniche AI' }: { className?: string; name?: string }) {
   return (
     <Link href="/" className={`flex items-center gap-2 ${className}`} aria-label={`${name} home`}>
       <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden>

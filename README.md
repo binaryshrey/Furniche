@@ -58,6 +58,7 @@ npm install --legacy-peer-deps
 cp .env.example .env.local          # fill in the keys
 npx matterport-assets public/matterport-assets   # Matterport viewer files (not in git)
 python3 scripts/build_listings.py   # builds data/listings.json (Houston; --region la for LA)
+python3 scripts/build_ikea_catalog.py   # refreshes catalog/ikea-catalog.json from IKEA's search (optional)
 npm run dev                          # http://localhost:3000
 npm test
 ```

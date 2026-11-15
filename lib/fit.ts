@@ -7,6 +7,7 @@ export const FIT_RULES = {
   walkwayMin: 0.76,
   touchingTolerance: 0.05,
   overlapTolerance: 0.02,
+  chairTuck: 0.3, // how far a chair may slide under its table
   companionMin: 0.35, // e.g. sofa to coffee table
   doorClear: 0.9,
   wallTolerance: 0.02, // how far a piece may touch into a wall's thickness before it counts
@@ -126,7 +127,11 @@ export function checkFit(inputs: FitInput[], rooms: Room[], doors: DoorMark[] = 
       const sep = convexSeparation(footprint(a.item, a.product), footprint(b.item, b.product));
       if (sep > FIT_RULES.walkwayMin + 0.5) continue;
       const comp = companions(a.product.category, b.product.category);
-      if (sep < -FIT_RULES.overlapTolerance) {
+      // Chairs tuck under a table, and a mattress lies on its bed frame: those may overlap.
+      const pair = (x: Category[], y: Category[]) => (x.includes(a.product.category) && y.includes(b.product.category)) || (x.includes(b.product.category) && y.includes(a.product.category));
+      if (pair(['mattress'], ['bed'])) continue;
+      const tuck = pair(['dining-table', 'round-table', 'desk', 'patio-table'], ['dining-chair', 'office-chair', 'bar-stool', 'patio-chair']) ? FIT_RULES.chairTuck : FIT_RULES.overlapTolerance;
+      if (sep < -tuck) {
         add(a.item.uid, 'error', `Overlaps ${b.product.name.split(',')[0]}`);
         add(b.item.uid, 'error', `Overlaps ${a.product.name.split(',')[0]}`);
       } else if (comp) {
