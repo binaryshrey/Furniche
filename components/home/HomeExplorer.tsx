@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import BedsFilter from '@/components/home/BedsFilter';
 import LocationFilter from '@/components/home/LocationFilter';
 import PriceFilter, { NO_PRICE, inRange, type PriceRange } from '@/components/home/PriceFilter';
+import { useFinance } from '@/components/finance/useFinance';
 import { LogoMark } from '@/components/ui/Brand';
 import { Input } from '@/components/ui/input';
 import { toggleVariants } from '@/components/ui/toggle';
@@ -20,6 +21,7 @@ import { loadFavorites, saveFavorites } from '@/lib/favorites';
 import { useViewerState } from '@/lib/sceneBridge';
 import { useOnMesh } from '@/lib/coverage';
 import type { SearchResult } from '@/lib/search';
+import { VERDICT_LABEL, buyVerdict, ownCost, rentVerdict, usd, type Verdict } from '@/lib/homeFinance';
 
 // three.js and the tile streamer are browser-only.
 const SkyView = dynamic(() => import('@/components/sky/SkyView'), {
@@ -56,8 +58,11 @@ const MAX_PINS = 250;
 const thumb = (sid: string) => `https://my.matterport.com/api/v1/player/models/${sid}/thumb?width=640`;
 const median = (xs: number[]) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
+const VERDICT_DOT: Record<Verdict, string> = { comfortable: 'bg-ok', stretch: 'bg-warn', over: 'bg-bad' };
+
 function Card({
   r,
+  money,
   active,
   saved,
   onToggleSave,
@@ -66,6 +71,7 @@ function Card({
   onOpen,
 }: {
   r: SearchResult;
+  money?: { monthly: number; verdict: Verdict } | null; // with the mover's Capital One accounts
   active: boolean;
   saved: boolean; // the heart is filled
   onToggleSave: () => void;
@@ -102,6 +108,13 @@ function Card({
           <span className="font-semibold">{amount}</span> <span className="text-muted">{unit}</span>
         </div>
       </Link>
+      {money && (
+        <Link href={`/finance/${r.sid}`} className="mt-1 flex items-center gap-1.5 text-sm text-muted hover:text-ink" title="Costs, mortgage and move-in with Capital One">
+          <span className={`h-2 w-2 rounded-full ${VERDICT_DOT[money.verdict]}`} />
+          {!r.rent && <span className="num">≈ {usd(money.monthly)}/mo ·</span>}
+          {VERDICT_LABEL[money.verdict]} <span aria-hidden>›</span>
+        </Link>
+      )}
       <button
         type="button"
         onClick={onToggleSave}
@@ -202,11 +215,28 @@ export default function HomeExplorer({ initial, fly }: { initial: Response & { q
   }, [q, initial.q]);
 
   const available = useMemo(() => (data?.results ?? []).filter((r) => !broken.has(r.sid)), [data, broken]);
+  // What each listing would cost the mover a month, and whether they can afford it (Capital One).
+  const [fin] = useFinance();
+  const [affordable, setAffordable] = useState(false);
+  const moneyOf = useMemo(() => {
+    const seen = new Map<string, { monthly: number; verdict: Verdict } | null>();
+    return (r: SearchResult) => {
+      if (!fin || r.price == null) return null;
+      if (!seen.has(r.sid)) {
+        if (r.rent) seen.set(r.sid, { monthly: r.price, verdict: rentVerdict(fin.profile, r.price).verdict });
+        else {
+          const c = ownCost({ price: r.price, downPct: 0.1, ratePct: fin.rates.rate30, years: 30, lon: r.lon });
+          seen.set(r.sid, { monthly: c.monthly, verdict: buyVerdict(fin.profile, c).verdict });
+        }
+      }
+      return seen.get(r.sid)!;
+    };
+  }, [fin]);
   const prices = useMemo(() => available.map((r) => r.price).filter((p): p is number => p != null), [available]);
   // The Price and Beds tabs narrow whatever the current search returned.
   const results = useMemo(
-    () => available.filter((r) => inRange(r.price, price) && inBeds(r.beds, beds.range)),
-    [available, price, beds],
+    () => available.filter((r) => inRange(r.price, price) && inBeds(r.beds, beds.range) && (!affordable || (moneyOf(r)?.verdict ?? 'over') !== 'over')),
+    [available, price, beds, affordable, moneyOf],
   );
   const onMesh = useOnMesh();
   const inCity = useMemo(() => results.filter(onMesh).slice(0, MAX_PINS), [results, onMesh]);
@@ -425,6 +455,17 @@ export default function HomeExplorer({ initial, fly }: { initial: Response & { q
             <LocationFilter value={location} onApply={applyLocation} />
             <BedsFilter value={beds} onChange={setBeds} />
             <PriceFilter prices={prices} value={price} onChange={setPrice} />
+            {fin && (
+              <button
+                type="button"
+                aria-pressed={affordable}
+                onClick={() => setAffordable((a) => !a)}
+                title="Homes your Capital One accounts can cover: within budget or a stretch"
+                className={cn(toggleVariants({ variant: 'outline' }), 'shrink-0 rounded-full px-4', affordable && 'border-foreground bg-foreground font-semibold text-background')}
+              >
+                Affordable for me
+              </button>
+            )}
             {PILLS.slice(1).map((p) => (
               <ToggleGroupItem
                 key={p.q}
@@ -533,6 +574,7 @@ export default function HomeExplorer({ initial, fly }: { initial: Response & { q
               <Card
                 key={r.sid}
                 r={r}
+                money={moneyOf(r)}
                 active={hover === r.sid}
                 saved={favs.has(r.sid)}
                 onToggleSave={() => toggleFav(r.sid)}

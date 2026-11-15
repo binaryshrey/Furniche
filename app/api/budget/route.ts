@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server';
-import { demoBudget } from '@/lib/budget';
-import { checkout, getBudget, nessieAvailable, type CheckoutLine } from '@/lib/nessie';
+import { checkout, loadBudget, nessieAvailable, type CheckoutLine } from '@/lib/nessie';
 
 // GET /api/budget?planned=1234 → the mover's budget from Capital One Nessie (or demo data).
 export async function GET(req: Request) {
   const planned = Number(new URL(req.url).searchParams.get('planned')) || 0;
-  if (!nessieAvailable()) return NextResponse.json(demoBudget(planned));
-  try {
-    return NextResponse.json(await getBudget(planned));
-  } catch (e) {
-    console.error('[nessie]', (e as Error).message);
-    return NextResponse.json({ ...demoBudget(planned), error: 'Capital One sandbox unavailable; showing demo numbers.' });
-  }
+  return NextResponse.json(await loadBudget(planned));
 }
 
 // POST /api/budget { accountId, lines } → one Nessie purchase per store.

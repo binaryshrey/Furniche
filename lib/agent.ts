@@ -4,14 +4,14 @@ import { CATEGORY_LABEL, PRODUCTS, RETAILER_LABEL } from '@/catalog/products';
 import { MATERIALS, materialById } from '@/catalog/materials';
 import { THEMES } from '@/catalog/themes';
 import { swapped } from './alternatives';
-import { demoBudget, type MoveInBudget } from './budget';
+import type { MoveInBudget } from './budget';
 import { compactRoom, designTotal, fitToBudget, floorStats, furnishableRooms, issuesFor, optimizeRoom, placeFree, roomById, styleRoom, swapFor, type Ctx, type WorkDesign } from './designOps';
 import { productFitsRoom } from './fit';
 import { clampLight, LIGHT_PRESETS, type LightPrefs } from './lighting';
 import { clock, lightAt, momentTime, type SunMoment } from './sun';
 import { llmAvailable } from './llm';
 import { getModelGeometry } from './matterport';
-import { getBudget, nessieAvailable } from './nessie';
+import { loadBudget as loadMoverBudget } from './nessie';
 import { roomTypeOf, TEMPLATES } from './solver';
 import type { Category, Product, Room, ThemeId } from './types';
 
@@ -240,14 +240,7 @@ function describeDesign(ctx: Ctx, state: State, roomId: string | null): string {
 }
 
 async function loadBudget(state: State, ctx: Ctx): Promise<MoveInBudget> {
-  const planned = designTotal(state.design, ctx.products);
-  if (!nessieAvailable()) return demoBudget(planned);
-  try {
-    return await getBudget(planned);
-  } catch (e) {
-    console.error('[agent] nessie', (e as Error).message);
-    return demoBudget(planned);
-  }
+  return loadMoverBudget(designTotal(state.design, ctx.products));
 }
 
 function budgetText(b: MoveInBudget): string {

@@ -134,6 +134,11 @@ export default function Editor({ sid }: { sid: string }) {
             </Link>
           )}
           <PhoneRemote geometry={geometry} title={title} />
+          {listing && (
+            <Link href={`/finance/${sid}`} className="rounded-md px-2 py-1 hover:bg-card">
+              {listing.kind === 'home' ? 'Afford & mortgage' : 'Afford it'}
+            </Link>
+          )}
           <Link href="/cart" className="rounded-md px-2 py-1 hover:bg-card">
             Cart{cartTotal > 0 ? ` · ${fmtUsd(cartTotal)}` : ''}
           </Link>
