@@ -26,3 +26,27 @@ export function warmthColor(warmth: number): string {
   const [a, b, t] = warmth < 0 ? [neutral, cool, -warmth] : [neutral, warm, warmth];
   return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
+
+// Named looks, far enough apart to read at a glance.
+export const LIGHT_PRESETS = {
+  evening: { brightness: 0.7, warmth: 0.9 }, // low, amber lamp light
+  daylight: { brightness: 1.35, warmth: -0.7 }, // bright, cool window light
+  neutral: { brightness: 1, warmth: 0 },
+} satisfies Record<string, LightPrefs>;
+
+// CSS grade for the whole tour. null at neutral light (no overlay at all).
+export function gradeFor({ brightness, warmth }: LightPrefs): { filter: string; tint: string; blend: 'multiply' | 'screen' } | null {
+  if (Math.abs(brightness - 1) < 0.02 && Math.abs(warmth) < 0.02) return null;
+  const warm = Math.max(0, warmth);
+  const cool = Math.max(0, -warmth);
+  const filter = [
+    `brightness(${(0.5 + 0.5 * brightness).toFixed(3)})`,
+    `saturate(${(1 + 0.3 * warm - 0.1 * cool).toFixed(3)})`,
+    `sepia(${(0.35 * warm).toFixed(3)})`,
+    `hue-rotate(${(-6 * warm + 10 * cool).toFixed(1)}deg)`,
+    `contrast(${(1 + 0.06 * warm + 0.04 * cool).toFixed(3)})`,
+  ].join(' ');
+  return warm > 0
+    ? { filter, tint: `rgba(255, 128, 40, ${(0.24 * warm).toFixed(3)})`, blend: 'multiply' } // amber dusk
+    : { filter, tint: `rgba(175, 210, 255, ${(0.16 * cool).toFixed(3)})`, blend: 'screen' }; // airy daylight
+}

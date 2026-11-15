@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { CategoryCarousel, CategoryGrid, FURNITURE_GROUPS } from '@/components/assistant/FurnitureCarousel';
 import WallsFloorTab from '@/components/assistant/WallsFloorTab';
 import DesignPanel from '@/components/design/DesignPanel';
-import StylistBox from '@/components/design/StylistBox';
 import { fmtUsd } from '@/components/shop/ShopPanel';
 import type { WorkDesign } from '@/lib/designOps';
 import { useLighting, type LightPrefs } from '@/lib/lighting';
 import { useViewerState } from '@/lib/sceneBridge';
-import { showcaseRoom, stopShowcase } from '@/lib/showcase';
+import { autoFurnishAll } from '@/lib/autoFurnishAll';
+import { lookAt } from '@/lib/showcase';
+import { usePanel } from '@/lib/uiState';
 import { useDesign, useStore } from '@/lib/store';
 import type { Design, ModelGeometry, Product } from '@/lib/types';
 import BudgetStrip, { useBudget } from './BudgetStrip';
@@ -27,17 +28,19 @@ type Msg = {
   before?: Before | null;
   undone?: boolean;
 };
-type Tab = 'chat' | 'furnish' | 'furniture' | 'finishes' | 'design';
+type Tab = 'chat' | 'furniture' | 'finishes' | 'design';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'chat', label: 'Chat', icon: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' },
-  { id: 'furnish', label: 'Furnish', icon: 'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z' },
   { id: 'furniture', label: 'Furniture', icon: 'M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3M3 12h18v4H3zM5 16v2M19 16v2' },
   { id: 'finishes', label: 'Walls & floor', icon: 'M4 4h12v5H4zM16 6.5h3v5h-7v3M11 14.5h2v6h-2z' },
   { id: 'design', label: 'My design', icon: 'M4 6h16M4 12h16M4 18h10' },
 ];
 
-const STARTERS = ['What can I afford?', 'Furnish this room under $2,500', 'Make this room feel bigger', 'Warmer evening light'];
+const AUTO = 'Auto-furnish every room';
+const STARTERS = [AUTO, 'What can I afford?', 'Make this room feel bigger', 'Warmer evening light'];
+const AUTO_RE = /\bauto[- ]?furnish|furnish (the )?(whole|entire|every|all)|furnish everything/i;
+const SPARK = 'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z';
 
 const mid = () => Math.random().toString(36).slice(2, 10);
 
@@ -60,7 +63,8 @@ function apply(out: { design?: WorkDesign | null; lighting?: LightPrefs | null }
   const cur = useStore.getState().design();
   const { brightness, warmth } = useLighting.getState();
   const before: Before = { design: cur, lighting: { brightness, warmth } };
-  if (out.design) useStore.getState().loadDesign({ ...cur, ...out.design, updatedAt: new Date().toISOString() });
+  // Pieces the chat adds or moves stay movable.
+  if (out.design) useStore.getState().loadDesign({ ...cur, ...out.design, locked: false, updatedAt: new Date().toISOString() });
   if (out.lighting) useLighting.getState().set(out.lighting);
   return before;
 }
@@ -70,7 +74,7 @@ function apply(out: { design?: WorkDesign | null; lighting?: LightPrefs | null }
 // and the stylist, a furniture carousel per category, walls and floor, and the design list.
 export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>('furnish');
+  const [tab, setTab] = useState<Tab>('chat');
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -79,7 +83,6 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   const [starters, setStarters] = useState<string[]>(STARTERS);
   const [seeAll, setSeeAll] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [showing, setShowing] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const design = useDesign();
   const roomId = useViewerState((s) => s.currentRoomId);
@@ -95,6 +98,8 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   useEffect(() => {
     if (tab !== 'chat') listRef.current?.scrollTo({ top: 0 });
   }, [tab, seeAll]);
+
+  useEffect(() => usePanel.getState().setOpen(open), [open]);
 
   useEffect(() => {
     if (!toast) return;
@@ -150,32 +155,43 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
     };
   }, [photon]);
 
-  // Any click in the tour while it is showing off a room hands the camera back to the visitor.
-  useEffect(() => {
-    if (!showing) return;
-    const stop = () => (stopShowcase(), setShowing(null));
-    window.addEventListener('pointerdown', stop, { once: true });
-    return () => window.removeEventListener('pointerdown', stop);
-  }, [showing]);
-
-  // After Auto-furnish: close the panel and turn the camera toward the new furniture.
-  async function showOff(roomIds: string[]) {
+  // Bring a room (or one piece) into view from where a visitor would stand. No spinning.
+  async function frame(roomIdToShow: string, opts: { target?: { x: number; y: number }; back?: number } = {}) {
+    // Wait (up to 20 s) for the tour to be showing a room; moving the camera earlier is ignored.
+    for (let t = 0; t < 40 && !useViewerState.getState().showingRoom; t++) await new Promise((r) => setTimeout(r, 500));
     const sdk = useViewerState.getState().sdk;
-    if (!geometry || !sdk || !roomIds.length) return;
-    const items = useStore.getState().design().items;
-    const target = roomIds.includes(roomId ?? '') ? roomId! : [...roomIds].sort((a, b) => items.filter((i) => i.roomId === b).length - items.filter((i) => i.roomId === a).length)[0];
-    const label = geometry.rooms.find((r) => r.id === target)?.label ?? 'room';
-    setOpen(false);
-    setShowing(label);
+    if (!geometry || !sdk) return;
     const { moveToPano } = await import('@/components/viewer/MatterportHost');
-    const products = new Map(useStore.getState().products().map((p) => [p.id, p]));
-    await new Promise((r) => setTimeout(r, 150)); // let the click that started this settle first
-    await showcaseRoom({ sdk, geometry, roomId: target, items, products, moveToPano: (s, id) => moveToPano(s, id) });
-    setShowing(null);
+    // The open panel covers the right of the view, so aim a little right to keep the pieces in the clear part.
+    await lookAt({ sdk, geometry, roomId: roomIdToShow, items: useStore.getState().design().items, moveToPano: (s, id) => moveToPano(s, id), yawOffset: usePanel.getState().open ? 22 : 0, ...opts });
+  }
+
+  // Auto-furnish from the chat: furnish every room, report it like any reply (with Undo), then
+  // move the camera to the furnished room you're in (or the fullest one) facing the new pieces.
+  function runAutoFurnish(message: string) {
+    if (!geometry) return;
+    setTab('chat');
+    const before: Before = { design: useStore.getState().design(), lighting: { ...useLighting.getState() } };
+    const res = autoFurnishAll(geometry);
+    const user: Msg = { id: mid(), role: 'user', text: message, channel: 'web' };
+    if (!res) {
+      setMsgs((m) => [...m, user, { id: mid(), role: 'assistant', text: 'I could not find a room to furnish in this scan.', channel: 'web' }]);
+      return;
+    }
+    const items = useStore.getState().design().items;
+    const target = res.rooms.includes(roomId ?? '') ? roomId! : [...res.rooms].sort((a, b) => items.filter((i) => i.roomId === b).length - items.filter((i) => i.roomId === a).length)[0];
+    const label = geometry.rooms.find((r) => r.id === target)?.label.toLowerCase() ?? 'room';
+    const text = `${res.summary}${res.dropped.length ? ` Left out to keep the rooms open: ${res.dropped.slice(0, 3).join(', ')}${res.dropped.length > 3 ? ` and ${res.dropped.length - 3} more` : ''}.` : ''} Showing you the ${label}.`;
+    setMsgs((m) => [...m, user, { id: mid(), role: 'assistant', text, channel: 'web', actions: res.rooms.map((id) => `Furnished ${geometry.rooms.find((r) => r.id === id)?.label ?? 'room'}`), suggestions: ['What can I afford?', 'Make this room feel bigger', `Paint the walls to match`, 'Swap the sofa for something cheaper'], before }]);
+    frame(target);
   }
 
   async function send(message: string) {
     if (!message.trim() || busy) return;
+    if (AUTO_RE.test(message)) {
+      setText('');
+      return runAutoFurnish(message);
+    }
     setTab('chat');
     const history = msgs.filter((m) => m.channel === 'web').map((m) => ({ role: m.role, text: m.text }));
     setMsgs((m) => [...m, { id: mid(), role: 'user', text: message, channel: 'web' }]);
@@ -206,11 +222,19 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   }
 
   function added(p: Product, placed: boolean) {
-    if (placed) setToast(`${p.name.split(',')[0]} added to the ${room?.label.toLowerCase() ?? 'room'}`);
+    // Added pieces are always movable: unlock the furniture; the new piece is already selected.
+    useStore.getState().setLocked(false);
+    if (placed) setToast(`${p.name.split(',')[0]} added. Drag it to move, drag ↻ to rotate`);
     else {
       setToast(`Click the floor where the ${p.name.split(',')[0]} should go`);
       setOpen(false);
     }
+  }
+
+  // Picking a piece in My design selects it and brings it into view.
+  function focusPiece(uid: string) {
+    const it = useStore.getState().design().items.find((i) => i.uid === uid);
+    if (it?.roomId) frame(it.roomId, { target: { x: it.pos.x, y: it.pos.y }, back: 1.8 });
   }
 
   const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
@@ -235,6 +259,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
     <>
       {!open && (
         <button
+          data-fn-ui
           onClick={() => (setOpen(true), setUnread(0))}
           className="absolute right-4 top-4 z-40 flex items-center gap-2 rounded-full btn-brand px-4 py-2.5 text-sm font-semibold shadow-swatch"
           aria-label="Open Ask Furniche"
@@ -248,15 +273,10 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
         </button>
       )}
 
-      {showing && (
-        <div className="pointer-events-none absolute bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-full border border-line bg-paper/90 px-4 py-2 text-xs shadow-swatch backdrop-blur">
-          Showing your {showing.toLowerCase()} · click anywhere to take over
-        </div>
-      )}
-      {toast && <div className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper shadow-swatch">{toast}</div>}
+      {toast && <div data-fn-ui className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper shadow-swatch">{toast}</div>}
 
       {open && (
-        <section className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-line bg-paper/95 shadow-swatch backdrop-blur" aria-label="Ask Furniche">
+        <section data-fn-ui className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-paper/55 shadow-swatch backdrop-blur-[2px] [text-shadow:0_1px_2px_rgba(0,0,0,.45)]" aria-label="Ask Furniche">
           <header className="flex items-center gap-2 border-b border-line px-4 py-3">
             <h2 className="font-display text-base font-semibold">Ask Furniche</h2>
             {photon && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10px] text-ok">iMessage on</span>}
@@ -287,6 +307,16 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
           <div ref={listRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto p-4">
             {tab === 'chat' && (
               <div className="space-y-2">
+                <button
+                  onClick={() => runAutoFurnish(AUTO)}
+                  disabled={!geometry}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl btn-brand px-3 py-2.5 text-sm font-semibold disabled:opacity-40"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d={SPARK} />
+                  </svg>
+                  Auto-furnish every room
+                </button>
                 {msgs.length === 0 && (
                   <p className="text-xs text-muted">
                     Tell me what to change and I’ll do it in the room: add or swap pieces, paint, flooring, lighting, more open space, or fit it all within your Capital One budget.
@@ -295,7 +325,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
                 )}
                 {msgs.map((m) => (
                   <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
-                    <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-white' : 'bg-card'} ${m.undone ? 'opacity-60' : ''}`}>
+                    <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-white' : 'bg-card/75'} ${m.undone ? 'opacity-60' : ''}`}>
                       {m.channel === 'imessage' && <div className={`mb-0.5 text-[10px] ${m.role === 'user' ? 'text-white/80' : 'text-muted'}`}>{m.role === 'user' ? `iMessage · ${m.from}` : 'Replied on iMessage'}</div>}
                       <p className="whitespace-pre-wrap">{m.text}</p>
                       {!!m.actions?.length && (
@@ -318,13 +348,6 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
               </div>
             )}
 
-            {tab === 'furnish' && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted">Auto-furnish fills every room with pieces that fit, then turns the camera to show you the result. Or describe a look for the room you’re in.</p>
-                <StylistBox geometry={geometry} roomId={roomId} onFurnished={showOff} />
-              </div>
-            )}
-
             {tab === 'furniture' &&
               (group ? (
                 <CategoryGrid group={group} room={room} geometry={geometry} onBack={() => setSeeAll(null)} onAdded={added} />
@@ -341,7 +364,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
 
             {tab === 'design' && (
               <div className="space-y-3">
-                <DesignPanel geometry={geometry} embedded />
+                <DesignPanel geometry={geometry} embedded onPick={focusPiece} />
                 <Link href="/cart" className="block w-full rounded-lg btn-brand px-4 py-2.5 text-center text-sm font-medium">
                   Review cart · {fmtUsd(planned)}
                 </Link>
@@ -353,7 +376,10 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
             <>
               <div className="flex flex-wrap gap-1.5 border-t border-line px-3 py-2" aria-label="Suggested next steps">
                 {lastAssistant?.before && !lastAssistant.undone && <Chip label="Undo" tone="undo" onClick={() => undo(lastAssistant)} />}
-                {(lastAssistant?.suggestions?.length ? lastAssistant.suggestions : starters).map((s) => (
+                {(() => {
+                  const list = lastAssistant?.suggestions?.length ? lastAssistant.suggestions : starters;
+                  return design.items.length || list.includes(AUTO) ? list : [AUTO, ...list].slice(0, 4);
+                })().map((s) => (
                   <Chip key={s} label={s} onClick={() => send(s === 'Try again' && lastUser ? lastUser.text : s)} />
                 ))}
               </div>

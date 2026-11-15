@@ -2,6 +2,7 @@
 import { useMemo } from 'react';
 import { alternatives } from '@/lib/alternatives';
 import { useDesign, useProducts, useStore } from '@/lib/store';
+import { usePanel } from '@/lib/uiState';
 import type { ModelGeometry } from '@/lib/types';
 import ProductSwatch from '../shop/ProductSwatch';
 import { fmtUsd } from '../shop/ShopPanel';
@@ -10,6 +11,7 @@ import { fmtUsd } from '../shop/ShopPanel';
 // already checked to fit where it stands, from cheaper to premium.
 export default function SwapCard({ geometry }: { geometry: ModelGeometry | null }) {
   const selected = useStore((s) => s.selectedUid);
+  const panelOpen = usePanel((s) => s.open);
   const design = useDesign();
   const products = useProducts();
   const item = design.items.find((i) => i.uid === selected) ?? null;
@@ -27,7 +29,15 @@ export default function SwapCard({ geometry }: { geometry: ModelGeometry | null 
   const close = () => useStore.getState().select(null);
 
   return (
-    <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-line bg-paper/95 p-3 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur sm:left-auto sm:right-3 sm:w-[min(640px,calc(100%-24px))]">
+    // data-fn-ui: presses here are for the card, not the 3D scene (see ArrangeOverlay), so Remove
+    // and Replace receive their clicks instead of the press deselecting the piece first.
+    <div
+      data-fn-ui
+      className={`absolute bottom-3 z-50 rounded-2xl border border-white/10 bg-paper/55 p-3 shadow-[0_8px_30px_rgba(0,0,0,0.5)] backdrop-blur-[2px] [text-shadow:0_1px_2px_rgba(0,0,0,.45)] ${
+        // Keep clear of the Ask Furniche panel (440px wide on the right) while it is open.
+        panelOpen ? 'left-3 right-3 sm:right-[464px]' : 'inset-x-3 sm:left-auto sm:right-3 sm:w-[min(640px,calc(100%-24px))]'
+      }`}
+    >
       <div className="mb-2 flex items-center gap-3">
         <ProductSwatch product={current} size={40} />
         <div className="min-w-0 flex-1">
@@ -38,7 +48,7 @@ export default function SwapCard({ geometry }: { geometry: ModelGeometry | null 
         </div>
         <button
           onClick={() => useStore.getState().removeItem(item.uid)}
-          className="rounded-full border border-line px-3 py-1 text-xs hover:border-ink/40"
+          className="rounded-full border border-bad/50 px-3 py-1 text-xs text-bad hover:bg-bad/10"
         >
           Remove
         </button>
@@ -53,7 +63,7 @@ export default function SwapCard({ geometry }: { geometry: ModelGeometry | null 
             <button
               key={o.product.id}
               onClick={() => useStore.getState().swapItem(item.uid, o.item)}
-              className="group flex flex-col rounded-xl border border-line bg-card p-2 text-left transition hover:border-brand"
+              className="group flex flex-col rounded-xl border border-white/10 bg-card/50 p-2 text-left transition hover:border-brand"
             >
               <div className="relative">
                 <ProductSwatch product={o.product} size={128} />

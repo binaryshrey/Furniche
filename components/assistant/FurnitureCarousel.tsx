@@ -75,7 +75,7 @@ export function CategoryCarousel({
 
   return (
     <section
-      className="rounded-2xl border border-line bg-card p-4"
+      className="rounded-2xl border border-white/10 bg-card/50 p-4"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       aria-roledescription="carousel"
@@ -199,7 +199,7 @@ export function CategoryGrid({ group, room, geometry, onBack, onAdded }: { group
         {rows.map((p) => {
           const fits = room ? productFitsRoom(p, room) : true;
           return (
-            <li key={p.id} className="flex flex-col rounded-xl border border-line bg-paper p-2">
+            <li key={p.id} className="flex flex-col rounded-xl border border-white/10 bg-paper/50 p-2">
               <ProductSwatch product={p} size={140} />
               <div className="mt-1.5 line-clamp-2 text-xs font-medium leading-tight">{p.name.split(',')[0]}</div>
               <div className="mt-0.5 flex items-baseline justify-between text-[11px] text-muted">

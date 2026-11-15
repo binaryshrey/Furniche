@@ -9,6 +9,7 @@ import { useStore } from '@/lib/store';
 import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
+import LightGrade from './viewer/LightGrade';
 import ChatPanel from './chat/ChatPanel';
 import PlanView from './plan/PlanView';
 import { fmtUsd } from './shop/ShopPanel';
@@ -45,6 +46,22 @@ export default function Editor({ sid }: { sid: string }) {
         if (d?.sid === sid) useStore.getState().loadDesign(d);
       } catch {
         /* ignore bad links */
+      }
+    } else {
+      // A home opens empty: no furniture until the shopper asks for it (chat, Auto-furnish, Add to
+      // room) or turns on the seller's furniture. Within one browser session the design is kept,
+      // so coming back from the cart still shows what was placed.
+      const key = `furniche:opened:${sid}`;
+      let seen = false;
+      try {
+        seen = sessionStorage.getItem(key) === '1';
+        sessionStorage.setItem(key, '1');
+      } catch {
+        /* storage blocked: start empty every time */
+      }
+      if (!seen) {
+        const cur = useStore.getState().design();
+        useStore.getState().loadDesign({ ...cur, items: [], surfaces: [], locked: false, updatedAt: new Date().toISOString() });
       }
     }
     fetch(`/api/models/${sid}`)
@@ -178,6 +195,7 @@ export default function Editor({ sid }: { sid: string }) {
             {error && <div className="absolute inset-0 z-20 flex items-center justify-center text-sm text-bad">{error}</div>}
             <div className={view === '3d' ? 'absolute inset-0' : 'invisible absolute inset-0'}>
               <MatterportHost sid={sid} geometry={geometry} />
+              <LightGrade />
               <ArrangeOverlay geometry={geometry} />
               <SwapCard geometry={geometry} />
               <TourCover sid={sid} />

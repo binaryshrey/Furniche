@@ -93,7 +93,7 @@ export default function WallsFloorTab({ geometry, room }: { geometry: ModelGeome
       <Group title="Flooring" kinds={['floor']} target="floor" />
 
       {lines.length > 0 && (
-        <section className="rounded-xl border border-line bg-paper p-3 text-xs">
+        <section className="rounded-xl border border-white/10 bg-paper/50 p-3 text-xs">
           <h4 className="eyebrow mb-1.5">What to buy</h4>
           <ul className="space-y-1">
             {lines.map((l) => (

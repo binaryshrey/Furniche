@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PRODUCTS } from '@/catalog/products';
 import { demoBudget, moveInBudget } from './budget';
 import { compactRoom, designTotal, fitToBudget, floorStats, issuesFor, optimizeRoom, placeFree, styleRoom, swapFor, type Ctx, type WorkDesign } from './designOps';
-import { warmthColor, clampLight } from './lighting';
+import { warmthColor, clampLight, gradeFor, LIGHT_PRESETS } from './lighting';
 import type { ModelGeometry, Room } from './types';
 
 const rect = (id: string, label: string, w: number, d: number): Room => ({
@@ -134,5 +134,15 @@ describe('lighting', () => {
     expect(clampLight({ brightness: 5, warmth: -3 }, { brightness: 1, warmth: 0 })).toEqual({ brightness: 2, warmth: -1 });
     expect(warmthColor(0)).toBe('#fffaf0');
     expect(warmthColor(1)).toBe('#ffc88a');
+  });
+
+  it('grades evening and daylight very differently, and leaves neutral alone', () => {
+    expect(gradeFor(LIGHT_PRESETS.neutral)).toBeNull();
+    const eve = gradeFor(LIGHT_PRESETS.evening)!;
+    const day = gradeFor(LIGHT_PRESETS.daylight)!;
+    expect(eve.blend).toBe('multiply');
+    expect(day.blend).toBe('screen');
+    const b = (f: string) => Number(f.match(/brightness\(([\d.]+)\)/)![1]);
+    expect(b(day.filter) - b(eve.filter)).toBeGreaterThan(0.3);
   });
 });
