@@ -38,10 +38,12 @@ export function TopNav({
   right,
   name,
   home = false,
+  accountHref,
 }: {
   right?: React.ReactNode;
   name?: string;
   home?: boolean;
+  accountHref?: string; // replaces the Cart link with "My Account", opened in a new tab
 }) {
   const link = "rounded-full px-3 py-2 transition hover:bg-card";
   if (home) {
@@ -69,9 +71,20 @@ export function TopNav({
         <Link href="/boards" className={link}>
           Looks
         </Link>
-        <Link href="/cart" className={link}>
-          Cart
-        </Link>
+        {accountHref ? (
+          <a
+            href={accountHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={link}
+          >
+            My Account
+          </a>
+        ) : (
+          <Link href="/cart" className={link}>
+            Cart
+          </Link>
+        )}
         {right}
       </nav>
     </header>
