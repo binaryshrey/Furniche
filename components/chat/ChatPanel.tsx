@@ -138,6 +138,28 @@ export default function ChatPanel({
 
   useEffect(() => usePanel.getState().setOpen(open), [open]);
 
+  // The phone remote (components/remote/PhoneRemote.tsx) talks to the chat through window events:
+  // "fn-chat" sends a message as if typed here, "fn-frame" shows off the room you're in. Replies go
+  // back out as "fn-chat-reply" so the phone can show them.
+  const remoteRef = useRef({ send, frame });
+  remoteRef.current = { send, frame };
+  useEffect(() => {
+    const onChat = (e: Event) => {
+      const text = String((e as CustomEvent<string>).detail ?? '').trim();
+      if (text) remoteRef.current.send(text);
+    };
+    const onFrame = () => {
+      const r = useViewerState.getState().currentRoomId;
+      if (r) remoteRef.current.frame(r);
+    };
+    window.addEventListener('fn-chat', onChat);
+    window.addEventListener('fn-frame', onFrame);
+    return () => {
+      window.removeEventListener('fn-chat', onChat);
+      window.removeEventListener('fn-frame', onFrame);
+    };
+  }, []);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2600);
@@ -304,6 +326,7 @@ export default function ChatPanel({
         before,
       },
     ]);
+    window.dispatchEvent(new CustomEvent('fn-chat-reply', { detail: { text, suggestions: ['What can I afford?', 'Make this room feel bigger', 'Warmer evening light'] } }));
     frame(target);
   }
 
@@ -332,6 +355,7 @@ export default function ChatPanel({
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? "The assistant is unavailable.");
       const before = apply(j);
+      window.dispatchEvent(new CustomEvent('fn-chat-reply', { detail: { text: j.reply, suggestions: j.suggestions ?? [] } }));
       setMsgs((m) => [
         ...m,
         {
