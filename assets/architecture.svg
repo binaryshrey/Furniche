@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1780" height="1160" viewBox="0 0 1780 1160"><rect width="100%" height="100%" fill="white"/>
+<defs><marker id="m" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#495057"/></marker></defs>
+<rect x="314" y="120" width="300" height="780" rx="14" fill="#f8f9fa" fill-opacity="0.6" stroke="#1971c2" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="330" y="180" width="268" height="84" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="330" y="296" width="268" height="84" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="330" y="412" width="268" height="84" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="330" y="528" width="268" height="84" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="330" y="644" width="268" height="84" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="330" y="760" width="268" height="84" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="40" y="465" width="210" height="90" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1e1e1e" stroke-width="2"/>
+<rect x="674" y="120" width="330" height="780" rx="14" fill="#f8f9fa" fill-opacity="0.6" stroke="#2f9e44" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="690" y="180" width="298" height="100" rx="14" fill="#d3f9d8" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="690" y="320" width="298" height="100" rx="14" fill="#d3f9d8" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="690" y="460" width="298" height="100" rx="14" fill="#d3f9d8" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="690" y="600" width="298" height="100" rx="14" fill="#d3f9d8" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="690" y="740" width="298" height="100" rx="14" fill="#d3f9d8" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="1034" y="120" width="330" height="780" rx="14" fill="#f8f9fa" fill-opacity="0.6" stroke="#e8590c" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="1050" y="170" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1050" y="270" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1050" y="370" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1050" y="470" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1050" y="570" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1050" y="670" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1050" y="770" width="298" height="78" rx="14" fill="#ffe8cc" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1440" y="170" width="300" height="78" rx="14" fill="#a5d8ff" fill-opacity="1.0" stroke="#1971c2" stroke-width="2"/>
+<rect x="1440" y="270" width="300" height="78" rx="14" fill="#b2f2bb" fill-opacity="1.0" stroke="#2f9e44" stroke-width="2"/>
+<rect x="1440" y="370" width="300" height="78" rx="14" fill="#ffd8a8" fill-opacity="1.0" stroke="#e8590c" stroke-width="2"/>
+<rect x="1440" y="470" width="300" height="78" rx="14" fill="#ffc9c9" fill-opacity="1.0" stroke="#e03131" stroke-width="2"/>
+<rect x="1440" y="570" width="300" height="78" rx="14" fill="#ffec99" fill-opacity="1.0" stroke="#f08c00" stroke-width="2"/>
+<rect x="1440" y="670" width="300" height="78" rx="14" fill="#d0bfff" fill-opacity="1.0" stroke="#6741d9" stroke-width="2"/>
+<rect x="1440" y="770" width="300" height="78" rx="14" fill="#99e9f2" fill-opacity="1.0" stroke="#0c8599" stroke-width="2"/>
+<rect x="1050" y="940" width="298" height="96" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1e1e1e" stroke-width="2" stroke-dasharray="8 6"/>
+<rect x="1440" y="940" width="300" height="96" rx="14" fill="#ffffff" fill-opacity="1.0" stroke="#1e1e1e" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="40" y="52.3" font-family="Helvetica,Arial" font-size="34" fill="#1e1e1e" text-anchor="start">FurNiche AI: architecture</text>
+<text x="40" y="83.1" font-family="Helvetica,Arial" font-size="18" fill="#495057" text-anchor="start">Try the real product in the real room, then check the fit and the budget.</text>
+<text x="330" y="150.9" font-family="Helvetica,Arial" font-size="22" fill="#1971c2" text-anchor="start">Next.js 14 app (Vercel)</text>
+<text x="464.0" y="217.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Home / search</text>
+<text x="464.0" y="237.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Vexcel aerial map + list</text>
+<text x="464.0" y="333.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">3D city  /sky</text>
+<text x="464.0" y="353.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">fly-in over Houston</text>
+<text x="464.0" y="449.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Editor  /space/[sid]</text>
+<text x="464.0" y="469.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">scan + furniture + plan</text>
+<text x="464.0" y="565.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Cart  /cart</text>
+<text x="464.0" y="585.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">swipe to pay</text>
+<text x="464.0" y="681.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Bank  /bank</text>
+<text x="464.0" y="701.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">balances, spending, health</text>
+<text x="464.0" y="797.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Phone remote  /remote</text>
+<text x="464.0" y="817.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">QR code, same Wi-Fi</text>
+<text x="145.0" y="504.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Mover</text>
+<text x="145.0" y="527.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">browser or phone</text>
+<text x="690" y="150.9" font-family="Helvetica,Arial" font-size="22" fill="#2f9e44" text-anchor="start">In the browser</text>
+<text x="839.0" y="225.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Matterport host + r3f overlay</text>
+<text x="839.0" y="245.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">furniture, art, mirrors, paint</text>
+<text x="839.0" y="365.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Scan sensing</text>
+<text x="839.0" y="385.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">doors, windows, counters</text>
+<text x="839.0" y="505.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Solver + fit check</text>
+<text x="839.0" y="525.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">auto-furnish, walkways, doors</text>
+<text x="839.0" y="645.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">3D city renderer</text>
+<text x="839.0" y="665.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">3d-tiles-renderer on three.js</text>
+<text x="839.0" y="785.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Design state (zustand)</text>
+<text x="839.0" y="805.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">share link carries the design</text>
+<text x="1050" y="150.9" font-family="Helvetica,Arial" font-size="22" fill="#e8590c" text-anchor="start">Server routes (Next.js API)</text>
+<text x="1199.0" y="204.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/models</text>
+<text x="1199.0" y="224.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">floor plans by model id</text>
+<text x="1199.0" y="304.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/vexcel</text>
+<text x="1199.0" y="324.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">tiles, parcel, 3D coverage</text>
+<text x="1199.0" y="404.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/stylist  /api/chat</text>
+<text x="1199.0" y="424.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Claude picks and chats</text>
+<text x="1199.0" y="504.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/budget  /api/bank</text>
+<text x="1199.0" y="524.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Nessie accounts, purchases</text>
+<text x="1199.0" y="604.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/photo3d</text>
+<text x="1199.0" y="624.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">photo to 3D model</text>
+<text x="1199.0" y="704.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/photon</text>
+<text x="1199.0" y="724.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">iMessage polling</text>
+<text x="1199.0" y="804.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">/api/product-image</text>
+<text x="1199.0" y="824.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">photo proxy, allowlist</text>
+<text x="1590.0" y="203.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Matterport</text>
+<text x="1590.0" y="226.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Model API + Showcase SDK</text>
+<text x="1590.0" y="303.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Vexcel</text>
+<text x="1590.0" y="326.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">property API, ortho, 3D Tiles</text>
+<text x="1590.0" y="403.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Anthropic Claude</text>
+<text x="1590.0" y="426.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">stylist, chat, sizes</text>
+<text x="1590.0" y="503.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Capital One Nessie</text>
+<text x="1590.0" y="526.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">sandbox accounts + purchases</text>
+<text x="1590.0" y="603.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Hugging Face Spaces</text>
+<text x="1590.0" y="626.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Stable Fast 3D, TRELLIS</text>
+<text x="1590.0" y="703.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">Photon</text>
+<text x="1590.0" y="726.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">iMessage line</text>
+<text x="1590.0" y="803.6" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">IKEA</text>
+<text x="1590.0" y="826.1" font-family="Helvetica,Arial" font-size="18" fill="#1e1e1e" text-anchor="middle">catalogue + product photos</text>
+<text x="1199.0" y="983.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Build: prebuild</text>
+<text x="1199.0" y="1003.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">fetch data/, copy viewer files</text>
+<text x="1590.0" y="983.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">Vercel Blob (private)</text>
+<text x="1590.0" y="1003.2" font-family="Helvetica,Arial" font-size="16" fill="#1e1e1e" text-anchor="middle">data/ from the CoStar kit</text>
+<text x="40" y="961.2" font-family="Helvetica,Arial" font-size="16" fill="#495057" text-anchor="start">Dashed boxes run at build time.</text>
+<text x="40" y="981.2" font-family="Helvetica,Arial" font-size="16" fill="#495057" text-anchor="start">The browser also loads the Matterport viewer</text>
+<text x="40" y="1001.2" font-family="Helvetica,Arial" font-size="16" fill="#495057" text-anchor="start">and Vexcel tiles directly (tiles via our proxy).</text>
+<line x1="250" y1="510.0" x2="314" y2="510.0" stroke="#495057" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="614" y1="510.0" x2="674" y2="510.0" stroke="#495057" stroke-width="2.5" marker-end="url(#m)"/>
+<text x="616.56" y="501.3" font-family="Helvetica,Arial" font-size="14" fill="#495057" text-anchor="start">renders</text>
+<line x1="1004" y1="510.0" x2="1034" y2="510.0" stroke="#495057" stroke-width="2.5" marker-end="url(#m)"/>
+<text x="999.4" y="501.3" font-family="Helvetica,Arial" font-size="14" fill="#495057" text-anchor="start">calls</text>
+<line x1="839.0" y1="280" x2="839.0" y2="320" stroke="#495057" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="839.0" y1="420" x2="839.0" y2="460" stroke="#495057" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="209.0" x2="1440" y2="209.0" stroke="#1971c2" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="309.0" x2="1440" y2="309.0" stroke="#2f9e44" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="409.0" x2="1440" y2="409.0" stroke="#e8590c" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="509.0" x2="1440" y2="509.0" stroke="#e03131" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="609.0" x2="1440" y2="609.0" stroke="#f08c00" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="709.0" x2="1440" y2="709.0" stroke="#6741d9" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="809.0" x2="1440" y2="809.0" stroke="#0c8599" stroke-width="2.5" marker-end="url(#m)"/>
+<line x1="1348" y1="988.0" x2="1440" y2="988.0" stroke="#495057" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#m)"/>
+</svg>
