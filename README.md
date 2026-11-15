@@ -7,6 +7,13 @@ paint and flooring, and plans the yard on a Vexcel aerial image.
 
 Built at HackPrinceton Fall 2026
 
+## Architecture
+
+![FurNiche AI architecture](assets/architecture.svg)
+
+The editable diagram is [`assets/architecture.excalidraw`](assets/architecture.excalidraw): open it at
+[excalidraw.com](https://excalidraw.com) to change it.
+
 ## What it does
 
 - **Search in plain words.** Type "3 bed apartments under $2,000" or "studio in Montrose under
