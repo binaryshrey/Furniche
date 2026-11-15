@@ -1,10 +1,12 @@
 // Downloads the git-ignored data/ folder (floor plans, listings) before the build, so Git-triggered
 // Vercel deploys work. It does nothing when data/ is already there (local dev, CLI deploys).
 //
-// Env:
-//   DATA_ARCHIVE_URL      where furniche-data.tar.gz lives (required on Vercel)
-//   DATA_ARCHIVE_TOKEN    optional, sent as "Authorization: Bearer <token>"
-//   DATA_ARCHIVE_SHA256   optional, the archive's sha256; the build fails if it differs
+// Where the archive comes from (first match wins):
+//   1. Vercel Blob (private store): set up by `vercel blob create-store`, which adds
+//      BLOB_READ_WRITE_TOKEN to the project. Read with the @vercel/blob SDK.
+//      DATA_BLOB_PATH picks the file (default data/furniche-data.tar.gz).
+//   2. Any URL: DATA_ARCHIVE_URL, with optional DATA_ARCHIVE_TOKEN sent as a Bearer token.
+// DATA_ARCHIVE_SHA256 (optional) is the archive's sha256; the build fails if it differs.
 // Make the archive with scripts/pack-data.sh.
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -29,17 +31,28 @@ if (hasData()) {
 }
 
 const url = process.env.DATA_ARCHIVE_URL;
-if (!url) {
-  if (onVercel) fail('data/ is missing and DATA_ARCHIVE_URL is not set. Add it in the Vercel project environment variables.');
-  console.warn('fetch-data: data/ is missing and DATA_ARCHIVE_URL is not set; skipping (set it, or add data/ by hand).');
+const blobPath = process.env.DATA_BLOB_PATH || 'data/furniche-data.tar.gz';
+const useBlob = !url && !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+if (!url && !useBlob) {
+  if (onVercel) fail('data/ is missing. Connect a Vercel Blob store holding the archive, or set DATA_ARCHIVE_URL in the Vercel project environment variables.');
+  console.warn('fetch-data: data/ is missing and no Blob store or DATA_ARCHIVE_URL is set; skipping (set one, or add data/ by hand).');
   process.exit(0);
 }
 
-const headers = process.env.DATA_ARCHIVE_TOKEN ? { Authorization: `Bearer ${process.env.DATA_ARCHIVE_TOKEN}` } : {};
-console.log('fetch-data: downloading the data archive…');
-const res = await fetch(url, { headers, redirect: 'follow' });
-if (!res.ok) fail(`download failed: HTTP ${res.status} ${res.statusText}`);
-const buf = Buffer.from(await res.arrayBuffer());
+let buf;
+if (useBlob) {
+  console.log(`fetch-data: reading ${blobPath} from Vercel Blob…`);
+  const { get } = await import('@vercel/blob');
+  const r = await get(blobPath, { access: 'private' });
+  if (!r || r.statusCode !== 200) fail(`${blobPath} was not found in the Blob store.`);
+  buf = Buffer.from(await new Response(r.stream).arrayBuffer());
+} else {
+  const headers = process.env.DATA_ARCHIVE_TOKEN ? { Authorization: `Bearer ${process.env.DATA_ARCHIVE_TOKEN}` } : {};
+  console.log('fetch-data: downloading the data archive…');
+  const res = await fetch(url, { headers, redirect: 'follow' });
+  if (!res.ok) fail(`download failed: HTTP ${res.status} ${res.statusText}`);
+  buf = Buffer.from(await res.arrayBuffer());
+}
 
 const want = process.env.DATA_ARCHIVE_SHA256?.trim().toLowerCase();
 if (want) {
