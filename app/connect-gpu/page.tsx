@@ -13,6 +13,15 @@ export default function ConnectGpu() {
   const [device, setDevice] = useState('');
   const [ready, setReady] = useState(false);
 
+  // Chrome asks once whether this site may reach this computer; until it's allowed, this fails.
+  function check(g: DirectGpu) {
+    setHealth('checking');
+    fetch(`${g.url}/health`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((h) => (setDevice(String(h?.device ?? '')), setHealth(h?.ok ? 'ok' : 'unreachable')))
+      .catch(() => setHealth('unreachable'));
+  }
+
   useEffect(() => {
     const p = new URLSearchParams(location.hash.slice(1));
     const url = p.get('url');
@@ -21,11 +30,7 @@ export default function ConnectGpu() {
     const g = directGpu();
     setGpu(g);
     setReady(true);
-    if (!g) return;
-    fetch(`${g.url}/health`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((h) => (setDevice(String(h?.device ?? '')), setHealth(h?.ok ? 'ok' : 'unreachable')))
-      .catch(() => setHealth('unreachable'));
+    if (g) check(g);
   }, []);
 
   return (
@@ -49,6 +54,11 @@ export default function ConnectGpu() {
               <Link href="/explore" className="rounded-lg btn-brand px-4 py-2 text-sm font-medium">
                 Pick a home
               </Link>
+              {health === 'unreachable' && (
+                <button onClick={() => check(gpu)} className="rounded-lg border border-line px-4 py-2 text-sm hover:border-ink/40">
+                  Check again
+                </button>
+              )}
               <button onClick={() => (setDirectGpu(null), setGpu(null))} className="rounded-lg border border-line px-4 py-2 text-sm hover:border-ink/40">
                 Stop using it
               </button>
