@@ -75,6 +75,7 @@ const ROWS: Row[] = [
   // Bedroom
   ['ikea-malm-queen', 'ikea', 'MALM bed frame, high, queen, white stained oak veneer', 399, 'bed', 165, 214, 100, '#e3d7c3', ['scandinavian', 'japandi']],
   ['ikea-hemnes-bed-queen', 'ikea', 'HEMNES bed frame, queen, white stain', 499, 'bed', 174, 211, 112, '#ece8df', ['coastal', 'scandinavian']],
+  ['ikea-taellasen-full', 'ikea', 'TÄLLÅSEN upholstered bed frame with mattress, Kulsta gray-green/Valevåg medium firm, full', 798, 'bed', 149, 203, 107, '#8c9d96', ['scandinavian', 'modern-organic']],
   ['amazon-zinus-platform-queen', 'amazon', 'Zinus wood platform bed, queen', 289, 'bed', 158, 208, 89, '#9a7656', ['japandi', 'modern-organic', 'midcentury']],
   ['ikea-hemnes-nightstand', 'ikea', 'HEMNES nightstand, white stain', 99, 'nightstand', 46, 35, 70, '#ece8df', ['coastal', 'scandinavian']],
   ['ikea-tarva-nightstand', 'ikea', 'TARVA nightstand, pine', 59, 'nightstand', 48, 39, 61, '#d9b98f', ['japandi', 'scandinavian']],
@@ -108,12 +109,17 @@ const ROWS: Row[] = [
   ['target-planter', 'target', 'Large ceramic outdoor planter', 59, 'planter', 46, 46, 50, '#cdbfa8', ['modern-organic', 'coastal'], 'outdoor'],
 ];
 
+// Exact product pages (read from IKEA's site), for items where the search link would be vaguer.
+const PAGE_URL: Record<string, string> = {
+  'ikea-taellasen-full': 'https://www.ikea.com/us/en/p/taellasen-upholstered-bed-frame-with-mattress-kulsta-gray-green-valevag-medium-firm-s19537138/',
+};
+
 export const PRODUCTS: Product[] = ROWS.map(([id, retailer, name, price, category, w, d, h, color, styles, placement]) => ({
   id,
   source: 'curated',
   retailer,
   name,
-  url: searchUrl(retailer, name.split(',')[0]),
+  url: PAGE_URL[id] ?? searchUrl(retailer, name.split(',')[0]),
   priceUsd: price,
   priceCheckedAt: CATALOG_CHECKED_AT,
   category,

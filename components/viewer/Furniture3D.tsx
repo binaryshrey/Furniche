@@ -157,6 +157,42 @@ function Bed({ w, d, h, color, opacity }: Props) {
   );
 }
 
+// Mattress, duvet and pillows for a bare bed frame (a store's 3D model is the frame alone).
+// base: height of the slats the mattress rests on. The pillows lie at -Z, the headboard side.
+export function BedDressing({ w, d, base, opacity = 1 }: { w: number; d: number; base: number; opacity?: number }) {
+  const MAT = 0.22; // mattress height
+  const mw = w - 0.08;
+  const md = d - 0.14;
+  const head = 0.04 - md / 2; // z of the mattress's head end
+  const foot = 0.04 + md / 2; // z of its foot end
+  // The duvet covers the lower ~70% of the mattress and hangs over both sides and the foot.
+  const len = md * 0.7;
+  const dz = foot + 0.02 - len / 2;
+  const dw = mw + 0.1;
+  const DUVET = '#8fa6ab';
+  return (
+    <group position={[0, base, 0]}>
+      <Box p={[0, MAT / 2, 0.04]} s={[mw, MAT, md]} c={LINEN} f="linen" r={0.06} opacity={opacity} />
+      {/* duvet: top, then the drape down each side and over the foot */}
+      <Box p={[0, MAT + 0.035, dz]} s={[dw, 0.07, len + 0.04]} c={DUVET} f="fabric" r={0.04} opacity={opacity} />
+      {[-1, 1].map((s) => (
+        <Box key={s} p={[s * (dw / 2 - 0.02), MAT - 0.06, dz]} s={[0.05, 0.2, len + 0.04]} c={shade(DUVET, -0.04)} f="fabric" r={0.02} opacity={opacity} />
+      ))}
+      <Box p={[0, MAT - 0.06, foot + 0.04]} s={[dw, 0.2, 0.05]} c={shade(DUVET, -0.04)} f="fabric" r={0.02} opacity={opacity} />
+      {/* the sheet folded back across the top of the duvet */}
+      <Box p={[0, MAT + 0.045, dz - len / 2 + 0.12]} s={[dw - 0.01, 0.092, 0.24]} c="#f3f0ea" f="linen" r={0.04} opacity={opacity} />
+      {/* a throw across the foot */}
+      <Box p={[0, MAT + 0.083, foot - 0.12]} s={[dw * 0.9, 0.026, 0.3]} c="#c9b79c" f="fabric" r={0.012} opacity={opacity} />
+      {/* two plump pillows leaning on the headboard */}
+      {[-1, 1].map((s) => (
+        <group key={s} position={[s * mw * 0.25, MAT + 0.085, head + 0.24]} rotation={[0.2, s * -0.05, 0]}>
+          <Box p={[0, 0, 0]} s={[mw * 0.42, 0.16, 0.42]} c="#ffffff" f="linen" r={0.07} opacity={opacity} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function Lamp({ w, h, color, opacity }: Props) {
   return (
     <group>
