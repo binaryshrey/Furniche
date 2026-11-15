@@ -7,6 +7,8 @@ import type { Engine, PhotoEvent } from '@/lib/photo3d';
 import { assetUrl, fromBase64, keepAsset } from '@/lib/photoAssets';
 import { type DirectGpu, directBuild, directGpu } from '@/lib/photoDirect';
 import { cutoutAspect, preparePhoto, thumbnail } from '@/lib/photoImage';
+import { recognize, warmUpRecognizer } from '@/lib/recognize';
+import { kindTitle } from '@/lib/scanSizes';
 import { type Axis, extentsAt, knownAxis, scaledDims, squareAngle, typicalCm } from '@/lib/photoSize';
 import { placeFree } from '@/lib/designOps';
 import { useStore } from '@/lib/store';
@@ -17,12 +19,13 @@ import { loadPhotoScene, scenePoints } from '../viewer/RealModel';
 // Photo to 3D: a photo of a piece becomes a textured 3D model at true size, dragged into the room
 // like any product. Built for free (lib/photo3d.ts): on your own GPU when one is connected, with no
 // daily limits (from this browser, when it's the server on this computer: lib/photoDirect.ts);
-// otherwise on Hugging Face's shared GPUs, a few models a day. Claude names the piece and estimates its size when an
-// Anthropic key is set; otherwise the shopper picks the type and the size starts from the catalogue.
+// otherwise on Hugging Face's shared GPUs, a few models a day. It comes out true to size: what the
+// piece is (Claude when an Anthropic key is set, else lib/recognize.ts in the browser) gives its real
+// size. Every finished one is kept in My Scans, for any home.
 
 const ModelPreview = dynamic(() => import('./ModelPreview'), { ssr: false, loading: () => <div className="h-full w-full animate-pulse bg-panel" /> });
 
-type Guess = { name: string; category: Category; color: string; dimsCm: Record<Axis, number | null>; confidence: 'high' | 'medium' | 'low' };
+type Guess = { name: string; category: Category; color: string; dimsCm: Record<Axis, number | null>; confidence: 'high' | 'medium' | 'low'; by?: Axis };
 type Shown = { engine: Engine; scene: THREE.Object3D; points: Float32Array; square: number };
 type Progress = { cutout: boolean; queue: { position: number; eta: number | null } | null; fraction: number | null };
 
@@ -88,11 +91,10 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
   const [startedAt, setStartedAt] = useState(0);
   const [readyAt, setReadyAt] = useState<number | null>(null);
   const [now, setNow] = useState(0);
-  const [guess, setGuess] = useState<Guess | null>(null);
+  const [guess, setGuess] = useState<Guess | null>(null); // Claude's, when a key is set
+  const [seen, setSeen] = useState<Guess | null>(null); // what the cut-out looks like (lib/recognize.ts)
   const [nameText, setNameText] = useState<string | null>(null);
   const [categoryChoice, setCategoryChoice] = useState<Category | null>(null);
-  const [userMeasure, setUserMeasure] = useState<{ axis: Axis; cm: number } | null>(null);
-  const [editing, setEditing] = useState<{ axis: Axis; text: string } | null>(null);
   const [price, setPrice] = useState('');
   const [thumb, setThumb] = useState<string | undefined>();
   const [aspect, setAspect] = useState<number | null>(null); // the cut-out's width ÷ height
@@ -135,10 +137,9 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
     setTurns(0);
     setReadyAt(null);
     setGuess(null);
+    setSeen(null);
     setNameText(null);
     setCategoryChoice(null);
-    setUserMeasure(null);
-    setEditing(null);
     setPrice('');
     setThumb(undefined);
     setAspect(null);
@@ -159,6 +160,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
   // retry), keeping the name, type and size, and any model on show until the new one is in.
   async function begin(file: File, which: Engine, again = false) {
     if (!again) reset();
+    warmUpRecognizer(); // loads while the piece is cut out
     const token = ++run.current;
     abort.current?.abort();
     const ctrl = new AbortController();
@@ -218,6 +220,14 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
           setProgress((p) => ({ ...p, cutout: true }));
           thumbnail(src).then((t) => token === run.current && t && setThumb(t));
           cutoutAspect(src).then((a) => token === run.current && a && setAspect(a));
+          // What it is, so it comes out at its real size.
+          recognize(src)
+            .then((r) => {
+              if (token !== run.current || !r) return;
+              const { kind, p, color } = r;
+              setSeen({ name: kindTitle(kind), category: kind.category, color, dimsCm: { w: kind.w, d: kind.d, h: kind.h }, confidence: p > 0.5 ? 'high' : p > 0.2 ? 'medium' : 'low', by: kind.by });
+            })
+            .catch(() => {});
         } else if (e.type === 'queue') setProgress((p) => ({ ...p, queue: { position: e.position, eta: e.eta } }));
         else if (e.type === 'step') setProgress((p) => ({ ...p, queue: null, fraction: e.fraction }));
         else if (e.type === 'error') return fail(e.message, e.retry);
@@ -269,15 +279,17 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
     return () => clearInterval(t);
   }, [building]);
 
-  // What the piece is and how big: the shopper's answers first, then Claude's, then defaults.
-  const category = categoryChoice ?? guess?.category ?? 'armchair';
-  const name = nameText ?? guess?.name ?? '';
+  // What the piece is and how big, so it comes out true to size: Claude's estimate when a key is
+  // set, else what the cut-out looks like (lib/recognize.ts) at that kind's usual size, else a
+  // typical piece of its type. One real measurement scales the model; its own shape gives the rest.
+  const best = guess ?? seen;
+  const category = categoryChoice ?? best?.category ?? 'decor';
+  const name = nameText ?? best?.name ?? '';
   const measure = useMemo(() => {
-    if (userMeasure) return { ...userMeasure, source: 'you' as const };
-    const axis = knownAxis(category);
-    const seen = guess?.category === category ? guess.dimsCm[axis] : null;
-    return seen ? { axis, cm: seen, source: 'photo' as const } : { axis, cm: typicalCm(category, axis, PRODUCTS), source: 'typical' as const };
-  }, [userMeasure, category, guess]);
+    const axis = (best?.category === category && best.by) || knownAxis(category);
+    const known = best?.category === category ? best.dimsCm[axis] : null;
+    return { axis, cm: known ?? typicalCm(category, axis, PRODUCTS) };
+  }, [category, best]);
   const yaw = shown ? ((((shown.square + turns * TURN) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) : 0;
   const extents = useMemo(() => (shown ? extentsAt(shown.points, yaw) : null), [shown, yaw]);
   // Before the model is in, the cut-out's proportions stand in (a thin card), so it can already go in the room.
@@ -296,20 +308,20 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
       priceCheckedAt: new Date().toISOString().slice(0, 10),
       category,
       dimsCm: dims,
-      color: guess?.color ?? '#9a8f80',
+      color: best?.color ?? '#9a8f80',
       styles: [],
       placement: WALL.includes(category) ? 'wall' : 'floor',
       standIn: false,
       photoModel: shown ? { id, engine: shown.engine, yaw } : { id, engine, yaw: 0, standee: true },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, shown, aspect, engine, dims?.w, dims?.d, dims?.h, name, thumb, price, category, guess?.color, yaw]);
+  }, [id, shown, aspect, engine, dims?.w, dims?.d, dims?.h, name, thumb, price, category, best?.color, yaw]);
 
-  // Once placed, the piece in the room follows every change here: size, name, facing, and a
-  // rebuild in Max detail.
+  // Every finished scan is kept in My Scans (saved in this browser, for any home, any day), and
+  // it and the pieces in the room follow each change here: name, type, facing, a rebuild.
   useEffect(() => {
-    if (placedId && product) useStore.getState().addImportedProduct(product);
-  }, [placedId, product]);
+    if (product && (shown || placedId)) useStore.getState().addImportedProduct(product);
+  }, [shown, placedId, product]);
 
   function addToRoom(p: Product) {
     const st = useStore.getState();
@@ -464,7 +476,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
           )}
           {product && <p className="text-[11px] text-muted">It shows as the photo until the 3D model is ready, then turns 3D by itself.</p>}
           <p className="text-[11px] text-muted">
-            {guess ? `Looks like: ${guess.name}.` : own ? 'Add it to the room now if you like: it turns 3D by itself when the model is ready.' : engine === 'quick' ? 'Usually a few seconds; longer if the free GPUs are busy.' : 'Usually about a minute; longer if the free GPUs are busy.'}
+            {best ? `Looks like: ${best.name.toLowerCase()}.` : own ? 'Add it to the room now if you like: it turns 3D by itself when the model is ready.' : engine === 'quick' ? 'Usually a few seconds; longer if the free GPUs are busy.' : 'Usually about a minute; longer if the free GPUs are busy.'}
           </p>
           <button onClick={reset} className="text-[11px] text-muted underline hover:text-ink">
             Cancel
@@ -539,37 +551,6 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
               />
             </label>
           </div>
-          <div>
-            <div className="flex items-baseline justify-between text-[11px] text-muted">
-              <span>Size (cm)</span>
-              <span className={measure.source === 'you' ? 'text-ok' : 'text-warn'}>
-                {measure.source === 'you' ? 'your measurement' : measure.source === 'photo' ? `estimated from the photo${guess ? ` · ${guess.confidence} confidence` : ''}` : 'typical size, please check'}
-              </span>
-            </div>
-            <div className="mt-0.5 grid grid-cols-3 gap-2">
-              {(['w', 'd', 'h'] as Axis[]).map((a) => (
-                <label key={a} className="flex items-center gap-1 rounded-lg border border-line bg-paper px-2 py-1 text-[11px] text-muted">
-                  {a.toUpperCase()}
-                  <input
-                    id={`photo3d-${a}`}
-                    type="number"
-                    min={1}
-                    inputMode="numeric"
-                    value={editing?.axis === a ? editing.text : dims[a]}
-                    onChange={(e) => {
-                      setEditing({ axis: a, text: e.target.value });
-                      const v = parseFloat(e.target.value);
-                      if (v > 0 && v < 2000) setUserMeasure({ axis: a, cm: v });
-                    }}
-                    onBlur={() => setEditing(null)}
-                    className="num w-full min-w-0 bg-transparent text-sm text-ink outline-none"
-                  />
-                </label>
-              ))}
-            </div>
-            <p className="mt-1 text-[11px] leading-snug text-muted">Know one measurement? Type it and the others follow the model&apos;s shape.</p>
-          </div>
-
           <button
             onClick={place}
             aria-pressed={pending === product.id}
@@ -588,7 +569,10 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
 
       {mine.length > 0 && (
         <div className="mt-3 border-t border-line pt-3">
-          <h4 className="eyebrow mb-2">Your pieces</h4>
+          <div className="mb-2 flex items-baseline justify-between">
+            <h4 className="eyebrow">My Scans</h4>
+            <span className="text-[11px] text-muted">Click one to add it to this home</span>
+          </div>
           <ul className="space-y-1.5">
             {mine.map((p) => (
               <li key={p.id} className={`flex items-center gap-2 rounded-xl border bg-paper p-1.5 ${pending === p.id ? 'border-ink' : 'border-line'}`}>
@@ -607,7 +591,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
                     useStore.getState().removeImportedProduct(p.id);
                   }}
                   aria-label={`Delete ${p.name}`}
-                  title="Delete this piece and remove it from the room"
+                  title="Delete this scan and remove it from every room"
                   className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted hover:bg-card hover:text-ink"
                 >
                   ×

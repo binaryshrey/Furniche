@@ -33,10 +33,13 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
   shop) and it becomes a textured 3D model with real depth, ready to drag into the scan, for
   free. Quick builds one in a few seconds; Max detail takes about a minute for finer shape and
   textures. A piece photographed at an angle is squared up automatically; turn it until its
-  front faces the arrow. Type one real measurement and the rest follow the model's shape, so it
-  is never stretched (Claude estimates the size when a key is set). It gets the same fit check
-  as store products. The free GPUs allow a few models a day, and every model is kept, so build
-  your demo pieces ahead of time.
+  front faces the arrow. It comes out true to size on its own: the browser recognises what it is
+  (Apple's MobileCLIP via transformers.js, free, `lib/recognize.ts`) and takes that kind's usual
+  size (`lib/scanSizes.ts`), or Claude's estimate when a key is set; one measurement scales the
+  model and its own shape gives the rest, so it is never stretched. It gets the same fit check as
+  store products. Every finished model is saved in **My Scans** (in the browser, so it lasts
+  across visits) and can be added to any home. The free GPUs allow a few models a day, so build
+  your demo pieces ahead of time, in the browser you'll demo from.
 - **Walls and floor.** Paint, wallpaper and flooring per room, with gallons (2 coats,
   350 sq ft per gallon, 15% for openings) and flooring area (+10% waste).
 - **Mood boards.** Six themes with palettes, finishes and matching products.
