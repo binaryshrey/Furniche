@@ -1,11 +1,11 @@
 # FurNiche AI
 
 Furnish a real Houston listing before you move in. Open the home's Matterport scan in its
-empty-room view, shop furniture from IKEA, Amazon, West Elm, Wayfair and Target, and drop each
+empty-room view, shop furniture from IKEA, Amazon, etc., and drop each
 piece into the room at its true size. FurNiche AI checks the fit, styles a room for you, prices
 paint and flooring, and plans the yard on a Vexcel aerial image.
 
-Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built World" track.
+Built at HackPrinceton Fall 2026
 
 ## What it does
 
