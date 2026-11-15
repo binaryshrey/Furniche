@@ -100,17 +100,23 @@ describe('photo to 3D on Hugging Face Spaces', () => {
     const cut = PNG.sync.read((await readAsset(id, 'cutout'))!);
     expect([cut.data[3], cut.data[5 * 4 + 3]]).toEqual([0, 255]); // background clear, piece solid
     expect(await readAsset(id, 'quick')).toEqual(GLB);
+    // The page gets both files in the events, to keep in the browser.
+    const cutout = seen.find((e) => e.type === 'cutout') as { png: string };
+    expect(Buffer.from(cutout.png, 'base64')).toEqual(await readAsset(id, 'cutout'));
+    expect(seen.at(-1)).toEqual({ type: 'done', glb: GLB.toString('base64') });
 
-    // The same photo again comes from the cache, without asking any Space.
+    // The same photo again comes from the cache, without asking any Space, files and all.
     calls = [];
-    expect((await build(bytes, 'quick')).map((e) => e.type)).toEqual(['id', 'cutout', 'done']);
+    const again = await build(bytes, 'quick');
+    expect(again.map((e) => e.type)).toEqual(['id', 'cutout', 'done']);
+    expect(again.slice(1)).toEqual([cutout, { type: 'done', glb: GLB.toString('base64') }]);
     expect(calls).toHaveLength(0);
   });
 
   it('lets a second request join a build that is already running', async () => {
     const bytes = photo();
     const [a, b] = await Promise.all([build(bytes, 'quick'), build(bytes, 'quick')]);
-    expect(a.at(-1)).toEqual({ type: 'done' });
+    expect(a.at(-1)).toEqual({ type: 'done', glb: GLB.toString('base64') });
     expect(b.map((e) => e.type)).toEqual(a.map((e) => e.type));
     expect(calls.filter((c) => c.endpoint === '/run_button')).toHaveLength(1);
   });
@@ -139,7 +145,7 @@ describe('photo to 3D on Hugging Face Spaces', () => {
 
   it('builds Max detail with TRELLIS: cut-out and preparation on the CPU, one GPU run', async () => {
     const seen = await build(photo(), 'detail');
-    expect(seen.at(-1)).toEqual({ type: 'done' });
+    expect(seen.at(-1)).toEqual({ type: 'done', glb: GLB.toString('base64') });
     expect(seen).toContainEqual({ type: 'step', step: 'shape', fraction: 0.5 });
     expect(calls.map((c) => c.endpoint)).toEqual(['/preprocess_image', '/preprocess_image', '/generate_and_extract_glb']);
     const gen = calls.at(-1)!.data as Record<string, unknown>;

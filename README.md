@@ -101,15 +101,22 @@ the hackathon organisers.
   for Quick (2048 px texture), Microsoft's TRELLIS for Max detail. Hugging Face meters free use
   per day: a free account (`HF_TOKEN`, optional) gets about 3 runs and 5 minutes of reserved GPU
   time, so about 3 Quick or 1 Max detail models; without a token, less. Progress streams to the
-  page as it happens. Models are cached by the photo's hash in `.cache/photo3d` (in `/tmp` on
-  Vercel, per instance), so a photo is only built once: build the demo pieces ahead of time and
-  they load instantly on stage. Photo pieces are never picked by Auto-furnish, the stylist or
-  swaps, and they appear in the cart without a store link.
+  page as it happens, and the cut-out and the model come with it: the browser keeps them
+  (IndexedDB, `lib/photoAssets.ts`), so placed pieces load after a reload, on Vercel too, where
+  functions share no disk. The server also caches models by the photo's hash in `.cache/photo3d`
+  (in `/tmp` on Vercel, per instance). A photo is only built once per browser: build the demo
+  pieces ahead of time, in the browser you'll demo from, and they load instantly on stage. iPhone
+  (HEIC) photos are converted on the server with libheif in WebAssembly (`lib/heic.ts`), so that
+  works on Vercel as well. Photo pieces are never picked by Auto-furnish, the stylist or swaps,
+  and they appear in the cart without a store link.
   It can also run with no daily limits: on this computer with PyTorch (`bash
   scripts/photo3d_local_setup.sh`, then `.cache/photo3d-local/venv/bin/python scripts/photo3d_local.py`
   and `PHOTO3D_GPU_URL=http://127.0.0.1:8765`), where TripoSR builds the shape on the Mac's GPU and the
   photo itself paints the side the camera saw; or on a free Kaggle or Colab GPU with
-  `scripts/photo3d_gpu.ipynb` (Hunyuan3D-2). On this computer a build needs about 5 GB of memory,
+  `scripts/photo3d_gpu.ipynb` (Hunyuan3D-2). The live site can use the server on this computer
+  too: Vercel can't reach it, but the browser can (`lib/photoDirect.ts`). Open
+  http://127.0.0.1:8765/connect once and allow the site to reach this computer if Chrome asks
+  (`/connect-gpu` shows the state and turns it off). On this computer a build needs about 5 GB of memory,
   which the server gives back when it's done; on an 8 GB Mac, close other apps first, or the build
   crawls while macOS swaps (the app waits up to 8 minutes). While a model builds, the piece can
   already go in the room as its cut-out, and it turns 3D by itself when the model arrives.

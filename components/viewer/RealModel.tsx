@@ -6,6 +6,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { PhotoModel, Product } from '@/lib/types';
 import Furniture3D from './Furniture3D';
 import { enrichModelMaterial } from '@/lib/materials';
+import { assetUrl } from '@/lib/photoAssets';
 
 // A real 3D model fitted to the product's size: a store's own model (IKEA's textured GLBs today)
 // or one generated from the shopper's photo. Shows the generic stand-in while it loads, or when
@@ -134,12 +135,14 @@ function fitPhoto(scene: THREE.Object3D, yaw: number, w: number, d: number, h: n
 
 // While a photo's model is being built: its cut-out, upright at the piece's size, readable from both sides.
 function standee(id: string, w: number, h: number): Promise<THREE.Object3D> {
-  return new THREE.TextureLoader().loadAsync(`/api/photo3d/${id}/cutout`).then((map) => {
-    map.colorSpace = THREE.SRGBColorSpace;
-    const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8 }));
-    card.position.y = h / 2;
-    return new THREE.Group().add(card);
-  });
+  return assetUrl(id, 'cutout')
+    .then((url) => new THREE.TextureLoader().loadAsync(url))
+    .then((map) => {
+      map.colorSpace = THREE.SRGBColorSpace;
+      const card = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8 }));
+      card.position.y = h / 2;
+      return new THREE.Group().add(card);
+    });
 }
 
 function load(p: Product): Promise<THREE.Object3D | null> {
@@ -153,7 +156,8 @@ function load(p: Product): Promise<THREE.Object3D | null> {
     templates.set(key, t);
   }
   if (!t && m) {
-    t = loadPhotoScene(photoModelUrl(m))
+    t = assetUrl(m.id, m.engine)
+      .then(loadPhotoScene)
       .then((scene) => fitPhoto(scene, m.yaw, w / 100, d / 100, h / 100))
       .catch(() => null);
     templates.set(key, t);

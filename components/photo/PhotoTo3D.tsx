@@ -4,17 +4,20 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { CATEGORY_LABEL, PRODUCTS } from '@/catalog/products';
 import type { Engine, PhotoEvent } from '@/lib/photo3d';
+import { assetUrl, fromBase64, keepAsset } from '@/lib/photoAssets';
+import { type DirectGpu, directBuild, directGpu } from '@/lib/photoDirect';
 import { cutoutAspect, preparePhoto, thumbnail } from '@/lib/photoImage';
 import { type Axis, extentsAt, knownAxis, scaledDims, squareAngle, typicalCm } from '@/lib/photoSize';
 import { placeFree } from '@/lib/designOps';
 import { useStore } from '@/lib/store';
 import type { Category, ModelGeometry, Product, Room } from '@/lib/types';
 import ProductSwatch from '../shop/ProductSwatch';
-import { loadPhotoScene, photoModelUrl, scenePoints } from '../viewer/RealModel';
+import { loadPhotoScene, scenePoints } from '../viewer/RealModel';
 
 // Photo to 3D: a photo of a piece becomes a textured 3D model at true size, dragged into the room
 // like any product. Built for free (lib/photo3d.ts): on your own GPU when one is connected, with no
-// daily limits; otherwise on Hugging Face's shared GPUs, a few models a day. Claude names the piece and estimates its size when an
+// daily limits (from this browser, when it's the server on this computer: lib/photoDirect.ts);
+// otherwise on Hugging Face's shared GPUs, a few models a day. Claude names the piece and estimates its size when an
 // Anthropic key is set; otherwise the shopper picks the type and the size starts from the catalogue.
 
 const ModelPreview = dynamic(() => import('./ModelPreview'), { ssr: false, loading: () => <div className="h-full w-full animate-pulse bg-panel" /> });
@@ -73,6 +76,7 @@ function progressNote(p: Progress): string | undefined {
 // with no room or no spot, onto the floor you click next.
 export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { room?: Room | null; geometry?: ModelGeometry | null; onAdded?: (p: Product, placed: boolean) => void } = {}) {
   const [config, setConfig] = useState<{ token: boolean; identify: boolean; gpu: boolean } | null>(null);
+  const [direct, setDirect] = useState<DirectGpu | null>(null); // the GPU server on this computer, if this browser was connected to it
   const [engine, setEngine] = useState<Engine>('quick');
   const [photo, setPhoto] = useState<string | null>(null);
   const [id, setId] = useState<string | null>(null);
@@ -92,6 +96,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
   const [price, setPrice] = useState('');
   const [thumb, setThumb] = useState<string | undefined>();
   const [aspect, setAspect] = useState<number | null>(null); // the cut-out's width ÷ height
+  const [cutoutSrc, setCutoutSrc] = useState<string | null>(null);
   const [placedId, setPlacedId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const run = useRef(0); // bumped for every build; stale async work checks it and stops
@@ -103,6 +108,9 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
   const pending = useStore((s) => s.pendingProductId);
 
   useEffect(() => {
+    const d = directGpu();
+    setDirect(d);
+    if (d) setEngine('quick');
     fetch('/api/photo3d')
       .then((r) => r.json())
       .then((c) => {
@@ -134,6 +142,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
     setPrice('');
     setThumb(undefined);
     setAspect(null);
+    setCutoutSrc(null);
     setPlacedId(null);
   }
 
@@ -182,28 +191,40 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
       identify(image, token);
     }
 
-    const body = new FormData();
-    body.append('image', image, image.type === 'image/png' ? 'photo.png' : 'photo.jpg');
-    body.append('engine', which);
-    const res = await fetch('/api/photo3d', { method: 'POST', body, signal: ctrl.signal }).catch(() => null);
-    if (token !== run.current) return;
-    if (!res?.ok || !res.body) return fail((await res?.json().catch(() => null))?.error ?? 'Could not reach the server.');
+    let stream: AsyncGenerator<PhotoEvent>;
+    if (direct) stream = directBuild(direct, image, which, ctrl.signal);
+    else {
+      const body = new FormData();
+      body.append('image', image, image.type === 'image/png' ? 'photo.png' : 'photo.jpg');
+      body.append('engine', which);
+      const res = await fetch('/api/photo3d', { method: 'POST', body, signal: ctrl.signal }).catch(() => null);
+      if (token !== run.current) return;
+      if (!res?.ok || !res.body) return fail((await res?.json().catch(() => null))?.error ?? 'Could not reach the server.');
+      stream = events(res.body);
+    }
     let photoId: string | null = null;
     let built = false;
     try {
-      for await (const e of events(res.body)) {
+      for await (const e of stream) {
         if (token !== run.current) return;
         if (e.type === 'id') {
           photoId = e.id;
           setId(e.id);
         } else if (e.type === 'cutout' && photoId) {
+          if (e.png) await keepAsset(photoId, 'cutout', await fromBase64(e.png, 'image/png'));
+          const src = await assetUrl(photoId, 'cutout');
+          if (token !== run.current) return;
+          setCutoutSrc(src);
           setProgress((p) => ({ ...p, cutout: true }));
-          thumbnail(`/api/photo3d/${photoId}/cutout`).then((t) => token === run.current && t && setThumb(t));
-          cutoutAspect(`/api/photo3d/${photoId}/cutout`).then((a) => token === run.current && a && setAspect(a));
+          thumbnail(src).then((t) => token === run.current && t && setThumb(t));
+          cutoutAspect(src).then((a) => token === run.current && a && setAspect(a));
         } else if (e.type === 'queue') setProgress((p) => ({ ...p, queue: { position: e.position, eta: e.eta } }));
         else if (e.type === 'step') setProgress((p) => ({ ...p, queue: null, fraction: e.fraction }));
         else if (e.type === 'error') return fail(e.message, e.retry);
-        else if (e.type === 'done') built = true;
+        else if (e.type === 'done' && photoId) {
+          if (e.glb) await keepAsset(photoId, which, await fromBase64(e.glb, 'model/gltf-binary'));
+          built = true;
+        }
       }
     } catch {
       return fail('The connection to the server dropped. Try again.');
@@ -211,7 +232,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
     if (!built || !photoId) return fail('The connection to the server dropped. Try again.');
 
     try {
-      const scene = await loadPhotoScene(photoModelUrl({ id: photoId, engine: which }));
+      const scene = await loadPhotoScene(await assetUrl(photoId, which));
       if (token !== run.current) return;
       const points = scenePoints(scene);
       const square = squareAngle(points);
@@ -314,7 +335,7 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
   const seconds = Math.max(0, ((readyAt ?? now) - startedAt) / 1000);
   const choose = () => fileInput.current?.click();
   const retry = (which: Engine) => source.current && begin(source.current, which, true);
-  const own = !!config?.gpu; // your own GPU server (this computer or a notebook): one quick model, no limits
+  const own = !!config?.gpu || !!direct; // your own GPU server (this computer or a notebook): one quick model, no limits
   const detailHint = 'About a minute, and it uses most of a free day\'s GPU allowance';
 
   return (
@@ -424,9 +445,9 @@ export default function PhotoTo3D({ room = null, geometry = null, onAdded }: { r
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={photo} alt="Your photo" className="aspect-square w-full rounded-lg bg-panel object-cover" />
             <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-panel">
-              {progress.cutout && id ? (
+              {progress.cutout && cutoutSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/api/photo3d/${id}/cutout`} alt="The piece, cut out" className="h-full w-full object-contain p-1" />
+                <img src={cutoutSrc} alt="The piece, cut out" className="h-full w-full object-contain p-1" />
               ) : (
                 <div className="h-full w-full animate-pulse" />
               )}

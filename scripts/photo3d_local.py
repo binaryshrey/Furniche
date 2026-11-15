@@ -8,6 +8,7 @@ It serves the same small job API as scripts/photo3d_gpu.ipynb, so the app only n
     PHOTO3D_GPU_URL=http://127.0.0.1:8765
 Set up once with `bash scripts/photo3d_local_setup.sh`, then run
     .cache/photo3d-local/venv/bin/python scripts/photo3d_local.py
+The live site can use it too, from this computer's browser: open http://127.0.0.1:8765/connect once.
 """
 
 import argparse
@@ -23,6 +24,7 @@ import traceback
 import types
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")  # the few ops MPS lacks run on the CPU
 
@@ -34,7 +36,8 @@ import trimesh
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from PIL import Image
 from skimage.measure import marching_cubes as skimage_marching_cubes
 
@@ -187,6 +190,26 @@ def build(cut: Image.Image, quality: str) -> bytes:
 
 # The job API: builds run one at a time; the app submits a job and polls it.
 app = FastAPI()
+SITE = "https://furniche-ai.vercel.app"  # where /connect sends the browser (--site)
+PORT = 8765
+# The live site (and its previews) call it from the browser (lib/photoDirect.ts), as does the app on this computer.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https://furniche[a-z0-9-]*\.vercel\.app|http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def private_network(req: Request, call_next):
+    """Chrome checks before a public site reaches this computer; the origins above still apply."""
+    res = await call_next(req)
+    if req.headers.get("access-control-request-private-network") == "true":
+        res.headers["Access-Control-Allow-Private-Network"] = "true"
+    return res
+
+
 jobs: dict = {}
 pending: "queue.Queue" = queue.Queue()
 
@@ -231,6 +254,12 @@ def worker():
 threading.Thread(target=worker, daemon=True).start()
 
 
+@app.get("/connect")
+def connect():
+    """Opened once in the browser: the site's Photo to 3D then builds here. The #fragment stays in the browser."""
+    return RedirectResponse(f"{SITE}/connect-gpu#url={quote(f'http://127.0.0.1:{PORT}', safe='')}&token={quote(TOKEN, safe='')}")
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "device": DEVICE, "queued": pending.qsize()}
@@ -273,7 +302,10 @@ def status(job_id: str, req: Request):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=PORT)
+    parser.add_argument("--site", default=SITE, help="the site /connect opens, e.g. http://localhost:3000")
     args = parser.parse_args()
-    print(f"Photo to 3D on {DEVICE} at http://127.0.0.1:{args.port}", flush=True)
+    PORT, SITE = args.port, args.site.rstrip("/")
+    print(f"Photo to 3D on {DEVICE} at http://127.0.0.1:{PORT}", flush=True)
+    print(f"To use it from {SITE}, open http://127.0.0.1:{PORT}/connect once in that browser.", flush=True)
     uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")

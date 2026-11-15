@@ -1,6 +1,6 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
-import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Client, handle_file } from '@gradio/client';
 import { PNG } from 'pngjs';
@@ -23,10 +23,10 @@ export const SPACES = { cutout: 'trellis-community/TRELLIS', quick: 'stabilityai
 
 export type PhotoEvent =
   | { type: 'id'; id: string }
-  | { type: 'cutout' }
+  | { type: 'cutout'; png?: string } // png, glb: the files themselves (base64), for the browser to keep
   | { type: 'queue'; position: number; eta: number | null }
   | { type: 'step'; step: 'shape'; fraction: number | null }
-  | { type: 'done' }
+  | { type: 'done'; glb?: string }
   | { type: 'error'; message: string; retry: boolean }; // retry: whether trying again now could help
 
 export class Photo3DError extends Error {
@@ -79,12 +79,6 @@ export async function readAsset(id: string, asset: 'cutout' | Engine): Promise<B
     return null;
   }
 }
-
-const hasAsset = (id: string, asset: 'cutout' | Engine) =>
-  access(assetPath(id, asset)).then(
-    () => true,
-    () => false,
-  );
 
 // Written to a temporary name and renamed, so a half-written file is never served.
 async function writeAtomic(file: string, data: Uint8Array) {
@@ -263,11 +257,15 @@ async function gpuBuild(cut: Uint8Array, engine: Engine, emit: (e: PhotoEvent) =
   }
 }
 
-async function build(id: string, photo: Uint8Array, engine: Engine, emit: (e: PhotoEvent) => void) {
+// The model, built or from the cache. The cut-out and the model go to the page in the events too:
+// on Vercel the request that serves a file may land where the build's disk isn't.
+async function build(id: string, photo: Uint8Array, engine: Engine, emit: (e: PhotoEvent) => void): Promise<Buffer> {
   const token = hfToken();
-  if (await hasAsset(id, engine)) {
-    if (await hasAsset(id, 'cutout')) emit({ type: 'cutout' });
-    return;
+  const built = await readAsset(id, engine);
+  if (built) {
+    const cached = await readAsset(id, 'cutout');
+    if (cached) emit({ type: 'cutout', png: cached.toString('base64') });
+    return built;
   }
   const onGpu = gpuSet();
   let cut = await readAsset(id, 'cutout');
@@ -279,7 +277,7 @@ async function build(id: string, photo: Uint8Array, engine: Engine, emit: (e: Ph
     } else cut = await cutOut(photo, token, emit);
     await writeAtomic(assetPath(id, 'cutout'), cut);
   }
-  emit({ type: 'cutout' });
+  emit({ type: 'cutout', png: cut.toString('base64') });
   const glb = onGpu
     ? await gpuBuild(cut, engine, emit)
     : engine === 'quick'
@@ -287,6 +285,7 @@ async function build(id: string, photo: Uint8Array, engine: Engine, emit: (e: Ph
       : await detail(cut, token, parseInt(id.slice(0, 8), 16) % 2_147_483_647, emit);
   if (glb.length < 12 || glb.toString('latin1', 0, 4) !== 'glTF') throw new Photo3DError('The free 3D service returned a file that is not a 3D model.');
   await writeAtomic(assetPath(id, engine), glb);
+  return glb;
 }
 
 // Builds run on in the server even if the page that asked goes away, so the result is cached for
@@ -318,7 +317,7 @@ export function follow(photo: Uint8Array, engine: Engine, listen: (e: PhotoEvent
     const late = gpuSet() ? unanswered('slow') : 'The free 3D service took too long. Try again in a moment.';
     const timer = setTimeout(() => emit({ type: 'error', message: late, retry: true }), timing.limitMs);
     build(id, photo, engine, emit)
-      .then(() => emit({ type: 'done' }))
+      .then((glb) => emit({ type: 'done', glb: glb.toString('base64') }))
       .catch((e) => {
         if (!(e instanceof Photo3DError)) console.error('[photo3d]', e);
         emit({ type: 'error', message: e instanceof Photo3DError ? e.message : 'The free 3D service is not reachable right now. Try again in a moment.', retry: !(e instanceof Photo3DError) || e.retry });
