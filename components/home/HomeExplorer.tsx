@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import BedsFilter from '@/components/home/BedsFilter';
 import LocationFilter from '@/components/home/LocationFilter';
 import PriceFilter, { NO_PRICE, inRange, type PriceRange } from '@/components/home/PriceFilter';
+import { LogoMark } from '@/components/ui/Brand';
 import { Input } from '@/components/ui/input';
 import { toggleVariants } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -122,7 +123,7 @@ function Card({
 
 // Search, quick filters and listings beside the live 3D city, Airbnb-style: hover a listing
 // and the camera flies to it; click a pin or a card to walk through the home.
-export default function HomeExplorer({ initial }: { initial: Response & { q: string } }) {
+export default function HomeExplorer({ initial, fly }: { initial: Response & { q: string }; fly?: string }) {
   const router = useRouter();
   const [q, setQ] = useState(initial.q);
   const [draft, setDraft] = useState(initial.q);
@@ -134,6 +135,8 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
   const [broken, setBroken] = useState<Set<string>>(new Set());
   const [price, setPrice] = useState<PriceRange>(NO_PRICE);
   const [beds, setBeds] = useState<BedFilter>(NO_BEDS);
+  // The map's expand button: the listing column is hidden and the map takes the full width.
+  const [wide, setWide] = useState(false);
   // Hearted listings, remembered in this browser. They are read after the first paint so the
   // server and browser render the same page.
   const [favs, setFavs] = useState<Set<string>>(new Set());
@@ -285,6 +288,16 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
     document.documentElement.style.overflow = '';
   }
 
+  // Opened by address (/space/<id> redirects here with ?fly=<id>): fly into that home once the
+  // city has drawn, as if its pin had been picked.
+  const flown = useRef(false);
+  useEffect(() => {
+    if (!fly || flown.current || !ready || entering) return;
+    const r = results.find((x) => x.sid === fly);
+    if (!r || !pinned.has(fly)) return;
+    flown.current = true;
+    enter(r);
+  }, [fly, ready, entering, results, pinned]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!showingRoom) return setSettled(false);
     const t = setTimeout(() => setSettled(true), SETTLE_MS);
@@ -323,7 +336,10 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
           aria-live="polite"
         >
           <div className="w-[min(420px,calc(100vw-32px))] text-center">
-            <div className="font-display text-3xl font-bold tracking-tight">Furniche AI</div>
+            <div className="flex items-center justify-center gap-3 font-display text-3xl font-bold tracking-tight">
+              <LogoMark size={36} />
+              FurNiche AI
+            </div>
             <p className="mt-2 text-sm text-muted">Finding your dream home…</p>
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-line">
               <div className="h-full bg-brand transition-[width] duration-300" style={{ width: `${city.done < city.total || !city.total ? pct * 0.95 : city.sharp ? 100 : 97}%` }} />
@@ -412,11 +428,17 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+      <div
+        className={`mx-auto grid max-w-[1600px] gap-6 px-4 py-6 sm:px-6 ${wide ? '' : 'lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]'}`}
+      >
         {/* The 3D city: first on phones, a sticky panel beside the list on wide screens. */}
         {/* A sticky element confines its children's z-index, so the panel itself must rise above
             the editor layer while flying in. */}
-        <div ref={panel} className="relative h-[55vh] lg:sticky lg:top-[136px] lg:order-2 lg:h-[calc(100vh-160px)]" style={{ zIndex: frame ? 70 : undefined }}>
+        <div
+          ref={panel}
+          className={`relative lg:sticky lg:top-[136px] lg:order-2 lg:h-[calc(100vh-160px)] ${wide ? 'h-[calc(100vh-160px)]' : 'h-[55vh]'}`}
+          style={{ zIndex: frame && !inside ? 70 : undefined, pointerEvents: inside ? 'none' : undefined }}
+        >
           {!inside && (
             <div
               className="absolute inset-0 z-[70] overflow-hidden rounded-2xl border border-line bg-paper ease-out"
@@ -430,6 +452,9 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
               }}
             >
               <SkyView
+                mapControls
+                expanded={wide}
+                onToggleExpand={() => setWide((w) => !w)}
                 snapshotKey={`home:${q}`}
                 lookAt={lookAt}
                 pins={pins}
@@ -473,7 +498,7 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
           </div>
         )}
 
-        <div className="lg:order-1">
+        <div className={`lg:order-1 ${wide ? 'hidden' : ''}`}>
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <h2 className="font-display text-2xl">
               {data ? `${count.toLocaleString()}${/^\d/.test(heading) ? ' · ' : ' '}${heading}` : 'Searching…'}
@@ -507,8 +532,8 @@ export default function HomeExplorer({ initial }: { initial: Response & { q: str
             ))}
           </div>
           {results.length > limit && (
-            <div className="mt-10 text-center">
-              <button onClick={() => setLimit((n) => n + PAGE)} className="rounded-lg border border-ink px-6 py-3 text-sm font-semibold transition hover:bg-card">
+            <div className="mt-10">
+              <button onClick={() => setLimit((n) => n + PAGE)} className="w-full rounded-lg border border-ink/30 px-6 py-3 text-sm font-semibold transition hover:border-ink/50 hover:bg-card">
                 Show more
               </button>
             </div>

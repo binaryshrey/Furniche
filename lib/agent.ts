@@ -424,7 +424,7 @@ async function runTool(name: string, input: any, ctx: Ctx, state: State, roomId:
 
 // ---------- prompt ----------
 
-const SYSTEM = `You are Furniche AI, a design assistant. The shopper is furnishing a real home they are about to move into, inside its Matterport 3D scan, with real products at true size. You can see and edit their design with tools.
+const SYSTEM = `You are FurNiche AI, a design assistant. The shopper is furnishing a real home they are about to move into, inside its Matterport 3D scan, with real products at true size. You can see and edit their design with tools.
 
 What you help with:
 - Questions about pieces: size, price, store, style, whether something fits, what goes with what.
@@ -446,7 +446,7 @@ How to work:
 Themes: ${THEMES.map((t) => `${t.id} (${t.name}: ${t.blurb})`).join('; ')}.
 Finishes: ${MATERIALS.map((m) => `${m.id} = ${m.name} ${m.kind} $${m.priceUsd}/${m.unit}`).join('; ')}.`;
 
-const IMESSAGE_NOTE = 'This conversation is over iMessage. Plain text only, no markdown, no bullet symbols. Keep it to three short sentences at most. The shopper sees the design update live in the Furniche AI tab on their computer.';
+const IMESSAGE_NOTE = 'This conversation is over iMessage. Plain text only, no markdown, no bullet symbols. Keep it to three short sentences at most. The shopper sees the design update live in the FurNiche AI tab on their computer.';
 
 // ---------- entry point ----------
 

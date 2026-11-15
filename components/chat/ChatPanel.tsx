@@ -21,9 +21,9 @@ import BudgetStrip, { useBudget } from './BudgetStrip';
 type Before = { design: Design; lighting: LightPrefs };
 type Msg = {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   text: string;
-  channel: 'web' | 'imessage';
+  channel: "web" | "imessage";
   from?: string;
   actions?: string[];
   suggestions?: string[];
@@ -40,10 +40,17 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'design', label: 'My design', icon: 'M4 6h16M4 12h16M4 18h10' },
 ];
 
-const AUTO = 'Auto-furnish every room';
-const STARTERS = [AUTO, 'What can I afford?', 'Make this room feel bigger', 'Warmer evening light'];
-const AUTO_RE = /\bauto[- ]?furnish|furnish (the )?(whole|entire|every|all)|furnish everything/i;
-const SPARK = 'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z';
+const AUTO = "Auto-furnish every room";
+const STARTERS = [
+  AUTO,
+  "What can I afford?",
+  "Make this room feel bigger",
+  "Warmer evening light",
+];
+const AUTO_RE =
+  /\bauto[- ]?furnish|furnish (the )?(whole|entire|every|all)|furnish everything/i;
+const SPARK =
+  "M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z";
 
 const mid = () => Math.random().toString(36).slice(2, 10);
 
@@ -54,7 +61,12 @@ function snapshot(geometry: ModelGeometry | null = null): { sid: string; roomId:
   return {
     sid: d.sid,
     roomId: useViewerState.getState().currentRoomId,
-    design: { items: d.items, surfaces: d.surfaces, doors: d.doors, themeId: d.themeId },
+    design: {
+      items: d.items,
+      surfaces: d.surfaces,
+      doors: d.doors,
+      themeId: d.themeId,
+    },
     imported: s.importedProducts,
     lighting: { brightness, warmth },
     scenes: roomScenes(geometry), // windows and built-ins, so the assistant places pieces clear of them
@@ -62,13 +74,22 @@ function snapshot(geometry: ModelGeometry | null = null): { sid: string; roomId:
 }
 
 // Apply a reply's edits; returns what to restore on Undo (null when nothing changed).
-function apply(out: { design?: WorkDesign | null; lighting?: LightPrefs | null }): Before | null {
+function apply(out: {
+  design?: WorkDesign | null;
+  lighting?: LightPrefs | null;
+}): Before | null {
   if (!out.design && !out.lighting) return null;
   const cur = useStore.getState().design();
   const { brightness, warmth } = useLighting.getState();
   const before: Before = { design: cur, lighting: { brightness, warmth } };
   // Pieces the chat adds or moves stay movable.
-  if (out.design) useStore.getState().loadDesign({ ...cur, ...out.design, locked: false, updatedAt: new Date().toISOString() });
+  if (out.design)
+    useStore.getState().loadDesign({
+      ...cur,
+      ...out.design,
+      locked: false,
+      updatedAt: new Date().toISOString(),
+    });
   if (out.lighting) useLighting.getState().set(out.lighting);
   return before;
 }
@@ -76,11 +97,15 @@ function apply(out: { design?: WorkDesign | null; lighting?: LightPrefs | null }
 // Everything for furnishing the home lives behind one "Ask Furniche" button, so the 3D tour can
 // fill the screen: chat (which edits the room and answers on iMessage via Photon), Auto-furnish
 // and the stylist, a furniture carousel per category, walls and floor, and the design list.
-export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null }) {
+export default function ChatPanel({
+  geometry,
+}: {
+  geometry: ModelGeometry | null;
+}) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>('chat');
+  const [tab, setTab] = useState<Tab>("chat");
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [photon, setPhoton] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -101,10 +126,14 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
 
   // Chat follows the newest message; every other tab opens at its top.
   useEffect(() => {
-    if (tab === 'chat') listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    if (tab === "chat")
+      listRef.current?.scrollTo({
+        top: listRef.current.scrollHeight,
+        behavior: "smooth",
+      });
   }, [msgs, busy, tab]);
   useEffect(() => {
-    if (tab !== 'chat') listRef.current?.scrollTo({ top: 0 });
+    if (tab !== "chat") listRef.current?.scrollTo({ top: 0 });
   }, [tab, seeAll]);
 
   useEffect(() => usePanel.getState().setOpen(open), [open]);
@@ -120,7 +149,11 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
     if (!open || msgs.length) return;
     const snap = snapshot(geometry);
     if (!snap.sid) return;
-    fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...snap, suggestOnly: true }) })
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...snap, suggestOnly: true }),
+    })
       .then((r) => r.json())
       .then((j) => j.suggestions?.length && setStarters(j.suggestions))
       .catch(() => {});
@@ -128,7 +161,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
 
   // iMessage bridge: poll while the editor is open.
   useEffect(() => {
-    fetch('/api/photon/sync')
+    fetch("/api/photon/sync")
       .then((r) => r.json())
       .then((j) => setPhoton(!!j.enabled))
       .catch(() => {});
@@ -140,16 +173,46 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
       const snap = snapshot(geometry);
       if (!snap.sid) return;
       try {
-        const res = await fetch('/api/photon/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(snap) });
+        const res = await fetch("/api/photon/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(snap),
+        });
         const j = await res.json();
         if (!alive || !j.events?.length) return;
         const before = apply(j);
         setMsgs((m) => [
           ...m,
-          ...j.events.flatMap((e: { from: string; text: string; reply: string; actions: string[]; suggestions: string[] }, k: number, all: unknown[]) => [
-            { id: mid(), role: 'user' as const, text: e.text, channel: 'imessage' as const, from: e.from },
-            { id: mid(), role: 'assistant' as const, text: e.reply, channel: 'imessage' as const, actions: e.actions, suggestions: e.suggestions, before: k === all.length - 1 ? before : null },
-          ]),
+          ...j.events.flatMap(
+            (
+              e: {
+                from: string;
+                text: string;
+                reply: string;
+                actions: string[];
+                suggestions: string[];
+              },
+              k: number,
+              all: unknown[],
+            ) => [
+              {
+                id: mid(),
+                role: "user" as const,
+                text: e.text,
+                channel: "imessage" as const,
+                from: e.from,
+              },
+              {
+                id: mid(),
+                role: "assistant" as const,
+                text: e.reply,
+                channel: "imessage" as const,
+                actions: e.actions,
+                suggestions: e.suggestions,
+                before: k === all.length - 1 ? before : null,
+              },
+            ],
+          ),
         ]);
         setUnread((u) => u + j.events.length);
       } catch {
@@ -174,7 +237,7 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
     for (let t = 0; t < 40 && !live(); t++) await new Promise((r) => setTimeout(r, 500));
     const sdk = useViewerState.getState().sdk;
     if (!geometry || !sdk) return;
-    const { moveToPano } = await import('@/components/viewer/MatterportHost');
+    const { moveToPano } = await import("@/components/viewer/MatterportHost");
     // The open panel covers the right of the view, so aim a little right to keep the pieces in the clear part.
     await lookAt({ sdk, geometry, roomId: roomIdToShow, items: useStore.getState().design().items, moveToPano: (s, id) => moveToPano(s, id, false, 2), yawOffset: usePanel.getState().open ? 18 : 0, ...opts });
   }
@@ -183,32 +246,82 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
   // move the camera to the furnished room you're in (or the fullest one) facing the new pieces.
   function runAutoFurnish(message: string) {
     if (!geometry) return;
-    setTab('chat');
-    const before: Before = { design: useStore.getState().design(), lighting: { ...useLighting.getState() } };
+    setTab("chat");
+    const before: Before = {
+      design: useStore.getState().design(),
+      lighting: { ...useLighting.getState() },
+    };
     const res = autoFurnishAll(geometry);
-    const user: Msg = { id: mid(), role: 'user', text: message, channel: 'web' };
+    const user: Msg = {
+      id: mid(),
+      role: "user",
+      text: message,
+      channel: "web",
+    };
     if (!res) {
-      setMsgs((m) => [...m, user, { id: mid(), role: 'assistant', text: 'I could not find a room to furnish in this scan.', channel: 'web' }]);
+      setMsgs((m) => [
+        ...m,
+        user,
+        {
+          id: mid(),
+          role: "assistant",
+          text: "I could not find a room to furnish in this scan.",
+          channel: "web",
+        },
+      ]);
       return;
     }
     const items = useStore.getState().design().items;
-    const target = res.rooms.includes(roomId ?? '') ? roomId! : [...res.rooms].sort((a, b) => items.filter((i) => i.roomId === b).length - items.filter((i) => i.roomId === a).length)[0];
-    const label = geometry.rooms.find((r) => r.id === target)?.label.toLowerCase() ?? 'room';
-    const text = `${res.summary}${res.dropped.length ? ` Left out to keep the rooms open: ${res.dropped.slice(0, 3).join(', ')}${res.dropped.length > 3 ? ` and ${res.dropped.length - 3} more` : ''}.` : ''} Showing you the ${label}.`;
-    setMsgs((m) => [...m, user, { id: mid(), role: 'assistant', text, channel: 'web', actions: res.rooms.map((id) => `Furnished ${geometry.rooms.find((r) => r.id === id)?.label ?? 'room'}`), suggestions: ['What can I afford?', 'Make this room feel bigger', `Paint the walls to match`, 'Swap the sofa for something cheaper'], before }]);
+    const target = res.rooms.includes(roomId ?? "")
+      ? roomId!
+      : [...res.rooms].sort(
+          (a, b) =>
+            items.filter((i) => i.roomId === b).length -
+            items.filter((i) => i.roomId === a).length,
+        )[0];
+    const label =
+      geometry.rooms.find((r) => r.id === target)?.label.toLowerCase() ??
+      "room";
+    const text = `${res.summary}${res.dropped.length ? ` Left out to keep the rooms open: ${res.dropped.slice(0, 3).join(", ")}${res.dropped.length > 3 ? ` and ${res.dropped.length - 3} more` : ""}.` : ""} Showing you the ${label}.`;
+    setMsgs((m) => [
+      ...m,
+      user,
+      {
+        id: mid(),
+        role: "assistant",
+        text,
+        channel: "web",
+        actions: res.rooms.map(
+          (id) =>
+            `Furnished ${geometry.rooms.find((r) => r.id === id)?.label ?? "room"}`,
+        ),
+        suggestions: [
+          "What can I afford?",
+          "Make this room feel bigger",
+          `Paint the walls to match`,
+          "Swap the sofa for something cheaper",
+        ],
+        before,
+      },
+    ]);
     frame(target);
   }
 
   async function send(message: string) {
     if (!message.trim() || busy) return;
     if (AUTO_RE.test(message)) {
-      setText('');
+      setText("");
       return runAutoFurnish(message);
     }
-    setTab('chat');
-    const history = msgs.filter((m) => m.channel === 'web').map((m) => ({ role: m.role, text: m.text }));
-    setMsgs((m) => [...m, { id: mid(), role: 'user', text: message, channel: 'web' }]);
-    setText('');
+    setTab("chat");
+    const history = msgs
+      .filter((m) => m.channel === "web")
+      .map((m) => ({ role: m.role, text: m.text }));
+    setMsgs((m) => [
+      ...m,
+      { id: mid(), role: "user", text: message, channel: "web" },
+    ]);
+    setText("");
     setBusy(true);
     try {
       const res = await fetch('/api/chat', {
@@ -217,11 +330,31 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
         body: JSON.stringify({ ...snapshot(geometry), history, message }),
       });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? 'The assistant is unavailable.');
+      if (!res.ok) throw new Error(j.error ?? "The assistant is unavailable.");
       const before = apply(j);
-      setMsgs((m) => [...m, { id: mid(), role: 'assistant', text: j.reply, channel: 'web', actions: j.actions, suggestions: j.suggestions, before }]);
+      setMsgs((m) => [
+        ...m,
+        {
+          id: mid(),
+          role: "assistant",
+          text: j.reply,
+          channel: "web",
+          actions: j.actions,
+          suggestions: j.suggestions,
+          before,
+        },
+      ]);
     } catch (e) {
-      setMsgs((m) => [...m, { id: mid(), role: 'assistant', text: (e as Error).message, channel: 'web', suggestions: ['Try again'] }]);
+      setMsgs((m) => [
+        ...m,
+        {
+          id: mid(),
+          role: "assistant",
+          text: (e as Error).message,
+          channel: "web",
+          suggestions: ["Try again"],
+        },
+      ]);
     } finally {
       setBusy(false);
     }
@@ -229,9 +362,21 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
 
   function undo(msg: Msg) {
     if (!msg.before) return;
-    useStore.getState().loadDesign({ ...msg.before.design, updatedAt: new Date().toISOString() });
+    useStore.getState().loadDesign({
+      ...msg.before.design,
+      updatedAt: new Date().toISOString(),
+    });
     useLighting.getState().set(msg.before.lighting);
-    setMsgs((m) => [...m.map((x) => (x.id === msg.id ? { ...x, undone: true } : x)), { id: mid(), role: 'assistant', text: 'Undone. The room is back to how it was.', channel: 'web', suggestions: msg.suggestions }]);
+    setMsgs((m) => [
+      ...m.map((x) => (x.id === msg.id ? { ...x, undone: true } : x)),
+      {
+        id: mid(),
+        role: "assistant",
+        text: "Undone. The room is back to how it was.",
+        channel: "web",
+        suggestions: msg.suggestions,
+      },
+    ]);
   }
 
   function added(p: Product, placed: boolean) {
@@ -261,18 +406,28 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
     if (it?.roomId) frame(it.roomId, { target: { x: it.pos.x, y: it.pos.y }, back: 2.3, pitch: 4 });
   }
 
-  const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
-  const lastUser = [...msgs].reverse().find((m) => m.role === 'user');
+  const lastAssistant = [...msgs].reverse().find((m) => m.role === "assistant");
+  const lastUser = [...msgs].reverse().find((m) => m.role === "user");
 
-  const Chip = ({ label, onClick, tone }: { label: string; onClick: () => void; tone?: 'undo' }) => (
+  const Chip = ({
+    label,
+    onClick,
+    tone,
+  }: {
+    label: string;
+    onClick: () => void;
+    tone?: "undo";
+  }) => (
     <button
       onClick={onClick}
       disabled={busy}
       className={`rounded-full border px-2.5 py-1 text-left text-[11px] leading-tight transition disabled:opacity-40 ${
-        tone === 'undo' ? 'border-line text-muted hover:text-ink' : 'border-brand/50 bg-brand/10 text-ink hover:bg-brand/20'
+        tone === "undo"
+          ? "border-line text-muted hover:text-ink"
+          : "border-brand/50 bg-brand/10 text-ink hover:bg-brand/20"
       }`}
     >
-      {tone === 'undo' ? '↶ ' : ''}
+      {tone === "undo" ? "↶ " : ""}
       {label}
     </button>
   );
@@ -286,41 +441,68 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
           data-fn-ui
           onClick={() => (setOpen(true), setUnread(0))}
           className="absolute right-4 top-4 z-40 flex items-center gap-2 rounded-full btn-brand px-4 py-2.5 text-sm font-semibold shadow-swatch"
-          aria-label="Open Ask Furniche AI"
+          aria-label="Open Ask FurNiche AI"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
             <path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z" />
           </svg>
-          Ask Furniche AI
+          Ask FurNiche AI
           {design.items.length > 0 && <span className="num rounded-full bg-black/25 px-2 py-0.5 text-[11px]">{fmtUsd(planned)}</span>}
           {unread > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] text-brand">{unread}</span>}
         </button>
       )}
 
-      {toast && <div data-fn-ui className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper shadow-swatch">{toast}</div>}
+      {toast && (
+        <div
+          data-fn-ui
+          className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper shadow-swatch"
+        >
+          {toast}
+        </div>
+      )}
 
       {open && (
-        <section data-fn-ui className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-paper/55 shadow-swatch backdrop-blur-[2px] [text-shadow:0_1px_2px_rgba(0,0,0,.45)]" aria-label="Ask Furniche AI">
+        <section data-fn-ui className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-paper/55 shadow-swatch backdrop-blur-[2px] [text-shadow:0_1px_2px_rgba(0,0,0,.45)]" aria-label="Ask FurNiche AI">
           <header className="flex items-center gap-2 border-b border-line px-4 py-3">
-            <h2 className="font-display text-base font-semibold">Ask Furniche AI</h2>
+            <h2 className="font-display text-base font-semibold">Ask FurNiche AI</h2>
             {photon && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10px] text-ok">iMessage on</span>}
             <span className="ml-auto text-[11px] text-muted">{room ? `${room.label} · ${room.widthM.toFixed(1)} × ${room.depthM.toFixed(1)} m` : 'Walk into a room'}</span>
-            <button onClick={() => setOpen(false)} className="rounded px-1.5 text-muted hover:text-ink" aria-label="Close Ask Furniche AI">
+            <button onClick={() => setOpen(false)} className="rounded px-1.5 text-muted hover:text-ink" aria-label="Close Ask FurNiche AI">
               ✕
             </button>
           </header>
           <BudgetStrip budget={budget} planned={planned} />
 
-          <nav className="grid grid-cols-4 border-b border-line" role="tablist" aria-label="Ask Furniche AI sections">
+          <nav className="grid grid-cols-4 border-b border-line" role="tablist" aria-label="Ask FurNiche AI sections">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 role="tab"
                 aria-selected={tab === t.id}
                 onClick={() => (setTab(t.id), setSeeAll(null))}
-                className={`flex flex-col items-center gap-1 px-1 py-2 text-[10px] transition ${tab === t.id ? 'border-b-2 border-brand text-ink' : 'border-b-2 border-transparent text-muted hover:text-ink'}`}
+                className={`flex flex-col items-center gap-1 px-1 py-2 text-[10px] transition ${tab === t.id ? "border-b-2 border-brand text-ink" : "border-b-2 border-transparent text-muted hover:text-ink"}`}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
                   <path d={t.icon} />
                 </svg>
                 {t.label}
@@ -328,34 +510,65 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
             ))}
           </nav>
 
-          <div ref={listRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto p-4">
-            {tab === 'chat' && (
+          <div
+            ref={listRef}
+            className="scroll-thin min-h-0 flex-1 overflow-y-auto p-4"
+          >
+            {tab === "chat" && (
               <div className="space-y-2">
                 <button
                   onClick={() => runAutoFurnish(AUTO)}
                   disabled={!geometry}
                   className="flex w-full items-center justify-center gap-2 rounded-xl btn-brand px-3 py-2.5 text-sm font-semibold disabled:opacity-40"
                 >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
                     <path d={SPARK} />
                   </svg>
                   Auto-furnish every room
                 </button>
                 {msgs.length === 0 && (
                   <p className="text-xs text-muted">
-                    Tell me what to change and I’ll do it in the room: add or swap pieces, paint, flooring, lighting, more open space, or fit it all within your Capital One budget.
-                    {photon && ' You can also text me on iMessage.'}
+                    Tell me what to change and I’ll do it in the room: add or
+                    swap pieces, paint, flooring, lighting, more open space, or
+                    fit it all within your Capital One budget.
+                    {photon && " You can also text me on iMessage."}
                   </p>
                 )}
                 {msgs.map((m) => (
-                  <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
-                    <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-white' : 'bg-card/75'} ${m.undone ? 'opacity-60' : ''}`}>
-                      {m.channel === 'imessage' && <div className={`mb-0.5 text-[10px] ${m.role === 'user' ? 'text-white/80' : 'text-muted'}`}>{m.role === 'user' ? `iMessage · ${m.from}` : 'Replied on iMessage'}</div>}
+                  <div
+                    key={m.id}
+                    className={m.role === "user" ? "flex justify-end" : ""}
+                  >
+                    <div
+                      className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.role === "user" ? "bg-brand text-white" : "bg-card/75"} ${m.undone ? "opacity-60" : ""}`}
+                    >
+                      {m.channel === "imessage" && (
+                        <div
+                          className={`mb-0.5 text-[10px] ${m.role === "user" ? "text-white/80" : "text-muted"}`}
+                        >
+                          {m.role === "user"
+                            ? `iMessage · ${m.from}`
+                            : "Replied on iMessage"}
+                        </div>
+                      )}
                       <p className="whitespace-pre-wrap">{m.text}</p>
                       {!!m.actions?.length && (
                         <ul className="mt-1.5 space-y-0.5 border-t border-line pt-1.5 text-[11px] text-ok">
                           {m.actions.map((a, i) => (
-                            <li key={i} className={m.undone ? 'line-through' : ''}>
+                            <li
+                              key={i}
+                              className={m.undone ? "line-through" : ""}
+                            >
                               ✓ {a}
                             </li>
                           ))}
@@ -366,20 +579,39 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
                 ))}
                 {busy && (
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" /> Working on it…
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />{" "}
+                    Working on it…
                   </div>
                 )}
               </div>
             )}
 
-            {tab === 'furniture' &&
+            {tab === "furniture" &&
               (group ? (
-                <CategoryGrid group={group} room={room} geometry={geometry} onBack={() => setSeeAll(null)} onAdded={added} />
+                <CategoryGrid
+                  group={group}
+                  room={room}
+                  geometry={geometry}
+                  onBack={() => setSeeAll(null)}
+                  onAdded={added}
+                />
               ) : (
                 <div className="space-y-3">
-                  {!room && <p className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">Walk into a room and pieces are placed for you. Until then, pick a piece and click the floor where it goes.</p>}
+                  {!room && (
+                    <p className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">
+                      Walk into a room and pieces are placed for you. Until
+                      then, pick a piece and click the floor where it goes.
+                    </p>
+                  )}
                   {FURNITURE_GROUPS.map((g) => (
-                    <CategoryCarousel key={g.id} group={g} room={room} geometry={geometry} onSeeAll={() => setSeeAll(g.id)} onAdded={added} />
+                    <CategoryCarousel
+                      key={g.id}
+                      group={g}
+                      room={room}
+                      geometry={geometry}
+                      onSeeAll={() => setSeeAll(g.id)}
+                      onAdded={added}
+                    />
                   ))}
                 </div>
               ))}
@@ -394,15 +626,34 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
             {tab === 'design' && <MyDesignTab geometry={geometry} budget={budget} onFocus={focusPiece} onAutoFurnish={() => runAutoFurnish(AUTO)} onBrowse={() => setTab('furniture')} />}
           </div>
 
-          {tab === 'chat' && (
+          {tab === "chat" && (
             <>
-              <div className="flex flex-wrap gap-1.5 border-t border-line px-3 py-2" aria-label="Suggested next steps">
-                {lastAssistant?.before && !lastAssistant.undone && <Chip label="Undo" tone="undo" onClick={() => undo(lastAssistant)} />}
+              <div
+                className="flex flex-wrap gap-1.5 border-t border-line px-3 py-2"
+                aria-label="Suggested next steps"
+              >
+                {lastAssistant?.before && !lastAssistant.undone && (
+                  <Chip
+                    label="Undo"
+                    tone="undo"
+                    onClick={() => undo(lastAssistant)}
+                  />
+                )}
                 {(() => {
-                  const list = lastAssistant?.suggestions?.length ? lastAssistant.suggestions : starters;
-                  return design.items.length || list.includes(AUTO) ? list : [AUTO, ...list].slice(0, 4);
+                  const list = lastAssistant?.suggestions?.length
+                    ? lastAssistant.suggestions
+                    : starters;
+                  return design.items.length || list.includes(AUTO)
+                    ? list
+                    : [AUTO, ...list].slice(0, 4);
                 })().map((s) => (
-                  <Chip key={s} label={s} onClick={() => send(s === 'Try again' && lastUser ? lastUser.text : s)} />
+                  <Chip
+                    key={s}
+                    label={s}
+                    onClick={() =>
+                      send(s === "Try again" && lastUser ? lastUser.text : s)
+                    }
+                  />
                 ))}
               </div>
               <form
@@ -420,7 +671,10 @@ export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null
                   className="min-w-0 flex-1 rounded-full border border-line bg-card px-3 py-2 text-sm outline-none focus:border-ink/40"
                   disabled={busy}
                 />
-                <button disabled={busy || !text.trim()} className="rounded-full btn-brand px-3 py-2 text-xs font-semibold disabled:opacity-40">
+                <button
+                  disabled={busy || !text.trim()}
+                  className="rounded-full btn-brand px-3 py-2 text-xs font-semibold disabled:opacity-40"
+                >
                   Send
                 </button>
               </form>

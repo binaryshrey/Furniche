@@ -1,8 +1,8 @@
-# Furniche AI
+# FurNiche AI
 
 Furnish a real Houston listing before you move in. Open the home's Matterport scan in its
 empty-room view, shop furniture from IKEA, Amazon, West Elm, Wayfair and Target, and drop each
-piece into the room at its true size. Furniche checks the fit, styles a room for you, prices
+piece into the room at its true size. FurNiche AI checks the fit, styles a room for you, prices
 paint and flooring, and plans the yard on a Vexcel aerial image.
 
 Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built World" track.
@@ -26,7 +26,7 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
 - **AI stylist.** Describe a look and budget ("warm japandi under $3,000"). Claude only picks
   products; a deterministic solver places them against the room's walls and drops optional
   pieces that would break the fit check. Without an API key a rule-based picker is used.
-- **Paste a link.** Paste a product page; Furniche reads its structured data for name, price and
+- **Paste a link.** Paste a product page; FurNiche AI AI reads its structured data for name, price and
   size (including fractional inches). It never guesses a size: if none is on the page, you
   enter it.
 - **Photo to 3D.** Take or upload a photo of any piece (your own armchair, one you saw in a
@@ -43,7 +43,7 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
 - **Plan the yard.** For homes, the Vexcel aerial image is shown to scale with the parcel line
   and building footprints. Place patio furniture and see lot, paved, deck, pool and tree-cover
   figures. Pieces off the lot or on a building turn red.
-- **Ask Furniche (chat).** A chat in the editor that knows the open home and design. Ask about
+- **Ask FurNiche AI AI (chat).** A chat in the editor that knows the open home and design. Ask about
   any piece, price, look or light, or tell it what to change: add, remove or swap furniture,
   "make this room feel bigger" (re-lays the room for the most open floor, or swaps in smaller
   pieces of the same style), paint and flooring, and warmer or brighter light in the 3D view.

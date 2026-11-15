@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { PhotoModel, Product } from '@/lib/types';
-import Furniture3D from './Furniture3D';
+import Furniture3D, { BedDressing } from './Furniture3D';
 import { enrichModelMaterial } from '@/lib/materials';
 import { assetUrl } from '@/lib/photoAssets';
 
@@ -23,6 +23,31 @@ function gltf(): GLTFLoader {
 
 // One download and fit per product and size; instances clone the result.
 const templates = new Map<string, Promise<THREE.Object3D | null>>();
+
+// A bed's store model is the frame alone. Which end the headboard is on (the end with the tall
+// geometry) and whether the model already has a mattress, so a mattress is added only when missing.
+const bedInfo = new Map<string, { head: 1 | -1; hasMattress: boolean }>();
+function inspectBed(root: THREE.Object3D, h: number) {
+  root.updateMatrixWorld(true);
+  const v = new THREE.Vector3();
+  let named = false;
+  let sum = 0;
+  let n = 0;
+  root.traverse((o) => {
+    if (/mattress/i.test(o.name)) named = true;
+    const m = o as THREE.Mesh;
+    const pos = m.isMesh ? m.geometry?.attributes?.position : null;
+    if (!pos) return;
+    for (let i = 0; i < pos.count; i += 4) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      if (v.y > h * 0.6) {
+        sum += v.z;
+        n++;
+      }
+    }
+  });
+  return { head: (n && sum / n > 0 ? 1 : -1) as 1 | -1, hasMattress: named };
+}
 
 export function hasRealModel(p: Product): boolean {
   return !!p.photoModel || (p.retailer === 'ikea' && /^https:\/\/www\.ikea\.com\//.test(p.url));
@@ -177,7 +202,9 @@ function load(p: Product): Promise<THREE.Object3D | null> {
           );
           m.material = Array.isArray(m.material) ? mats : mats[0];
         });
-        return fit(g.scene, w / 100, d / 100, h / 100);
+        const fitted = fit(g.scene, w / 100, d / 100, h / 100);
+        if (p.category === 'bed') bedInfo.set(p.id, { ...inspectBed(fitted, h / 100), hasMattress: /mattress/i.test(p.name) || inspectBed(fitted, h / 100).hasMattress });
+        return fitted;
       })
       .catch(() => null);
     templates.set(key, t);
@@ -220,5 +247,14 @@ export default function RealModel({ product, w, d, h, opacity = 1, warnTint }: {
   }, [template, opacity, warnTint]);
 
   if (!object) return <Furniture3D category={product.category} w={w} d={d} h={h} color={product.color} opacity={opacity} />;
-  return <primitive object={object} />;
+  const bed = product.category === 'bed' ? bedInfo.get(product.id) : undefined;
+  if (!bed || bed.hasMattress) return <primitive object={object} />;
+  return (
+    <group>
+      <primitive object={object} />
+      <group rotation={[0, bed.head > 0 ? Math.PI : 0, 0]}>
+        <BedDressing w={w} d={d} base={Math.min(0.38, Math.max(0.22, h * 0.33))} opacity={opacity} />
+      </group>
+    </group>
+  );
 }

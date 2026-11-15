@@ -123,7 +123,8 @@ function skyDome(): THREE.Mesh {
     fragmentShader:
       'uniform vec3 top; uniform vec3 horizon; uniform vec3 below; varying vec3 vDir;' +
       'void main() { float h = vDir.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(min(h * 2.2, 1.0), 0.7)) : mix(horizon, below, min(-h * 6.0, 1.0));' +
-      ' gl_FragColor = vec4(c, 1.0); #include <colorspace_fragment> }',
+      // A #include must sit on its own line, or the whole shader fails to compile.
+      ' gl_FragColor = vec4(c, 1.0);\n#include <colorspace_fragment>\n}',
   });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), mat);
   dome.frustumCulled = false;
@@ -204,7 +205,17 @@ export default function SkyView({
   onLoadState,
   dive = false,
   entry = null,
+  mapControls = false,
+  expanded = false,
+  onToggleExpand,
 }: {
+  // Map-style buttons (expand, zoom in and out) in the top-right corner instead of the controls
+  // hint text. The expand button only shows when the page gives it something to do: the page
+  // decides what "expanded" means (the home page hides the listing column so the map fills the
+  // width) and tells the icon which way to point.
+  mapControls?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
   // Reports the full-city preload and whether the first view has sharpened, so a page can hold
   // a loading screen until the whole city is local and the view is crystal clear. Passing it
   // also starts the preload at once, at full speed (the user is waiting for it).
@@ -223,6 +234,16 @@ export default function SkyView({
 }) {
   const host = useRef<HTMLDivElement>(null);
   const labels = useRef<Map<string, HTMLButtonElement>>(new Map());
+  // The camera controls zoom toward the pointer on a wheel event, so the buttons send the same
+  // event aimed at the middle of the canvas (one scroll notch is about 100).
+  const zoom = (dir: 1 | -1) => {
+    const canvas = host.current?.querySelector('canvas');
+    if (!canvas) return;
+    const r = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(
+      new WheelEvent('wheel', { deltaY: -dir * 160, deltaMode: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true, cancelable: true }),
+    );
+  };
   const api = useRef<{
     positionOf: (sid: string) => THREE.Vector3 | null;
     groundOf: (sid: string) => THREE.Vector3 | null;
@@ -235,6 +256,8 @@ export default function SkyView({
   } | null>(null);
   const pinsRef = useRef(pins);
   pinsRef.current = pins;
+  const lookAtRef = useRef(lookAt);
+  lookAtRef.current = lookAt;
   const enterRef = useRef(enterSid);
   enterRef.current = enterSid;
   const entryRef = useRef(entry);
@@ -323,12 +346,15 @@ export default function SkyView({
     const camera = new THREE.PerspectiveCamera(55, el.clientWidth / el.clientHeight, 2, 9000);
     camera.position.set(0, 900, 1300);
     camera.lookAt(0, 0, 0);
+    const startedAt = performance.now();
+    let fromSnapshot = false; // the camera began at a remembered view (checked once the city has had time to load)
     try {
       const snap = JSON.parse(localStorage.getItem(snapKey) ?? 'null') as { img: string; pos: number[]; quat: number[] } | null;
       if (snap?.img) {
         camera.position.fromArray(snap.pos);
         camera.quaternion.fromArray(snap.quat);
         restored.current = true;
+        fromSnapshot = true;
         setPoster(snap.img);
       }
     } catch {
@@ -590,12 +616,30 @@ export default function SkyView({
       stems.visible = !enterRef.current;
       renderer.render(scene, camera);
 
+      // A remembered view can look at empty space (none of the city in sight), which reads as
+      // "the map is not loading". If nothing is on screen a few seconds in, forget that view and
+      // fly to the results instead, like a first visit.
+      if (fromSnapshot && performance.now() - startedAt > 5000) {
+        fromSnapshot = false;
+        const target = lookAtRef.current;
+        if (tiles.group.children.length === 0 && target && !enterRef.current) {
+          try {
+            localStorage.removeItem(snapKey);
+          } catch {
+            /* storage unavailable */
+          }
+          const a = api.current;
+          if (a) a.fly(a.groundAt(target), new THREE.Vector3(0, 900, 1300));
+        }
+      }
+
       // Once the view has been still for a moment with the sharp tiles in, save a small picture
       // of it with the camera pose. Drawn straight after render, while the buffer is valid.
       if (flight || hoverAround) {
         lastMove = performance.now();
         dirty = true;
-      } else if (dirty && loadWaves >= 1 && !enterRef.current && performance.now() - lastMove > 1500) {
+      } else if (dirty && loadWaves >= 1 && tiles.group.children.length > 0 && !enterRef.current && performance.now() - lastMove > 1500) {
+        // (only a view with some of the city in it is worth remembering)
         dirty = false;
         try {
           const c = document.createElement('canvas');
@@ -750,11 +794,61 @@ export default function SkyView({
       {status && !poster && (
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-paper/85 px-4 py-2 text-sm text-muted">{status}</div>
       )}
-      {!enterSid && (
+      {!enterSid && !mapControls && (
         <div className="pointer-events-none absolute right-4 top-4 rounded-xl bg-paper/80 px-3 py-2 text-[11px] leading-relaxed text-muted backdrop-blur">
           Drag to pan · right-drag to tilt · scroll to zoom
           <br />
           Fly with W A S D, Q/E down/up, Shift for speed
+        </div>
+      )}
+      {!enterSid && mapControls && (
+        <div className="absolute right-4 top-4 z-10 flex flex-col items-end gap-3 text-neutral-900">
+          {onToggleExpand && (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              aria-pressed={expanded}
+              aria-label={expanded ? 'Show listings' : 'Expand map to full width'}
+              className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.35)] transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                {expanded ? (
+                  <>
+                    <path d="M4 20l6-6M5 14h5v5" />
+                    <path d="M20 4l-6 6M19 10h-5V5" />
+                  </>
+                ) : (
+                  <>
+                    <path d="M14 10l6-6M15 4h5v5" />
+                    <path d="M10 14l-6 6M9 20H4v-5" />
+                  </>
+                )}
+              </svg>
+            </button>
+          )}
+          <div className="flex w-12 flex-col overflow-hidden rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.35)]">
+            <button
+              type="button"
+              onClick={() => zoom(1)}
+              aria-label="Zoom in"
+              className="grid h-12 w-12 place-items-center transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <div className="mx-2 h-px bg-neutral-200" />
+            <button
+              type="button"
+              onClick={() => zoom(-1)}
+              aria-label="Zoom out"
+              className="grid h-12 w-12 place-items-center transition hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                <path d="M5 12h14" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </div>

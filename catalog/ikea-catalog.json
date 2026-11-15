@@ -882,6 +882,26 @@
    "itemNo": "10492672"
   },
   {
+   "id": "ikea-taellasen-full",
+   "name": "TÄLLÅSEN upholstered bed frame with mattress, Full, Kulsta gray-green/Valevåg medium firm",
+   "price": 798.0,
+   "category": "bed",
+   "dims": [
+    149,
+    203,
+    107
+   ],
+   "color": "#8c9d96",
+   "styles": [
+    "scandinavian",
+    "modern-organic"
+   ],
+   "placement": "floor",
+   "url": "https://www.ikea.com/us/en/p/taellasen-upholstered-bed-frame-with-mattress-kulsta-gray-green-valevag-medium-firm-s19537138/",
+   "image": "https://www.ikea.com/us/en/images/products/taellasen-upholstered-bed-frame-with-mattress-kulsta-gray-green-valevag-medium-firm__1363658_pe955575_s5.jpg",
+   "itemNo": "19537138"
+  },
+  {
    "id": "ikea-vesteroy-queen",
    "name": "VESTERÖY pocket spring mattress, Full, firm/white",
    "price": 279.0,

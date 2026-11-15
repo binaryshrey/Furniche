@@ -23,12 +23,14 @@ const startPano = (geometry: ModelGeometry, skip?: ReadonlySet<string>) => entry
 // stays loaded: our remount after a failed boot, a Fast Refresh in development, or leaving the
 // editor client-side. They are harmless (the old viewer is already gone), so keep them out of the
 // console and the Next.js error overlay. Everything else still surfaces.
-const TEARDOWN = /No Data was registered to the Module|module unloaded/i;
+// The view-mode one is Showcase's own quick start losing a race with our move inside, which the
+// settle loop below retries; it shows up when a warm cache makes the tour load faster.
+const TEARDOWN = /No Data was registered to the Module|module unloaded|ViewmodeActiveTransition|Tried to start view-mode transition/i;
 if (typeof window !== 'undefined' && !(window as any).__fnTeardownGuard) {
   (window as any).__fnTeardownGuard = true;
   const swallow = (e: ErrorEvent | PromiseRejectionEvent) => {
     const reason = 'reason' in e ? e.reason : e.error ?? e.message;
-    const msg = typeof reason === 'string' ? reason : reason?.message ?? String(reason ?? '');
+    const msg = typeof reason === 'string' ? reason : `${reason?.name ?? ''} ${reason?.message ?? ''} ${String(reason ?? '')}`;
     if (!TEARDOWN.test(msg)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -37,10 +39,14 @@ if (typeof window !== 'undefined' && !(window as any).__fnTeardownGuard) {
   window.addEventListener('unhandledrejection', swallow, true);
 }
 
-export async function moveToPano(sdk: any, panoId: string, instant = false, tries = 6) {
+// alt: the same pano under another id, tried from the second attempt. With the empty (defurnished)
+// view active, Showcase knows a pano as "<viewId>:<panoId>" and rejects the plain id with "not
+// available in view", which used to burn every retry.
+export async function moveToPano(sdk: any, panoId: string, instant = false, tries = 6, alt?: () => string) {
   for (let i = 0; i < tries; i++) {
     try {
-      await sdk.Sweep.moveTo(panoId, { transition: instant ? sdk.Sweep.Transition.INSTANT : sdk.Sweep.Transition.FLY });
+      const id = i > 0 && alt ? alt() : panoId;
+      await sdk.Sweep.moveTo(id, { transition: instant ? sdk.Sweep.Transition.INSTANT : sdk.Sweep.Transition.FLY });
       return true;
     } catch {
       await new Promise((r) => setTimeout(r, 1200));
@@ -51,6 +57,8 @@ export async function moveToPano(sdk: any, panoId: string, instant = false, trie
 
 const MAX_REMOUNTS = 2;
 const SDK_WAIT_MS = 12000;
+const QUICKSTART_WAIT_MS = 6000;
+const SDK_RETRY_MS = 30000; // localhost: no connection after this long, so boot a fresh viewer
 
 export default function MatterportHost({ sid, geometry }: { sid: string; geometry: ModelGeometry | null }) {
   // A fresh <matterport-viewer> recovers from a failed boot; bumping the key remounts it.
@@ -79,13 +87,24 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
   const sdkReady = useViewerState((st) => !!st.sdk);
   const [embedOnly, setEmbedOnly] = useState(false);
   useEffect(() => {
-    if (sdkReady || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) return;
+    if (sdkReady) return;
+    if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)) {
+      // On localhost the SDK should connect, but a slow load can take 30 s or more, and a remount
+      // throws that progress away. So retry only after a long wait, and drop the local Matterport
+      // cache (public/mp-sw.js, in case a file in it is bad) only on the last retry.
+      const retry = setTimeout(() => {
+        const last = attemptRef.current >= MAX_REMOUNTS - 1;
+        const wipe = last && typeof caches !== 'undefined' ? caches.delete('furniche-mp-v2').catch(() => false) : Promise.resolve(false);
+        wipe.finally(remount);
+      }, SDK_RETRY_MS);
+      return () => clearTimeout(retry);
+    }
     const t = setTimeout(() => {
       setEmbedOnly(true);
       setPartial({ showingRoom: true, embedOnly: true }); // reveal the tour (and let the sky crossfade finish)
     }, SDK_WAIT_MS);
     return () => clearTimeout(t);
-  }, [sdkReady, sid, setPartial]);
+  }, [sdkReady, sid, attempt, setPartial]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A direct page load sometimes ends on Showcase's "model not available" screen while a
   // client-side navigation to the same model works. Watch for that screen and remount.
@@ -114,6 +133,8 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
 
     // Wait for sweeps and geometry, then go inside.
     let sweeps: Record<string, any> = {};
+    // The pano's id as the active view knows it ("<viewId>:<panoId>" under the empty view).
+    const qualify = (id: string) => Object.keys(sweeps).find((k) => k === id) ?? Object.keys(sweeps).find((k) => k.endsWith(':' + id)) ?? id;
     await new Promise<void>((res) =>
       s.Sweep.data.subscribe({
         onCollectionUpdated: (c: Record<string, any>) => {
@@ -136,9 +157,22 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
     // Switch to the empty (defurnished) view first: activating a view puts the camera back at
     // that view's own start, which would undo the move below.
     if (wantEmpty()) await viewsRef.current.defurnish.setActive().catch(() => {});
+    // Showcase's own quick start (play=1) starts a view-mode transition at boot, and a move of ours
+    // during it is rejected ("another transition was active") on every retry until it ends. Let
+    // it finish (inside the home) first, but never wait long: drone-start models stay outside.
+    await new Promise<void>((res) => {
+      const subs: any[] = []; // filled below; done() may run before or after
+      const done = () => {
+        clearTimeout(cap);
+        subs.forEach((x) => x?.cancel?.());
+        res();
+      };
+      const cap = setTimeout(done, QUICKSTART_WAIT_MS);
+      subs.push(s.Mode.current.subscribe((m: string) => m === s.Mode.Mode.INSIDE && done()));
+    });
     // Pano tiles can be slow when Matterport is under load, so retry for ~20 s, then let
     // Showcase pick its own way inside rather than leaving the user in the dollhouse.
-    const inside = target ? await moveToPano(s, target, true, 16) : false;
+    const inside = target ? await moveToPano(s, qualify(target), true, 16, () => qualify(target)) : false;
     if (!inside) await s.Mode.moveTo(s.Mode.Mode.INSIDE).catch(() => {});
     hideLoading(vref.current);
     setTimeout(() => hideLoading(vref.current), 1500);
@@ -189,7 +223,7 @@ export default function MatterportHost({ sid, geometry }: { sid: string; geometr
       const onTarget = !target || currentSweep?.sid === target;
       if (mode === s.Mode.Mode.INSIDE && onPano && onTarget && emptyActive()) break;
       if (!emptyActive()) await viewsRef.current.defurnish.setActive().catch(() => {});
-      const moved = target && !onTarget ? await moveToPano(s, target, true, 1) : onTarget;
+      const moved = target && !onTarget ? await moveToPano(s, qualify(target), true, 1) : onTarget;
       if (!moved) await s.Mode.moveTo(s.Mode.Mode.INSIDE).catch(() => {});
       hideLoading(vref.current);
       await new Promise((r) => setTimeout(r, 1000));
