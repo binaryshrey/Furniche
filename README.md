@@ -1,89 +1,165 @@
 # FurNiche AI
 
-Furnish a real Houston listing before you move in. Open the home's Matterport scan in its
-empty-room view, shop furniture from IKEA, Amazon, etc., and drop each
-piece into the room at its true size. FurNiche AI checks the fit, styles a room for you, prices
-paint and flooring, and plans the yard on a Vexcel aerial image.
+**Live demo:** [https://furniche.biz](https://furniche.biz)
 
-Built at HackPrinceton Fall 2026
+FurNiche AI lets you furnish a real housing listing before you settle in. It finds you a listing via Vexcel aerial map, where in you fly in over Vexcel's 3D city and open the home's Matterport scan in an empty-room view. Shop artistic furniture and appliances from IKEA, drop each piece into the room at its true size and let the app check the fit and style in one click, price paint and flooring, plan the yard on a Vexcel aerial image and pay through a Capital One sandbox account. Built at HackPrinceton Fall 2026.
 
-## Architecture
+![Banner](assets/banner.png)
 
-![FurNiche AI architecture](assets/architecture.svg)
+## Introducing FurNiche AI
 
-The editable diagram is [`assets/architecture.excalidraw`](assets/architecture.excalidraw): open it at
-[excalidraw.com](https://excalidraw.com) to change it.
+Listing photos show an empty room, and a product page shows a number in inches. Nothing connects the two, and nothing checks the result against rent. FurNiche AI puts the real product, at its real size, inside the real scan, then checks the fit and the budget before you buy.
 
-### Request flow
+You start from a CoStar listing, fly in from a 3D city view into the home's Matterport scan, and furnish it with real catalogue products. A deterministic solver lays rooms out and checks every piece against the room's walls and doors. Claude only chooses the products and the look; it never places anything.
 
-![FurNiche AI request flow](assets/sequence-flow.svg)
+FurNiche AI lets a mover:
 
-From a typed search to a paid cart: find, fly in, furnish, pay. Editable source:
-[`assets/sequence-flow.excalidraw`](assets/sequence-flow.excalidraw).
+- Search for a home in plain words and see it on a Vexcel aerial map or in a 3D city
+- Walk into the scan and drop real furniture at catalogue size
+- Auto-furnish every room in one click, with art, mirrors, plants and a dressed bed
+- See the room at any time of day, with the sun placed for the home's location
+- Get a fit check, paint and flooring quantities, and a yard plan
+- Check whether they can afford the home, rent versus buy, and what moving in costs
+- Pay the cart from a Capital One sandbox account and read it back in a banking dashboard
 
-## What it does
+## Key Features
 
-- **Search in plain words.** Type "3 bed apartments under $2,000" or "studio in Montrose under
-  $1,500". Matches appear as price tags on a Vexcel aerial map with a carousel of every result;
-  click one to walk into its scan. Neighbourhood names become a radius search.
-- **Float over the 3D city.** Vexcel's 3D mesh of Houston streams into the browser with every
-  match floating above its building. Drag, tilt and zoom, or fly with W A S D and Q/E; hover a
-  card to glide to that home and click a pin to walk inside.
-- **Furnish the real room.** The scan opens in Matterport's defurnished view. Drag a product
-  from the shop onto the floor; it lands at its catalogue size. Drag to move, `R` rotate,
-  `D` duplicate, `Delete` remove.
-- **Fit check.** Every piece is checked against the room outline from the Matterport Model API:
-  crossing a wall, overlapping, taller than the ceiling, blocking a door you marked, and
-  walkways under 76 cm. Seat–table pairs (sofa and coffee table, bed and nightstand) get their
-  own spacing rule.
-- **Floor plan.** A to-scale plan from the scan's wall graph, with the same drag and fit check.
-- **AI stylist.** Describe a look and budget ("warm japandi under $3,000"). Claude only picks
-  products; a deterministic solver places them against the room's walls and drops optional
-  pieces that would break the fit check. Without an API key a rule-based picker is used.
-- **Paste a link.** Paste a product page; FurNiche AI AI reads its structured data for name, price and
-  size (including fractional inches). It never guesses a size: if none is on the page, you
-  enter it.
-- **Photo to 3D.** Take or upload a photo of any piece (your own armchair, one you saw in a
-  shop) and it becomes a textured 3D model with real depth, ready to drag into the scan, for
-  free. Quick builds one in a few seconds; Max detail takes about a minute for finer shape and
-  textures. A piece photographed at an angle is squared up automatically; turn it until its
-  front faces the arrow. It comes out true to size on its own: the browser recognises what it is
-  (Apple's MobileCLIP via transformers.js, free, `lib/recognize.ts`) and takes that kind's usual
-  size (`lib/scanSizes.ts`), or Claude's estimate when a key is set; one measurement scales the
-  model and its own shape gives the rest, so it is never stretched. It gets the same fit check as
-  store products. Every finished model is saved in **My Scans** (in the browser, so it lasts
-  across visits) and can be added to any home. The free GPUs allow a few models a day, so build
-  your demo pieces ahead of time, in the browser you'll demo from.
-- **Walls and floor.** Paint, wallpaper and flooring per room, with gallons (2 coats,
-  350 sq ft per gallon, 15% for openings) and flooring area (+10% waste).
-- **Mood boards.** Six themes with palettes, finishes and matching products.
-- **Plan the yard.** For homes, the Vexcel aerial image is shown to scale with the parcel line
-  and building footprints. Place patio furniture and see lot, paved, deck, pool and tree-cover
-  figures. Pieces off the lot or on a building turn red.
-- **Ask FurNiche AI AI (chat).** A chat in the editor that knows the open home and design. Ask about
-  any piece, price, look or light, or tell it what to change: add, remove or swap furniture,
-  "make this room feel bigger" (re-lays the room for the most open floor, or swaps in smaller
-  pieces of the same style), paint and flooring, and warmer or brighter light in the 3D view.
-  Runs on Claude with tools; without `ANTHROPIC_API_KEY` common commands still work by keyword.
-- **Move-in budget (Capital One Nessie).** Reads the mover's checking, savings and card, bills and
-  paychecks from the Nessie sandbox and shows what is safe to spend without missing rent (bills
-  and a $500 cushion kept back, 40% of savings, card kept under 30% use). The chat answers
-  "what can I afford?", and the cart shows a pay-now / pay-later plan and pays each store as a
-  Nessie purchase. Without `NESSIE_API_KEY` the same numbers come from demo data.
-- **Text it on iMessage (Photon).** With `PHOTON_PROJECT_ID` and `PHOTON_API_KEY` set, the same
-  assistant answers iMessages to your Photon line while the editor is open, and edits sent by
-  text update the 3D room live. Messages are polled, so no public webhook URL is needed.
-- **Phone remote.** Press Phone remote in the editor and scan the QR code: your phone becomes a
-  controller for the tour on the big screen. Drag to look around (or tilt the phone), step
-  forward and back, jump between rooms, switch evening/daylight, Auto-furnish, and chat with the
-  assistant, with its replies shown on the phone. The phone must be on the same Wi-Fi as the
-  computer running the app; the relay lives in the app server's memory, so run one server.
-- **Cart and sharing.** One shopping list grouped by store with buy links, and a share link
-  that carries the whole design in the URL.
+### Search and Fly-in
 
-## Run it
+- Search in plain words: "3 bed apartments under $2,000" or "studio in Montrose under $1,500". Matches appear as price tags on a Vexcel aerial map with a carousel of every result. Neighbourhood names become a radius search.
+- Vexcel's 3D mesh of Houston streams into the browser with every match above its building. Hover a card to glide to that home, click a pin to walk inside. Homes outside the mesh open the scan directly.
+
+![Home page](assets/flyin.png)
+
+### Furnish the Real Room
+
+- Drag a product from the shop onto the floor and it lands at its catalogue size. Drag to move, `R` rotate, `D` duplicate, `Delete` remove.
+- **Auto-furnish** styles every room by type and size, from sofa and coffee table to bed, nightstands and wardrobe, a dining table with chairs and a flower pot, rugs, TV console and plants. Pictures hang on interior walls, mirrors stand upright, and new pieces settle in with a short animation.
+- The fit check flags a piece that crosses a wall, overlaps another, is taller than the ceiling, blocks a marked door, or leaves a walkway under 76 cm.
+
+![Auto-furnish and chat](assets/1.png)
+
+### Time of Day
+
+Pick any hour and the scene is lit for the home's location: the sun's position comes from standard solar formulas, with sunbeams through the windows and a night mode when the windows go dark.
+
+![Morning light](assets/2.png)
+![Night](assets/3.png)
+
+### AI Stylist, Swaps and Chat
+
+- Describe a look and a budget ("warm japandi under $3,000"). Claude picks products; the solver places them and drops optional pieces that would break the fit.
+- Click any piece to see swaps: best match, cheaper, premium, and others that also fit. IKEA prices are checked live.
+- The chat knows the open home and design: add, remove or swap furniture, "make this room feel bigger", change paint, flooring and light. Without an Anthropic key, common commands still work by keyword.
+
+![Swap alternatives](assets/4.png)
+
+### Plan, Paint and More
+
+- **Photo to 3D:** upload a photo of any piece and it becomes a textured 3D model, sized from what the browser recognises it to be. Every model is kept in My Scans.
+- **Walls and floor:** paint, wallpaper and flooring per room, with gallons (2 coats, 350 sq ft per gallon, 15% for openings) and flooring area (+10% waste).
+- **Plan the yard:** the Vexcel aerial image shown to scale with the parcel line and building footprints.
+- **Floor plan, mood boards, paste-a-link import:** a to-scale plan from the scan's wall graph, six themes, and product import from any page's structured data. A size is never guessed.
+- **Phone remote and iMessage:** scan a QR code to steer the tour from your phone, or text the assistant through Photon.
+
+### Cart and Swipe to Pay
+
+One shopping list grouped by store with buy links, in a two-column layout. Pick a Capital One sandbox account, check it against the move-in budget, then swipe to post one Nessie purchase per store. No card number is typed, shown or stored.
+
+![Cart](assets/cart.png)
+
+### Banking Dashboard
+
+Click the Capital One card to open `/bank` in a new tab: balances, a spent-versus-saved ring, weekly spending, a category breakdown, top merchants, every card, transactions, and a financial health score with tips. Orders you pay for appear as transactions. Everyday activity beyond what the sandbox holds is generated and marked as sample.
+
+![Banking dashboard](assets/bank-1.png)
+![Insights and tips](assets/bank-2.png)
+
+### Home Finance
+
+For any listing, a finance page works out what the home costs a month and whether the mover can afford it from their Capital One accounts. It covers mortgage and pre-qualification, renting against buying, what moving in takes, and, for an owner, the home's value and equity. Rates are weekly averages and the approvals are simulated; none of it is an offer of credit.
+
+![Afford and mortgage](assets/bank-3.png)
+![Rent versus buy](assets/bank-4.png)
+![Move-in costs](assets/bank-5.png)
+![Sell and equity](assets/bank-6.png)
+
+## Core User Flow (Find, Fly In, Furnish, Pay)
+
+![Request flow](assets/sequence-flow.svg)
+
+The editable source is [`assets/sequence-flow.excalidraw`](assets/sequence-flow.excalidraw).
+
+### 1. Find
+
+The mover types a search. The query becomes filters (rules, plus Claude when a key is set), and results land on the Vexcel aerial map and the home list.
+
+### 2. Fly In
+
+Choosing a home glides the camera over the 3D city and down to the building. While it descends, the Matterport scan loads underneath, and it cross-fades in as soon as the room is showing. The URL becomes `/space/[sid]`.
+
+### 3. Furnish
+
+Drag pieces in, ask the stylist, or press Auto-furnish for the whole home. The solver senses doors, windows and counters in the scan, places pieces against walls, and runs the fit check. Paint and flooring quantities update as you go.
+
+### 4. Budget and Pay
+
+The budget strip shows what the mover can safely spend after bills and a $500 cushion, with the card kept under 30% use. Swipe to pay, then open the dashboard to see the purchases posted.
+
+### 5. Share
+
+The share link carries the whole design in the URL. Designs are saved in the browser; there are no accounts and nothing is sold.
+
+## Built With
+
+Application
+
+- Next.js 14 (App Router), React 18, TypeScript: web application framework
+- Tailwind CSS and zustand: UI styling and state
+- `@matterport/webcomponent` and `@matterport/r3f`: host the scan; furniture is drawn with three.js (react-three-fiber) inside Matterport's scene
+- `3d-tiles-renderer`: the Vexcel 3D city; Leaflet for the search map
+
+Data and APIs
+
+- Matterport Model API (GraphQL) and Showcase SDK: rooms, walls, panoramas
+- Vexcel property API, ortho tiles and 3D Tiles for Houston
+- CoStar hackathon kit: listings and Matterport links
+- Capital One Nessie v2 (sandbox): accounts, bills, purchases, transactions
+- IKEA product pages: catalogue measurements, photos and live prices
+
+AI
+
+- Anthropic Claude: stylist, chat, product import and size estimates, each with a rule-based fallback
+- Google Gemini API
+- Photon: the same assistant over iMessage
+- Hugging Face ZeroGPU Spaces, or your own GPU: Photo to 3D
+
+Infrastructure and Deployment
+
+- Vercel: Git deploys from `main`; a `prebuild` step fetches the git-ignored `data/` archive from a private Vercel Blob store and copies the Matterport viewer files
+- A service worker caches the large Matterport model files in the browser
+
+## Architecture Overview
+
+![Architecture](assets/architecture.svg)
+
+| Layer   | What it does                                                                                        | Where                                                       |
+| ------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Scan    | Hosts the Matterport tour in its defurnished view                                                   | `components/viewer/MatterportHost.tsx`                      |
+| Overlay | Draws furniture, wall art, mirrors and paint with a depth occluder, so pieces sit behind real walls | `components/viewer/`                                        |
+| Sensing | Raycasts the scan for doorways, windows, counters and plain wall                                    | `lib/scanSense.ts`                                          |
+| Solver  | Places pieces against walls, keeps walkways clear, drops optional pieces that break the fit         | `lib/solver.ts`, `lib/autofurnish.ts`                       |
+| Fit     | Separating-axis tests on footprints, walkway and door rules                                         | `lib/fit.ts`                                                |
+| Stylist | Claude picks products, never positions                                                              | `app/api/stylist`, `lib/llm.ts`                             |
+| Money   | Nessie accounts, bills, purchases, bank summary, home finance                                       | `lib/nessie.ts`, `lib/bankSummary.ts`, `lib/homeFinance.ts` |
+
+## Development Setup
+
+Needs Node.js 20.9 or newer.
 
 ```bash
+git clone https://github.com/binaryshrey/Furniche.git
+cd Furniche
 npm install --legacy-peer-deps
 cp .env.example .env.local          # fill in the keys
 npx matterport-assets public/matterport-assets   # Matterport viewer files (not in git)
@@ -96,53 +172,57 @@ npm run dev                          # http://localhost:3000
 npm test
 ```
 
-Open the app at `http://localhost:3000` (not `127.0.0.1`): the Matterport SDK key is limited to
-localhost.
+Open the app at `http://localhost:3000` (not `127.0.0.1`): the Matterport SDK key is limited to localhost. The CoStar kit and the generated `data/listings.json` are not in this repo; they come from the hackathon organisers.
 
-The CoStar kit and the generated `data/listings.json` are not in this repo; they come from
-the hackathon organisers.
+### Configs
 
-## How it works
+Create a `.env.local` file in the project root. The Matterport and Vexcel keys are required; the rest are optional and each has a fallback.
 
-- Next.js 14 (App Router), React 18, TypeScript, Tailwind, zustand.
-- `@matterport/webcomponent` + `@matterport/r3f` host the scan; furniture is rendered with
-  three.js inside Matterport's scene. Stand-in shapes are built at each product's exact size.
+```
+MATTERPORT_API_KEY=XXXXX-XXXXX
+MATTERPORT_API_TOKEN=XXXXX-XXXXX
+NEXT_PUBLIC_MATTERPORT_SDK_KEY=XXXXX-XXXXX
+VEXCEL_API_KEY=XXXXX-XXXXX
+
+# Optional
+ANTHROPIC_API_KEY=XXXXX-XXXXX        # stylist, chat, product import (rule-based fallback)
+NESSIE_API_KEY=XXXXX-XXXXX           # Capital One sandbox checkout and dashboard (demo data without it)
+PHOTON_PROJECT_ID=XXXXX-XXXXX        # iMessage assistant
+PHOTON_API_KEY=XXXXX-XXXXX
+HF_TOKEN=XXXXX-XXXXX                 # more free GPU time for Photo to 3D
+PHOTO3D_GPU_URL=XXXXX-XXXXX          # your own GPU for Photo to 3D, no daily limit
+PHOTO3D_GPU_TOKEN=XXXXX-XXXXX
+```
+
+### Deploy
+
+```bash
+npm run lint && npm test            # lint errors fail the remote build
+```
+
+Pushes to `main` deploy to Vercel. The build runs `scripts/fetch-data.mjs`, which reads the git-ignored `data/` archive from a private Blob store, and copies the Matterport viewer files into `public/`. To update the data, run `bash scripts/pack-data.sh` and upload the archive as described in [`docs/DATA.md`](docs/DATA.md).
+
+## Project Layout
+
+| Path                                                          | What it holds                                                                                     |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `app/`                                                        | Pages (`/`, `/space/[sid]`, `/sky`, `/cart`, `/bank`, `/finance/[sid]`, `/boards`) and API routes |
+| `components/viewer/`                                          | Matterport host, furniture layer, surface (paint) layer, 3D furniture shapes                      |
+| `components/bank/`, `components/finance/`, `components/shop/` | Capital One card, charts, finance pages, checkout, swipe to pay                                   |
+| `lib/solver.ts`, `lib/autofurnish.ts`                         | Room layout solver and Auto-furnish                                                               |
+| `lib/scanSense.ts`, `lib/closets.ts`, `lib/hang.ts`           | Scan sensing, closet and doorway inference, wall-art placement                                    |
+| `lib/fit.ts`                                                  | Fit and walkway checks (pure, unit tested)                                                        |
+| `lib/bankSummary.ts`, `lib/homeFinance.ts`, `lib/nessie.ts`   | Banking summary, home finance, Capital One sandbox                                                |
+| `catalog/`                                                    | Curated product catalogue and the IKEA catalogue                                                  |
+| `scripts/`                                                    | Listing, catalogue and model-index builders; data packing; Photo to 3D GPU helpers                |
+| `assets/`                                                     | Screenshots and diagrams used in this README                                                      |
+
+## How It Works
+
 - `lib/matterport.ts` reads rooms, walls and panos from the Matterport Model API (GraphQL).
-- `lib/vexcel.ts` reads the parcel and buildings from Vexcel's property API and frames the
-  ortho image on the same centre, so the overlay lines up. Ortho map tiles and the 3D Tiles
-  city mesh go through server routes so the API key never reaches the browser.
-- `/sky` renders the 3D city with `3d-tiles-renderer` on three.js. The Draco and KTX2 decoders
-  in `public/decoders/` are copied from three.js. Vexcel's 3D collection covers Houston only.
-- `lib/search.ts` turns plain-language queries into filters (rules, plus Claude when a key is
-  set); the search map uses Leaflet with Vexcel tiles.
-- `lib/fit.ts` (separating-axis tests on footprints) and `lib/solver.ts` are pure functions
-  with unit tests.
-- Photo to 3D (`lib/photo3d.ts`, `/api/photo3d`) runs free on Hugging Face's shared GPUs
-  (ZeroGPU Spaces), called with `@gradio/client`. The TRELLIS Space cuts the piece out on its
-  CPU (no GPU allowance used); then one GPU run builds the model: Stability AI's Stable Fast 3D
-  for Quick (2048 px texture), Microsoft's TRELLIS for Max detail. Hugging Face meters free use
-  per day: a free account (`HF_TOKEN`, optional) gets about 3 runs and 5 minutes of reserved GPU
-  time, so about 3 Quick or 1 Max detail models; without a token, less. Progress streams to the
-  page as it happens, and the cut-out and the model come with it: the browser keeps them
-  (IndexedDB, `lib/photoAssets.ts`), so placed pieces load after a reload, on Vercel too, where
-  functions share no disk. The server also caches models by the photo's hash in `.cache/photo3d`
-  (in `/tmp` on Vercel, per instance). A photo is only built once per browser: build the demo
-  pieces ahead of time, in the browser you'll demo from, and they load instantly on stage. iPhone
-  (HEIC) photos are converted on the server with libheif in WebAssembly (`lib/heic.ts`), so that
-  works on Vercel as well. Photo pieces are never picked by Auto-furnish, the stylist or swaps,
-  and they appear in the cart without a store link.
-  It can also run with no daily limits: on this computer with PyTorch (`bash
-  scripts/photo3d_local_setup.sh`, then `.cache/photo3d-local/venv/bin/python scripts/photo3d_local.py`
-  and `PHOTO3D_GPU_URL=http://127.0.0.1:8765`), where TripoSR builds the shape on the Mac's GPU and the
-  photo itself paints the side the camera saw; or on a free Kaggle or Colab GPU with
-  `scripts/photo3d_gpu.ipynb` (Hunyuan3D-2). The live site can use the server on this computer
-  too: Vercel can't reach it, but the browser can (`lib/photoDirect.ts`). Open
-  http://127.0.0.1:8765/connect once and allow the site to reach this computer if Chrome asks
-  (`/connect-gpu` shows the state and turns it off). On this computer a build needs about 5 GB of memory,
-  which the server gives back when it's done; on an 8 GB Mac, close other apps first, or the build
-  crawls while macOS swaps (the app waits up to 8 minutes). While a model builds, the piece can
-  already go in the room as its cut-out, and it turns 3D by itself when the model arrives.
-- Designs are saved in the browser; there are no accounts and nothing is sold.
-
-The product catalogue is a curated sample; prices and sizes were checked on the date shown in
-the cart and may have changed.
+- `lib/vexcel.ts` reads the parcel and buildings from Vexcel's property API and frames the ortho image on the same centre so the overlay lines up. Ortho tiles and the 3D Tiles mesh go through server routes so the API key never reaches the browser.
+- `/sky` renders the 3D city with `3d-tiles-renderer`. The Draco and KTX2 decoders in `public/decoders/` are copied from three.js. Vexcel's 3D collection covers Houston only.
+- `lib/search.ts` turns plain-language queries into filters (rules, plus Claude when a key is set).
+- `lib/fit.ts` and `lib/solver.ts` are pure functions with unit tests. `lib/scanSense.ts` raycasts the scan for doorways, windows and flat counters, and Auto-furnish uses them to keep pieces off doors and windows.
+- Photo to 3D (`lib/photo3d.ts`, `/api/photo3d`) runs free on Hugging Face's shared GPUs, called with `@gradio/client`. Quick uses Stability AI's Stable Fast 3D and Max detail uses Microsoft's TRELLIS. Hugging Face meters free use per day, so build demo pieces ahead of time in the browser you will demo from; models are kept in the browser (IndexedDB) and cached on the server by the photo's hash. iPhone (HEIC) photos are converted on the server in WebAssembly. For no daily limit, run `scripts/photo3d_local.py` on this computer or `scripts/photo3d_gpu.ipynb` on a free Kaggle or Colab GPU, and set `PHOTO3D_GPU_URL`.
+- The product catalogue is a curated sample; prices and sizes were checked on the date shown in the cart and may have changed.
