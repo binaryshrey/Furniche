@@ -56,6 +56,11 @@ Built at HackPrinceton Fall 2026 for CoStar's "Inside and Out: AI for the Built 
 - **Text it on iMessage (Photon).** With `PHOTON_PROJECT_ID` and `PHOTON_API_KEY` set, the same
   assistant answers iMessages to your Photon line while the editor is open, and edits sent by
   text update the 3D room live. Messages are polled, so no public webhook URL is needed.
+- **Phone remote.** Press Phone remote in the editor and scan the QR code: your phone becomes a
+  controller for the tour on the big screen. Drag to look around (or tilt the phone), step
+  forward and back, jump between rooms, switch evening/daylight, Auto-furnish, and chat with the
+  assistant, with its replies shown on the phone. The phone must be on the same Wi-Fi as the
+  computer running the app; the relay lives in the app server's memory, so run one server.
 - **Cart and sharing.** One shopping list grouped by store with buy links, and a share link
   that carries the whole design in the URL.
 

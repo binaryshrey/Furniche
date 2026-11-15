@@ -11,6 +11,7 @@ import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
 import LightGrade from './viewer/LightGrade';
 import ChatPanel from './chat/ChatPanel';
+import PhoneRemote from './remote/PhoneRemote';
 import PlanView from './plan/PlanView';
 import { fmtUsd } from './shop/ShopPanel';
 import SwapCard from './design/SwapCard';
@@ -130,6 +131,7 @@ export default function Editor({ sid }: { sid: string }) {
               Plan the yard
             </Link>
           )}
+          <PhoneRemote geometry={geometry} title={title} />
           <Link href="/cart" className="rounded-md px-2 py-1 hover:bg-card">
             Cart{cartTotal > 0 ? ` · ${fmtUsd(cartTotal)}` : ''}
           </Link>
