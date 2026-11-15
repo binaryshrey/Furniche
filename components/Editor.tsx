@@ -9,8 +9,8 @@ import { useStore } from '@/lib/store';
 import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
+import LightGrade from './viewer/LightGrade';
 import ChatPanel from './chat/ChatPanel';
-import DesignPanel from './design/DesignPanel';
 import PlanView from './plan/PlanView';
 import { fmtUsd } from './shop/ShopPanel';
 import SwapCard from './design/SwapCard';
@@ -34,6 +34,7 @@ export default function Editor({ sid }: { sid: string }) {
   const setShowFurnished = useStore((s) => s.setShowFurnished);
   const { sdk, ready, hasDefurnish, currentRoomId, embedOnly } = useViewerState();
   const locked = useStore((s) => !!(s.activeSid && s.designs[s.activeSid]?.locked));
+  const cartTotal = useStore((s) => (s.activeSid ? (s.designs[s.activeSid]?.items ?? []).reduce((t, i) => t + (s.product(i.productId)?.priceUsd ?? 0), 0) : 0));
 
   useEffect(() => {
     setActive(sid);
@@ -45,6 +46,22 @@ export default function Editor({ sid }: { sid: string }) {
         if (d?.sid === sid) useStore.getState().loadDesign(d);
       } catch {
         /* ignore bad links */
+      }
+    } else {
+      // A home opens empty: no furniture until the shopper asks for it (chat, Auto-furnish, Add to
+      // room) or turns on the seller's furniture. Within one browser session the design is kept,
+      // so coming back from the cart still shows what was placed.
+      const key = `furniche:opened:${sid}`;
+      let seen = false;
+      try {
+        seen = sessionStorage.getItem(key) === '1';
+        sessionStorage.setItem(key, '1');
+      } catch {
+        /* storage blocked: start empty every time */
+      }
+      if (!seen) {
+        const cur = useStore.getState().design();
+        useStore.getState().loadDesign({ ...cur, items: [], surfaces: [], locked: false, updatedAt: new Date().toISOString() });
       }
     }
     fetch(`/api/models/${sid}`)
@@ -117,6 +134,9 @@ export default function Editor({ sid }: { sid: string }) {
           <Link href={`/sky?q=&focus=${sid}`} className="rounded-md px-2 py-1 hover:bg-card">
             3D city
           </Link>
+          <Link href="/cart" className="rounded-md px-2 py-1 hover:bg-card">
+            Cart{cartTotal > 0 ? ` · ${fmtUsd(cartTotal)}` : ''}
+          </Link>
           <button onClick={share} className="rounded-md border border-line bg-card px-3 py-1.5">
             {copied ? 'Link copied' : 'Share design'}
           </button>
@@ -175,11 +195,12 @@ export default function Editor({ sid }: { sid: string }) {
             {error && <div className="absolute inset-0 z-20 flex items-center justify-center text-sm text-bad">{error}</div>}
             <div className={view === '3d' ? 'absolute inset-0' : 'invisible absolute inset-0'}>
               <MatterportHost sid={sid} geometry={geometry} />
+              <LightGrade />
               <ArrangeOverlay geometry={geometry} />
               <SwapCard geometry={geometry} />
               <TourCover sid={sid} />
             </div>
-            <ChatPanel />
+            <ChatPanel geometry={geometry} />
             {view === 'plan' && geometry && (
               <div className="absolute inset-0 z-10">
                 <PlanView geometry={geometry} />
@@ -188,7 +209,6 @@ export default function Editor({ sid }: { sid: string }) {
           </div>
         </main>
 
-        <DesignPanel geometry={geometry} />
       </div>
     </div>
   );

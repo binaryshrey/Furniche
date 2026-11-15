@@ -13,7 +13,9 @@ import SurfacesBox from './SurfacesBox';
 
 const DOT: Record<FitLevel, string> = { ok: 'bg-ok', warn: 'bg-warn', error: 'bg-bad' };
 
-export default function DesignPanel({ geometry }: { geometry: ModelGeometry | null }) {
+// embedded: shown inside the Ask Furniche panel, without the sidebar frame, stylist or finishes.
+// onPick: a row was chosen (the Ask Furniche panel brings that piece into view).
+export default function DesignPanel({ geometry, embedded = false, onPick }: { geometry: ModelGeometry | null; embedded?: boolean; onPick?: (uid: string) => void }) {
   const design = useDesign();
   const productOf = useStore((s) => s.product);
   const selected = useStore((s) => s.selectedUid);
@@ -33,7 +35,7 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
   for (const r of resolved) byRoom.set(r.item.roomId ?? '', [...(byRoom.get(r.item.roomId ?? '') ?? []), r]);
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-line bg-paper">
+    <aside className={embedded ? 'flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-card/50' : 'flex h-full w-[340px] shrink-0 flex-col border-l border-line bg-paper'}>
       <div className="border-b border-line p-4">
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-lg">Your design</h2>
@@ -53,7 +55,7 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
         </p>
       </div>
 
-      <div className="scroll-thin flex-1 space-y-4 overflow-y-auto p-4">
+      <div className={embedded ? 'space-y-4 p-4' : 'scroll-thin flex-1 space-y-4 overflow-y-auto p-4'}>
         {resolved.length > 0 && (
           <section className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3">
             <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${design.locked ? 'bg-brand/15 text-brand' : 'bg-panel text-muted'}`} aria-hidden>
@@ -80,11 +82,11 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
           </section>
         )}
 
-        <StylistBox geometry={geometry} roomId={currentRoomId} />
+        {!embedded && <StylistBox geometry={geometry} roomId={currentRoomId} />}
 
         {resolved.length === 0 && (
           <div className="rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">
-            Press Auto-furnish to fill every room, then click any piece to swap it for one that fits.
+            {embedded ? 'Nothing placed yet. Use Furnish or Furniture to add pieces.' : 'Press Auto-furnish to fill every room, then click any piece to swap it for one that fits.'}
           </div>
         )}
 
@@ -101,9 +103,9 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
                     <div
                       role="button"
                       tabIndex={0}
-                      onClick={() => select(isSel ? null : item.uid)}
-                      onKeyDown={(e) => e.key === 'Enter' && select(isSel ? null : item.uid)}
-                      className={`rounded-xl border bg-card p-2.5 ${isSel ? 'border-ink' : 'border-line'}`}
+                      onClick={() => (select(isSel ? null : item.uid), !isSel && onPick?.(item.uid))}
+                      onKeyDown={(e) => e.key === 'Enter' && (select(isSel ? null : item.uid), !isSel && onPick?.(item.uid))}
+                      className={`cursor-pointer rounded-xl border bg-card/60 p-2.5 ${isSel ? 'border-brand' : 'border-white/10 hover:border-ink/40'}`}
                     >
                       <div className="flex gap-3">
                         <ProductSwatch product={product} size={44} />
@@ -145,15 +147,18 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
           </section>
         ))}
 
-        <SurfacesBox geometry={geometry} roomId={currentRoomId} />
+        {!embedded && <SurfacesBox geometry={geometry} roomId={currentRoomId} />}
       </div>
 
-      <div className="border-t border-line p-4">
-        <Link href="/cart" className="block w-full rounded-lg btn-brand px-4 py-2.5 text-center text-sm font-medium ">
-          Review cart · {fmtUsd(total)}
-        </Link>
-        <p className="mt-2 text-center text-[11px] text-muted">Click to select, drag the selected piece to move · drag ↻ to rotate · D duplicate · Delete remove</p>
-      </div>
+      {/* Embedded in Ask Furniche, which has its own Review cart button. */}
+      {!embedded && (
+        <div className="border-t border-line p-4">
+          <Link href="/cart" className="block w-full rounded-lg btn-brand px-4 py-2.5 text-center text-sm font-medium ">
+            Review cart · {fmtUsd(total)}
+          </Link>
+          <p className="mt-2 text-center text-[11px] text-muted">Click to select, drag the selected piece to move · drag ↻ to rotate · D duplicate · Delete remove</p>
+        </div>
+      )}
     </aside>
   );
 }
