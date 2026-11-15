@@ -8,7 +8,8 @@ import type { ModelGeometry } from '@/lib/types';
 
 const EXAMPLES = ['Warm Japandi under $3,000', 'Midcentury with walnut, $2,500', 'Bright coastal, keep it cheap'];
 
-export default function StylistBox({ geometry, roomId }: { geometry: ModelGeometry | null; roomId: string | null }) {
+// onFurnished: the rooms that just got furniture, so the editor can show them off.
+export default function StylistBox({ geometry, roomId, onFurnished }: { geometry: ModelGeometry | null; roomId: string | null; onFurnished?: (roomIds: string[]) => void }) {
   const room = geometry?.rooms.find((r) => r.id === roomId) ?? null;
   const design = useDesign();
   const imported = useStore((s) => s.importedProducts);
@@ -32,6 +33,7 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
     let budget = 0;
     let done = 0;
     let tried = 0;
+    const furnished: string[] = [];
     const dropped: { name: string; reason: string }[] = [];
     for (const r of rooms) {
       const sense = senseRoom(r, { fixtures: !hasDefurnish });
@@ -43,6 +45,7 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
       budget += res.budget;
       tried = Math.max(tried, res.tried);
       done += 1;
+      furnished.push(r.id);
       dropped.push(...res.dropped.map((d) => ({ name: d.product.name.split(',')[0], reason: d.reason })));
     }
     if (!done) {
@@ -58,6 +61,7 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
       dropped,
       method: 'auto',
     });
+    onFurnished?.(furnished);
   }
 
   async function run(text: string) {
@@ -75,6 +79,7 @@ export default function StylistBox({ geometry, roomId }: { geometry: ModelGeomet
       useStore.getState().replaceItems(json.placed, room.id);
       if (json.themeId) useStore.getState().setTheme(json.themeId);
       setNote({ summary: json.summary, dropped: json.dropped, method: json.method });
+      onFurnished?.([room.id]);
     } finally {
       setBusy(false);
     }

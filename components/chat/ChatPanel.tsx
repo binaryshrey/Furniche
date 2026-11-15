@@ -1,10 +1,17 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CategoryCarousel, CategoryGrid, FURNITURE_GROUPS } from '@/components/assistant/FurnitureCarousel';
+import WallsFloorTab from '@/components/assistant/WallsFloorTab';
+import DesignPanel from '@/components/design/DesignPanel';
+import StylistBox from '@/components/design/StylistBox';
+import { fmtUsd } from '@/components/shop/ShopPanel';
 import type { WorkDesign } from '@/lib/designOps';
 import { useLighting, type LightPrefs } from '@/lib/lighting';
 import { useViewerState } from '@/lib/sceneBridge';
+import { showcaseRoom, stopShowcase } from '@/lib/showcase';
 import { useDesign, useStore } from '@/lib/store';
-import type { Design } from '@/lib/types';
+import type { Design, ModelGeometry, Product } from '@/lib/types';
 import BudgetStrip, { useBudget } from './BudgetStrip';
 
 // What the design looked like before a reply changed it, so one tap can put it back.
@@ -20,6 +27,15 @@ type Msg = {
   before?: Before | null;
   undone?: boolean;
 };
+type Tab = 'chat' | 'furnish' | 'furniture' | 'finishes' | 'design';
+
+const TABS: { id: Tab; label: string; icon: string }[] = [
+  { id: 'chat', label: 'Chat', icon: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z' },
+  { id: 'furnish', label: 'Furnish', icon: 'M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z' },
+  { id: 'furniture', label: 'Furniture', icon: 'M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3M3 12h18v4H3zM5 16v2M19 16v2' },
+  { id: 'finishes', label: 'Walls & floor', icon: 'M4 4h12v5H4zM16 6.5h3v5h-7v3M11 14.5h2v6h-2z' },
+  { id: 'design', label: 'My design', icon: 'M4 6h16M4 12h16M4 18h10' },
+];
 
 const STARTERS = ['What can I afford?', 'Furnish this room under $2,500', 'Make this room feel bigger', 'Warmer evening light'];
 
@@ -49,29 +65,44 @@ function apply(out: { design?: WorkDesign | null; lighting?: LightPrefs | null }
   return before;
 }
 
-// Chat with the Furniche agent about the open home. Every reply carries out the request, lists
-// what changed, and offers next steps as one-tap options (plus Undo). The same agent answers
-// iMessages through Photon; those conversations appear here too and edit the room live.
-export default function ChatPanel() {
+// Everything for furnishing the home lives behind one "Ask Furniche" button, so the 3D tour can
+// fill the screen: chat (which edits the room and answers on iMessage via Photon), Auto-furnish
+// and the stylist, a furniture carousel per category, walls and floor, and the design list.
+export default function ChatPanel({ geometry }: { geometry: ModelGeometry | null }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>('furnish');
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [photon, setPhoton] = useState(false);
   const [unread, setUnread] = useState(0);
   const [starters, setStarters] = useState<string[]>(STARTERS);
+  const [seeAll, setSeeAll] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [showing, setShowing] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const design = useDesign();
   const roomId = useViewerState((s) => s.currentRoomId);
+  const room = geometry?.rooms.find((r) => r.id === roomId) ?? null;
   const productOf = useStore((s) => s.product);
   const planned = useMemo(() => design.items.reduce((s, i) => s + (productOf(i.productId)?.priceUsd ?? 0), 0), [design.items, productOf]);
   const budget = useBudget(planned, msgs.length);
 
+  // Chat follows the newest message; every other tab opens at its top.
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
-  }, [msgs, busy]);
+    if (tab === 'chat') listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+  }, [msgs, busy, tab]);
+  useEffect(() => {
+    if (tab !== 'chat') listRef.current?.scrollTo({ top: 0 });
+  }, [tab, seeAll]);
 
-  // Opening options fit the room the shopper is standing in and what is already there.
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // Opening chat options fit the room the shopper is standing in and what is already there.
   useEffect(() => {
     if (!open || msgs.length) return;
     const snap = snapshot();
@@ -119,8 +150,33 @@ export default function ChatPanel() {
     };
   }, [photon]);
 
+  // Any click in the tour while it is showing off a room hands the camera back to the visitor.
+  useEffect(() => {
+    if (!showing) return;
+    const stop = () => (stopShowcase(), setShowing(null));
+    window.addEventListener('pointerdown', stop, { once: true });
+    return () => window.removeEventListener('pointerdown', stop);
+  }, [showing]);
+
+  // After Auto-furnish: close the panel and turn the camera toward the new furniture.
+  async function showOff(roomIds: string[]) {
+    const sdk = useViewerState.getState().sdk;
+    if (!geometry || !sdk || !roomIds.length) return;
+    const items = useStore.getState().design().items;
+    const target = roomIds.includes(roomId ?? '') ? roomId! : [...roomIds].sort((a, b) => items.filter((i) => i.roomId === b).length - items.filter((i) => i.roomId === a).length)[0];
+    const label = geometry.rooms.find((r) => r.id === target)?.label ?? 'room';
+    setOpen(false);
+    setShowing(label);
+    const { moveToPano } = await import('@/components/viewer/MatterportHost');
+    const products = new Map(useStore.getState().products().map((p) => [p.id, p]));
+    await new Promise((r) => setTimeout(r, 150)); // let the click that started this settle first
+    await showcaseRoom({ sdk, geometry, roomId: target, items, products, moveToPano: (s, id) => moveToPano(s, id) });
+    setShowing(null);
+  }
+
   async function send(message: string) {
     if (!message.trim() || busy) return;
+    setTab('chat');
     const history = msgs.filter((m) => m.channel === 'web').map((m) => ({ role: m.role, text: m.text }));
     setMsgs((m) => [...m, { id: mid(), role: 'user', text: message, channel: 'web' }]);
     setText('');
@@ -149,24 +205,16 @@ export default function ChatPanel() {
     setMsgs((m) => [...m.map((x) => (x.id === msg.id ? { ...x, undone: true } : x)), { id: mid(), role: 'assistant', text: 'Undone. The room is back to how it was.', channel: 'web', suggestions: msg.suggestions }]);
   }
 
+  function added(p: Product, placed: boolean) {
+    if (placed) setToast(`${p.name.split(',')[0]} added to the ${room?.label.toLowerCase() ?? 'room'}`);
+    else {
+      setToast(`Click the floor where the ${p.name.split(',')[0]} should go`);
+      setOpen(false);
+    }
+  }
+
   const lastAssistant = [...msgs].reverse().find((m) => m.role === 'assistant');
   const lastUser = [...msgs].reverse().find((m) => m.role === 'user');
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => (setOpen(true), setUnread(0))}
-        className="absolute right-4 top-4 z-40 flex items-center gap-2 rounded-full btn-brand px-4 py-2.5 text-sm font-semibold shadow-swatch"
-        aria-label="Open the design assistant"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
-        </svg>
-        Ask Furniche
-        {unread > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] text-brand">{unread}</span>}
-      </button>
-    );
-  }
 
   const Chip = ({ label, onClick, tone }: { label: string; onClick: () => void; tone?: 'undo' }) => (
     <button
@@ -181,75 +229,157 @@ export default function ChatPanel() {
     </button>
   );
 
+  const group = FURNITURE_GROUPS.find((g) => g.id === seeAll) ?? null;
+
   return (
-    <section className="absolute bottom-16 right-4 top-4 z-40 flex w-[400px] max-w-[calc(100%-2rem)] flex-col overflow-hidden rounded-2xl border border-line bg-paper/95 shadow-swatch backdrop-blur" aria-label="Design assistant">
-      <header className="flex items-center gap-2 border-b border-line px-3 py-2">
-        <h2 className="font-display text-sm font-semibold">Ask Furniche</h2>
-        {photon && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10px] text-ok">iMessage connected</span>}
-        <button onClick={() => setOpen(false)} className="ml-auto rounded px-2 py-0.5 text-muted hover:text-ink" aria-label="Close the assistant">
-          ✕
+    <>
+      {!open && (
+        <button
+          onClick={() => (setOpen(true), setUnread(0))}
+          className="absolute right-4 top-4 z-40 flex items-center gap-2 rounded-full btn-brand px-4 py-2.5 text-sm font-semibold shadow-swatch"
+          aria-label="Open Ask Furniche"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z" />
+          </svg>
+          Ask Furniche
+          {design.items.length > 0 && <span className="num rounded-full bg-black/25 px-2 py-0.5 text-[11px]">{fmtUsd(planned)}</span>}
+          {unread > 0 && <span className="rounded-full bg-white px-1.5 text-[11px] text-brand">{unread}</span>}
         </button>
-      </header>
-      <BudgetStrip budget={budget} planned={planned} />
+      )}
 
-      <div ref={listRef} className="scroll-thin min-h-[180px] flex-1 space-y-2 overflow-y-auto p-3">
-        {msgs.length === 0 && (
-          <p className="text-xs text-muted">
-            Tell me what to change and I’ll do it in the room: add or swap pieces, paint, flooring, lighting, more open space, or fit it all within your Capital One budget.
-            {photon && ' You can also text me on iMessage.'}
-          </p>
-        )}
-        {msgs.map((m) => (
-          <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
-            <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-white' : 'bg-card'} ${m.undone ? 'opacity-60' : ''}`}>
-              {m.channel === 'imessage' && <div className={`mb-0.5 text-[10px] ${m.role === 'user' ? 'text-white/80' : 'text-muted'}`}>{m.role === 'user' ? `iMessage · ${m.from}` : 'Replied on iMessage'}</div>}
-              <p className="whitespace-pre-wrap">{m.text}</p>
-              {!!m.actions?.length && (
-                <ul className="mt-1.5 space-y-0.5 border-t border-line pt-1.5 text-[11px] text-ok">
-                  {m.actions.map((a, i) => (
-                    <li key={i} className={m.undone ? 'line-through' : ''}>
-                      ✓ {a}
-                    </li>
+      {showing && (
+        <div className="pointer-events-none absolute bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-full border border-line bg-paper/90 px-4 py-2 text-xs shadow-swatch backdrop-blur">
+          Showing your {showing.toLowerCase()} · click anywhere to take over
+        </div>
+      )}
+      {toast && <div className="absolute bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-paper shadow-swatch">{toast}</div>}
+
+      {open && (
+        <section className="absolute bottom-3 right-3 top-3 z-40 flex w-[440px] max-w-[calc(100%-1.5rem)] flex-col overflow-hidden rounded-2xl border border-line bg-paper/95 shadow-swatch backdrop-blur" aria-label="Ask Furniche">
+          <header className="flex items-center gap-2 border-b border-line px-4 py-3">
+            <h2 className="font-display text-base font-semibold">Ask Furniche</h2>
+            {photon && <span className="rounded-full bg-ok/15 px-2 py-0.5 text-[10px] text-ok">iMessage on</span>}
+            <span className="ml-auto text-[11px] text-muted">{room ? `${room.label} · ${room.widthM.toFixed(1)} × ${room.depthM.toFixed(1)} m` : 'Walk into a room'}</span>
+            <button onClick={() => setOpen(false)} className="rounded px-1.5 text-muted hover:text-ink" aria-label="Close Ask Furniche">
+              ✕
+            </button>
+          </header>
+          <BudgetStrip budget={budget} planned={planned} />
+
+          <nav className="grid grid-cols-5 border-b border-line" role="tablist" aria-label="Ask Furniche sections">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => (setTab(t.id), setSeeAll(null))}
+                className={`flex flex-col items-center gap-1 px-1 py-2 text-[10px] transition ${tab === t.id ? 'border-b-2 border-brand text-ink' : 'border-b-2 border-transparent text-muted hover:text-ink'}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d={t.icon} />
+                </svg>
+                {t.label}
+              </button>
+            ))}
+          </nav>
+
+          <div ref={listRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto p-4">
+            {tab === 'chat' && (
+              <div className="space-y-2">
+                {msgs.length === 0 && (
+                  <p className="text-xs text-muted">
+                    Tell me what to change and I’ll do it in the room: add or swap pieces, paint, flooring, lighting, more open space, or fit it all within your Capital One budget.
+                    {photon && ' You can also text me on iMessage.'}
+                  </p>
+                )}
+                {msgs.map((m) => (
+                  <div key={m.id} className={m.role === 'user' ? 'flex justify-end' : ''}>
+                    <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-sm ${m.role === 'user' ? 'bg-brand text-white' : 'bg-card'} ${m.undone ? 'opacity-60' : ''}`}>
+                      {m.channel === 'imessage' && <div className={`mb-0.5 text-[10px] ${m.role === 'user' ? 'text-white/80' : 'text-muted'}`}>{m.role === 'user' ? `iMessage · ${m.from}` : 'Replied on iMessage'}</div>}
+                      <p className="whitespace-pre-wrap">{m.text}</p>
+                      {!!m.actions?.length && (
+                        <ul className="mt-1.5 space-y-0.5 border-t border-line pt-1.5 text-[11px] text-ok">
+                          {m.actions.map((a, i) => (
+                            <li key={i} className={m.undone ? 'line-through' : ''}>
+                              ✓ {a}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {busy && (
+                  <div className="flex items-center gap-2 text-xs text-muted">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" /> Working on it…
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tab === 'furnish' && (
+              <div className="space-y-3">
+                <p className="text-xs text-muted">Auto-furnish fills every room with pieces that fit, then turns the camera to show you the result. Or describe a look for the room you’re in.</p>
+                <StylistBox geometry={geometry} roomId={roomId} onFurnished={showOff} />
+              </div>
+            )}
+
+            {tab === 'furniture' &&
+              (group ? (
+                <CategoryGrid group={group} room={room} geometry={geometry} onBack={() => setSeeAll(null)} onAdded={added} />
+              ) : (
+                <div className="space-y-3">
+                  {!room && <p className="rounded-xl border border-dashed border-line p-3 text-xs text-muted">Walk into a room and pieces are placed for you. Until then, pick a piece and click the floor where it goes.</p>}
+                  {FURNITURE_GROUPS.map((g) => (
+                    <CategoryCarousel key={g.id} group={g} room={room} geometry={geometry} onSeeAll={() => setSeeAll(g.id)} onAdded={added} />
                   ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        ))}
-        {busy && (
-          <div className="flex items-center gap-2 text-xs text-muted">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" /> Working on it…
-          </div>
-        )}
-      </div>
+                </div>
+              ))}
 
-      {/* Next steps: always one tap away, refreshed after every reply. */}
-      <div className="flex flex-wrap gap-1.5 border-t border-line px-3 py-2" aria-label="Suggested next steps">
-        {lastAssistant?.before && !lastAssistant.undone && <Chip label="Undo" tone="undo" onClick={() => undo(lastAssistant)} />}
-        {(lastAssistant?.suggestions?.length ? lastAssistant.suggestions : starters).map((s) => (
-          <Chip key={s} label={s} onClick={() => send(s === 'Try again' && lastUser ? lastUser.text : s)} />
-        ))}
-      </div>
+            {tab === 'finishes' && <WallsFloorTab geometry={geometry} room={room} />}
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(text);
-        }}
-        className="flex items-center gap-2 border-t border-line p-2"
-      >
-        <input
-          id="chat-input"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. add two armchairs and a jute rug"
-          className="min-w-0 flex-1 rounded-full border border-line bg-card px-3 py-2 text-sm outline-none focus:border-ink/40"
-          disabled={busy}
-        />
-        <button disabled={busy || !text.trim()} className="rounded-full btn-brand px-3 py-2 text-xs font-semibold disabled:opacity-40">
-          Send
-        </button>
-      </form>
-    </section>
+            {tab === 'design' && (
+              <div className="space-y-3">
+                <DesignPanel geometry={geometry} embedded />
+                <Link href="/cart" className="block w-full rounded-lg btn-brand px-4 py-2.5 text-center text-sm font-medium">
+                  Review cart · {fmtUsd(planned)}
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {tab === 'chat' && (
+            <>
+              <div className="flex flex-wrap gap-1.5 border-t border-line px-3 py-2" aria-label="Suggested next steps">
+                {lastAssistant?.before && !lastAssistant.undone && <Chip label="Undo" tone="undo" onClick={() => undo(lastAssistant)} />}
+                {(lastAssistant?.suggestions?.length ? lastAssistant.suggestions : starters).map((s) => (
+                  <Chip key={s} label={s} onClick={() => send(s === 'Try again' && lastUser ? lastUser.text : s)} />
+                ))}
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  send(text);
+                }}
+                className="flex items-center gap-2 border-t border-line p-2"
+              >
+                <input
+                  id="chat-input"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="e.g. add two armchairs and a jute rug"
+                  className="min-w-0 flex-1 rounded-full border border-line bg-card px-3 py-2 text-sm outline-none focus:border-ink/40"
+                  disabled={busy}
+                />
+                <button disabled={busy || !text.trim()} className="rounded-full btn-brand px-3 py-2 text-xs font-semibold disabled:opacity-40">
+                  Send
+                </button>
+              </form>
+            </>
+          )}
+        </section>
+      )}
+    </>
   );
 }

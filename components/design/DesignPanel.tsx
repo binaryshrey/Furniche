@@ -13,7 +13,8 @@ import SurfacesBox from './SurfacesBox';
 
 const DOT: Record<FitLevel, string> = { ok: 'bg-ok', warn: 'bg-warn', error: 'bg-bad' };
 
-export default function DesignPanel({ geometry }: { geometry: ModelGeometry | null }) {
+// embedded: shown inside the Ask Furniche panel, without the sidebar frame, stylist or finishes.
+export default function DesignPanel({ geometry, embedded = false }: { geometry: ModelGeometry | null; embedded?: boolean }) {
   const design = useDesign();
   const productOf = useStore((s) => s.product);
   const selected = useStore((s) => s.selectedUid);
@@ -33,7 +34,7 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
   for (const r of resolved) byRoom.set(r.item.roomId ?? '', [...(byRoom.get(r.item.roomId ?? '') ?? []), r]);
 
   return (
-    <aside className="flex h-full w-[340px] shrink-0 flex-col border-l border-line bg-paper">
+    <aside className={embedded ? 'flex flex-col overflow-hidden rounded-2xl border border-line bg-card' : 'flex h-full w-[340px] shrink-0 flex-col border-l border-line bg-paper'}>
       <div className="border-b border-line p-4">
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-lg">Your design</h2>
@@ -53,7 +54,7 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
         </p>
       </div>
 
-      <div className="scroll-thin flex-1 space-y-4 overflow-y-auto p-4">
+      <div className={embedded ? 'space-y-4 p-4' : 'scroll-thin flex-1 space-y-4 overflow-y-auto p-4'}>
         {resolved.length > 0 && (
           <section className="flex items-center gap-3 rounded-2xl border border-line bg-card p-3">
             <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${design.locked ? 'bg-brand/15 text-brand' : 'bg-panel text-muted'}`} aria-hidden>
@@ -80,11 +81,11 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
           </section>
         )}
 
-        <StylistBox geometry={geometry} roomId={currentRoomId} />
+        {!embedded && <StylistBox geometry={geometry} roomId={currentRoomId} />}
 
         {resolved.length === 0 && (
           <div className="rounded-xl border border-dashed border-line p-5 text-center text-sm text-muted">
-            Press Auto-furnish to fill every room, then click any piece to swap it for one that fits.
+            {embedded ? 'Nothing placed yet. Use Furnish or Furniture to add pieces.' : 'Press Auto-furnish to fill every room, then click any piece to swap it for one that fits.'}
           </div>
         )}
 
@@ -145,7 +146,7 @@ export default function DesignPanel({ geometry }: { geometry: ModelGeometry | nu
           </section>
         ))}
 
-        <SurfacesBox geometry={geometry} roomId={currentRoomId} />
+        {!embedded && <SurfacesBox geometry={geometry} roomId={currentRoomId} />}
       </div>
 
       <div className="border-t border-line p-4">

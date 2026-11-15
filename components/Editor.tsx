@@ -10,7 +10,6 @@ import type { Design, Listing, ModelGeometry } from '@/lib/types';
 import ArrangeOverlay from './viewer/ArrangeOverlay';
 import TourCover from './viewer/TourCover';
 import ChatPanel from './chat/ChatPanel';
-import DesignPanel from './design/DesignPanel';
 import PlanView from './plan/PlanView';
 import { fmtUsd } from './shop/ShopPanel';
 import SwapCard from './design/SwapCard';
@@ -34,6 +33,7 @@ export default function Editor({ sid }: { sid: string }) {
   const setShowFurnished = useStore((s) => s.setShowFurnished);
   const { sdk, ready, hasDefurnish, currentRoomId, embedOnly } = useViewerState();
   const locked = useStore((s) => !!(s.activeSid && s.designs[s.activeSid]?.locked));
+  const cartTotal = useStore((s) => (s.activeSid ? (s.designs[s.activeSid]?.items ?? []).reduce((t, i) => t + (s.product(i.productId)?.priceUsd ?? 0), 0) : 0));
 
   useEffect(() => {
     setActive(sid);
@@ -117,6 +117,9 @@ export default function Editor({ sid }: { sid: string }) {
           <Link href={`/sky?q=&focus=${sid}`} className="rounded-md px-2 py-1 hover:bg-card">
             3D city
           </Link>
+          <Link href="/cart" className="rounded-md px-2 py-1 hover:bg-card">
+            Cart{cartTotal > 0 ? ` · ${fmtUsd(cartTotal)}` : ''}
+          </Link>
           <button onClick={share} className="rounded-md border border-line bg-card px-3 py-1.5">
             {copied ? 'Link copied' : 'Share design'}
           </button>
@@ -179,7 +182,7 @@ export default function Editor({ sid }: { sid: string }) {
               <SwapCard geometry={geometry} />
               <TourCover sid={sid} />
             </div>
-            <ChatPanel />
+            <ChatPanel geometry={geometry} />
             {view === 'plan' && geometry && (
               <div className="absolute inset-0 z-10">
                 <PlanView geometry={geometry} />
@@ -188,7 +191,6 @@ export default function Editor({ sid }: { sid: string }) {
           </div>
         </main>
 
-        <DesignPanel geometry={geometry} />
       </div>
     </div>
   );
