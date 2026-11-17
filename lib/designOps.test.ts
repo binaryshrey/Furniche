@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PRODUCTS } from '@/catalog/products';
-import { demoBudget, moveInBudget } from './budget';
+import { demoBudget, isHousingBill, moveInBudget } from './budget';
 import { compactRoom, designTotal, fitToBudget, floorStats, issuesFor, optimizeRoom, placeFree, styleRoom, swapFor, type Ctx, type WorkDesign } from './designOps';
 import { warmthColor, clampLight, gradeFor, LIGHT_PRESETS } from './lighting';
 import type { ModelGeometry, Room } from './types';
@@ -115,6 +115,17 @@ describe('moveInBudget', () => {
     expect(over.status).toBe('over');
     expect(over.plan.reduce((s, p) => s + p.amount, 0)).toBeCloseTo(9000);
     expect(over.plan.some((p) => p.label.startsWith('After paycheck'))).toBe(true);
+  });
+
+  it('finds rent by payee or nickname, and not renters insurance', () => {
+    const bills = [
+      { id: 'i', payee: 'Renters insurance', amount: 22, due: null },
+      { id: 'n', payee: 'The Alexan', nickname: 'Rent · The Alexan', amount: 1600, due: null },
+    ];
+    expect(isHousingBill(bills[0])).toBe(false);
+    expect(isHousingBill(bills[1])).toBe(true);
+    expect(isHousingBill({ id: 'm', payee: 'Home mortgage', amount: 1900, due: null })).toBe(true);
+    expect(moveInBudget({ source: 'demo', planned: 0, accounts: [], bills, txns: [] }).rent).toBe(1600);
   });
 
   it('flags rent above 30% of income', () => {
